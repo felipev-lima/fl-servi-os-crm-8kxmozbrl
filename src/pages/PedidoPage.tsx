@@ -27,7 +27,14 @@ import {
   getFileUrl,
 } from '@/services/api'
 import { useAuth } from '@/contexts/AuthContext'
-import { createQuote, getQuote, updateQuote, totalDoDocumento, getClientes } from '@/services/crm'
+import {
+  createQuote,
+  getQuote,
+  updateQuote,
+  totalDoDocumento,
+  getClientes,
+  registrarHistoricoPedido,
+} from '@/services/crm'
 import { getEmpresa, type Empresa } from '@/lib/empresa'
 import type { Material } from '@/types/flservicos'
 import type { Client } from '@/types/flservicos'
@@ -104,6 +111,10 @@ export default function PedidoPage() {
   const [sigEntregador, setSigEntregador] = useState('')
   const [fotos, setFotos] = useState<File[]>([])
   const [salvoId, setSalvoId] = useState<string>('')
+  const [numero, setNumero] = useState<string>('')
+  const [statusAtual, setStatusAtual] = useState<string>('PEDIDO')
+  /** nomes dos arquivos já gravados no servidor (pedido reaberto) */
+  const [fotosSalvas, setFotosSalvas] = useState<string[]>([])
 
   // busca de cliente
   const [buscaCliente, setBuscaCliente] = useState('')
@@ -156,6 +167,17 @@ export default function PedidoPage() {
           setData((q.date || '').slice(0, 10) || new Date().toISOString().slice(0, 10))
           setObs(q.notes || '')
           setEntregador(q.delivered_by_name || '')
+          setNumero(q.number ? String(q.number) : '')
+          setStatusAtual(q.status || 'PEDIDO')
+          // FOTOS JÁ SALVAS: reabre o pedido e elas continuam lá, para
+          // reimprimir o PDF e mandar ao cliente dias depois.
+          setFotosSalvas((q.photos || []) as string[])
+          // assinaturas gravadas voltam para o talão
+          const urlSig = (campo?: string) => (campo ? getFileUrl('quotes', q.id, campo) : '')
+          const sc = urlSig((q as any).signature_client)
+          const se = urlSig((q as any).signature_deliverer)
+          if (sc) setSigCliente(sc)
+          if (se) setSigEntregador(se)
           setItens(
             (q.items || []).map((i) => ({
               ...i,
@@ -474,10 +496,12 @@ export default function PedidoPage() {
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h1 className="text-xl font-black tracking-tight sm:text-2xl">
-            {ehNovo ? 'Novo pedido' : 'Pedido'}
+            {ehNovo ? 'Novo pedido' : `Pedido ${numero ? `nº ${numero}` : ''}`}
           </h1>
           <p className="text-[11px] text-muted-foreground">
-            Venda de produto com confirmação de entrega
+            {ehNovo
+              ? 'Venda de produto com confirmação de entrega'
+              : `Status: ${statusAtual} · venda com confirmação de entrega`}
           </p>
         </div>
         <div className="flex gap-1.5">
@@ -915,6 +939,32 @@ export default function PedidoPage() {
               foto estava indo, nem se estava torta ou escura. Agora cada foto
               aparece em miniatura, com botão de remover.
             */}
+            {/* fotos JÁ SALVAS, quando o pedido é reaberto */}
+            {fotosSalvas.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-[9px] font-semibold text-emerald-700">
+                  {fotosSalvas.length} foto(s) já salva(s) no pedido
+                </p>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {fotosSalvas.map((nome, i) => (
+                    <a
+                      key={nome}
+                      href={getFileUrl('quotes', salvoId, nome)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block overflow-hidden rounded-md border"
+                    >
+                      <img
+                        src={getFileUrl('quotes', salvoId, nome)}
+                        alt={`Foto ${i + 1}`}
+                        className="h-20 w-full object-cover"
+                      />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {fotos.length > 0 && (
               <>
                 <p className="text-[9px] text-muted-foreground">
@@ -953,6 +1003,52 @@ export default function PedidoPage() {
               </p>
             )}
           </div>
+
+          {/*
+            MOVIMENTAÇÃO DO PEDIDO — igual à OS.
+            PEDIDO (gerado) → ENCOMENDADO (aguardando material) → ENTREGUE →
+            FATURADO. Cada troca grava uma linha no histórico, com quem mudou
+            e quando, para o Felipe acompanhar o que está faltando entregar.
+          */}
+          {!ehNovo && (
+            <div className="space-y-1.5 rounded-lg border border-[#0B3D91]/30 bg-[#0B3D91]/5 p-2">
+              <Label className="text-[10px] font-semibold text-[#0B3D91]">Movimentar pedido</Label>
+              <div className="flex flex-wrap gap-1">
+                {(['PEDIDO', 'ENTREGUE', 'FATURADO'] as const).map((st) => (
+                  <button
+                    key={st}
+                    type="button"
+                    onClick={async () => {
+                      if (st === statusAtual) return
+                      const anterior = statusAtual
+                      setStatusAtual(st)
+                      const r = await updateQuote(salvoId, { status: st } as any)
+                      if (r) {
+                        await registrarHistoricoPedido(
+                          salvoId,
+                          anterior,
+                          st,
+                          entregador || 'Sistema',
+                          `Status alterado de ${anterior} para ${st}`,
+                        )
+                        toast.success(`Pedido marcado como ${st}.`)
+                      }
+                    }}
+                    className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
+                      statusAtual === st
+                        ? 'border-[#0B3D91] bg-[#0B3D91] text-white'
+                        : 'bg-white hover:border-[#0B3D91]/50'
+                    }`}
+                  >
+                    {st}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[8px] text-muted-foreground">
+                Cada mudança fica no histórico do pedido.
+              </p>
+            </div>
+          )}
 
           <div className="space-y-1">
             <Label className="text-[10px] font-semibold">Observações</Label>
@@ -1005,7 +1101,9 @@ export default function PedidoPage() {
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-sm font-black uppercase text-[#0B3D91]">Pedido</p>
+                <p className="text-sm font-black uppercase text-[#0B3D91]">
+                  Pedido{numero ? ` nº ${numero}` : ''}
+                </p>
                 <p className="text-[9px] text-slate-600">{dataBR(data)}</p>
               </div>
             </div>
@@ -1137,15 +1235,25 @@ export default function PedidoPage() {
               foi entregue. As fotos entram em miniatura, 3 por linha, antes do
               rodapé — assim cabem na mesma página do documento.
             */}
-            {fotos.length > 0 && (
+            {(fotos.length > 0 || fotosSalvas.length > 0) && (
               <div className="mt-3 border-t pt-2">
                 <p className="mb-1 text-[8px] font-bold uppercase text-slate-500">
                   Fotos da entrega
                 </p>
                 <div className="grid grid-cols-3 gap-1">
+                  {/* já salvas no servidor */}
+                  {fotosSalvas.map((nome, i) => (
+                    <img
+                      key={`s${i}`}
+                      src={getFileUrl('quotes', salvoId, nome)}
+                      alt=""
+                      className="h-24 w-full rounded border object-cover"
+                    />
+                  ))}
+                  {/* recém-escolhidas, ainda no aparelho */}
                   {fotos.map((f, i) => (
                     <img
-                      key={i}
+                      key={`n${i}`}
                       src={URL.createObjectURL(f)}
                       alt=""
                       className="h-24 w-full rounded border object-cover"

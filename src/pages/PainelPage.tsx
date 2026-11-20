@@ -17,8 +17,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
-import { getClientsSummary, getTransactions, getBills } from '@/services/crm'
-import type { ClientSummary, Transaction, Bill } from '@/types/crm'
+import {
+  getClientsSummary,
+  getTransactions,
+  getBills,
+  getQuotes,
+  totalDoDocumento,
+} from '@/services/crm'
+import type { ClientSummary, Transaction, Bill, Quote } from '@/types/crm'
 import { brl, dataBR, totalDaLinha } from '@/types/crm'
 import { getWorkOrders, getMaterials, getClients } from '@/services/api'
 import { enderecoCompleto, linkMapa, temEndereco } from '@/lib/local'
@@ -122,6 +128,7 @@ export default function Painel() {
   const { user, isAdmin } = useAuth()
 
   const [os, setOs] = useState<WorkOrder[]>([])
+  const [pedidos, setPedidos] = useState<Quote[]>([])
   const [carregando, setCarregando] = useState(true)
 
   // financeiro — só carrega para administrador
@@ -183,6 +190,11 @@ export default function Painel() {
         setContas(bl)
       } catch {
         /* painel funciona sem o financeiro */
+      }
+      try {
+        setPedidos(await getQuotes())
+      } catch {
+        /* a lista de pedidos é complementar */
       }
       try {
         const [mats, cls] = await Promise.all([getMaterials(), getClients()])
@@ -534,6 +546,87 @@ export default function Painel() {
           </div>
         </CardContent>
       </Card>
+
+      {/*
+        PEDIDOS no painel (pedido do Felipe, 20/11/2026).
+        Ele quis o pedido no painel inicial, com número e situação, para
+        gerenciar o que está faltando entregar — como já faz com a OS.
+      */}
+      {isAdmin && pedidos.length > 0 && (
+        <Card>
+          <CardContent className="p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="flex items-center gap-1.5 text-sm font-bold">
+                <ShoppingCart className="h-4 w-4 text-[#0B3D91]" /> Pedidos
+              </h2>
+              <Button variant="outline" size="sm" asChild className="h-7 gap-1 text-[10px]">
+                <Link to="/pedidos">
+                  Ver todos <ArrowRight className="h-3 w-3" />
+                </Link>
+              </Button>
+            </div>
+            <div className="mb-2 grid grid-cols-3 gap-1.5">
+              {[
+                [
+                  'Em aberto',
+                  pedidos.filter((p) => (p.status || 'PEDIDO') === 'PEDIDO').length,
+                  'text-amber-700',
+                ],
+                [
+                  'Entregues',
+                  pedidos.filter((p) => p.status === 'ENTREGUE').length,
+                  'text-emerald-700',
+                ],
+                [
+                  'Faturados',
+                  pedidos.filter((p) => p.status === 'FATURADO').length,
+                  'text-[#0B3D91]',
+                ],
+              ].map(([rot, qtd, cor]) => (
+                <div key={String(rot)} className="rounded-lg border px-2 py-1.5 text-center">
+                  <span className={`block text-[9px] font-bold uppercase ${cor}`}>{rot}</span>
+                  <span className={`block text-lg font-black leading-none ${cor}`}>{qtd}</span>
+                </div>
+              ))}
+            </div>
+            <div className="space-y-1">
+              {pedidos.slice(0, 4).map((p) => (
+                <Link
+                  key={p.id}
+                  to={`/pedido/${p.id}`}
+                  className="flex items-center gap-2 rounded-lg border p-2 transition hover:border-[#0B3D91]/60"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono text-[10px] font-bold text-[#0B3D91]">
+                        nº {p.number}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className={`px-1 py-0 text-[8px] ${
+                          p.status === 'ENTREGUE'
+                            ? 'text-emerald-700'
+                            : p.status === 'FATURADO'
+                              ? 'text-[#0B3D91]'
+                              : 'text-amber-700'
+                        }`}
+                      >
+                        {p.status || 'PEDIDO'}
+                      </Badge>
+                    </div>
+                    <p className="truncate text-[10px] font-semibold">
+                      {p.expand?.client?.name || '—'}
+                    </p>
+                  </div>
+                  <span className="shrink-0 font-mono text-[10px] font-bold">
+                    {brl(totalDoDocumento(p.items))}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ---- PENDÊNCIAS: só admin, porque falam de dinheiro do cliente ---- */}
       {isAdmin && (estoqueBaixo > 0 || semContato > 0) && (

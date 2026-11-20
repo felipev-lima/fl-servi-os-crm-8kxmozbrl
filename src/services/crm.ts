@@ -108,8 +108,64 @@ export async function getQuote(id: string): Promise<Quote> {
   })) as unknown as Quote
 }
 
-export async function createQuote(dados: Partial<Quote>) {
-  return pb.collection('quotes').create(dados)
+/**
+ * Próximo número de pedido — mesma ideia da OS.
+ *
+ * Lê o maior número já usado e soma 1. O `getFullList` não serve aqui: com o
+ * histórico crescendo ele traz tudo só para descobrir o último, então pedimos
+ * uma linha ordenada.
+ */
+export async function getNextQuoteNumber(): Promise<number> {
+  try {
+    const l = await pb.collection('quotes').getList(1, 1, { sort: '-number' })
+    const ultimo = l.items[0] ? Number((l.items[0] as any).number || 0) : 0
+    return ultimo + 1
+  } catch {
+    return 1
+  }
+}
+
+export async function createQuote(dados: Partial<Quote> | FormData) {
+  // numeração automática quando não veio pronta
+  if (dados instanceof FormData) {
+    if (!dados.get('number')) dados.append('number', String(await getNextQuoteNumber()))
+  } else if (!dados.number) {
+    dados.number = await getNextQuoteNumber()
+  }
+  return pb.collection('quotes').create(dados as any)
+}
+
+/** Registra uma linha no histórico do pedido (não quebra o fluxo se falhar) */
+export async function registrarHistoricoPedido(
+  quoteId: string,
+  de: string,
+  para: string,
+  usuario: string,
+  nota?: string,
+) {
+  try {
+    await pb.collection('quote_history').create({
+      quote: quoteId,
+      status_from: de || '',
+      status_to: para,
+      user_name: usuario || 'Sistema',
+      user_id: pb.authStore.record?.id || '',
+      notes: nota || '',
+    })
+  } catch (e) {
+    console.warn('histórico do pedido não registrado', e)
+  }
+}
+
+export async function getHistoricoPedido(quoteId: string) {
+  try {
+    return await pb.collection('quote_history').getFullList({
+      filter: `quote = "${quoteId}"`,
+      sort: '-created',
+    })
+  } catch {
+    return []
+  }
 }
 
 export async function updateQuote(id: string, dados: Partial<Quote> | FormData) {
