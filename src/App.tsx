@@ -46,7 +46,13 @@ const App = () => (
         <Sonner />
         <Routes>
           <Route element={<Layout />}>
-            <Route path="/" element={<Dashboard />} />
+            {/*
+              A raiz é o PAINEL DO CRM, não o dashboard antigo: é o que o dono
+              precisa ver ao abrir (a receber, OS em aberto, devedores,
+              pendências). O dashboard antigo continua em /dashboard.
+            */}
+            <Route path="/" element={<PainelPage />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/login" element={<Login />} />
             <Route path="/ordens" element={<WorkOrderList />} />
             <Route path="/ordens/:id" element={<WorkOrderDetail />} />
@@ -59,7 +65,7 @@ const App = () => (
             <Route path="/planilha" element={<PlanilhaPage />} />
             <Route path="/conectores" element={<ConectoresPage />} />
             {/* ---- CRM ---- */}
-            <Route path="/painel" element={<PainelPage />} />
+
             <Route path="/lancamentos" element={<LancamentosPage />} />
             <Route path="/relatorios" element={<RelatoriosPage />} />
             <Route path="/orcamentos" element={<OrcamentosPage />} />
