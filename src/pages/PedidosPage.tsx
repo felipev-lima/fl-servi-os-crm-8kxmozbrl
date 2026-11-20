@@ -12,6 +12,7 @@ import { Link } from 'react-router-dom'
 import { getQuotes, totalDoDocumento } from '@/services/crm'
 import type { Quote } from '@/types/crm'
 import { brl, dataBR } from '@/types/crm'
+import { STATUS_PEDIDO, configStatus } from '@/lib/pedidoStatus'
 import { useAuth } from '@/contexts/AuthContext'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -126,22 +127,22 @@ export default function PedidosPage() {
         {lista.map((p) => {
           const itens = p.items || []
           const total = totalDoDocumento(itens)
-          const entregue = p.status === 'ENTREGUE'
+          const cfg = configStatus(p.status)
           return (
             <Link key={p.id} to={`/pedido/${p.id}`} className="block">
-              <Card className={entregue ? 'border-emerald-200' : 'border-amber-200'}>
+              {/* a cor do cartão é a do status: bate o olho e já sabe a etapa */}
+              <Card className={`border-l-4 ${cfg.cor}`}>
                 <CardContent className="flex items-center gap-2 p-2.5">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <Badge
-                        className={`px-1.5 py-0 text-[8px] ${
-                          entregue
-                            ? 'border-emerald-300 bg-emerald-100 text-emerald-800'
-                            : 'border-amber-300 bg-amber-100 text-amber-800'
-                        }`}
-                      >
-                        {entregue ? 'ENTREGUE' : 'EM ABERTO'}
+                      <Badge variant="outline" className={`px-1.5 py-0 text-[8px] ${cfg.texto}`}>
+                        {cfg.rotulo}
                       </Badge>
+                      {p.number ? (
+                        <span className="font-mono text-[10px] font-bold text-[#0B3D91]">
+                          nº {p.number}
+                        </span>
+                      ) : null}
                       <span className="text-[9px] text-muted-foreground">{dataBR(p.date)}</span>
                       <span className="text-[9px] text-muted-foreground">
                         · {itens.length} item(ns)

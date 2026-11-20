@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-20T23:04:56.698Z",
+  "generatedAt": "2026-11-20T23:22:46.691Z",
   "collections": [
     {
       "name": "users",
@@ -1286,8 +1286,9 @@
           "selectValues": [
             "ORCAMENTO",
             "PEDIDO",
+            "AGUARDANDO MATERIAL",
             "ENTREGUE",
-            "FATURADO",
+            "LANCADO",
             "CANCELADO"
           ]
         },

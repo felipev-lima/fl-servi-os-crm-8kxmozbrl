@@ -44,6 +44,7 @@ import { enderecoCompleto, linkMapa, temEndereco } from '@/lib/local'
 import { prepararFoto } from '@/lib/imagem'
 import { SignaturePad } from '@/components/SignaturePad'
 import { ProdutoRapidoDialog } from '@/components/ProdutoRapidoDialog'
+import { FLUXO_PEDIDO, configStatus } from '@/lib/pedidoStatus'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -1013,37 +1014,50 @@ export default function PedidoPage() {
           {!ehNovo && (
             <div className="space-y-1.5 rounded-lg border border-[#0B3D91]/30 bg-[#0B3D91]/5 p-2">
               <Label className="text-[10px] font-semibold text-[#0B3D91]">Movimentar pedido</Label>
-              <div className="flex flex-wrap gap-1">
-                {(['PEDIDO', 'ENTREGUE', 'FATURADO'] as const).map((st) => (
-                  <button
-                    key={st}
-                    type="button"
-                    onClick={async () => {
-                      if (st === statusAtual) return
-                      const anterior = statusAtual
-                      setStatusAtual(st)
-                      const r = await updateQuote(salvoId, { status: st } as any)
-                      if (r) {
-                        await registrarHistoricoPedido(
-                          salvoId,
-                          anterior,
-                          st,
-                          entregador || 'Sistema',
-                          `Status alterado de ${anterior} para ${st}`,
-                        )
-                        toast.success(`Pedido marcado como ${st}.`)
-                      }
-                    }}
-                    className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
-                      statusAtual === st
-                        ? 'border-[#0B3D91] bg-[#0B3D91] text-white'
-                        : 'bg-white hover:border-[#0B3D91]/50'
-                    }`}
-                  >
-                    {st}
-                  </button>
-                ))}
+              {/*
+                ESTEIRA COMPLETA: Orçamento → Pedido → Aguard. material →
+                Entregue → Lançado. Cada botão tem a cor da etapa, e o pedido
+                muda de cor na lista conforme avança.
+              */}
+              <div className="grid grid-cols-5 gap-1">
+                {FLUXO_PEDIDO.map((st) => {
+                  const cfg = configStatus(st)
+                  const ativo = statusAtual === st
+                  return (
+                    <button
+                      key={st}
+                      type="button"
+                      onClick={async () => {
+                        if (st === statusAtual) return
+                        const anterior = statusAtual
+                        setStatusAtual(st)
+                        const r = await updateQuote(salvoId, { status: st } as any)
+                        if (r) {
+                          await registrarHistoricoPedido(
+                            salvoId,
+                            anterior,
+                            st,
+                            entregador || 'Sistema',
+                            `Status alterado de ${anterior} para ${st}`,
+                          )
+                          toast.success(`Pedido marcado como ${cfg.rotulo}.`)
+                        }
+                      }}
+                      title={cfg.ajuda}
+                      className={`flex flex-col items-center justify-center rounded-lg border px-0.5 py-1.5 transition-all ${cfg.cor} ${
+                        ativo ? 'ring-2 ring-slate-700 shadow-sm' : 'opacity-70 hover:opacity-100'
+                      }`}
+                    >
+                      <span className={`text-[8px] font-bold uppercase leading-tight ${cfg.texto}`}>
+                        {cfg.rotulo}
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
+              <p className={`text-center text-[9px] font-bold ${configStatus(statusAtual).texto}`}>
+                {configStatus(statusAtual).rotulo} — {configStatus(statusAtual).ajuda}
+              </p>
               <p className="text-[8px] text-muted-foreground">
                 Cada mudança fica no histórico do pedido.
               </p>

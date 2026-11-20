@@ -28,6 +28,7 @@ import type { ClientSummary, Transaction, Bill, Quote } from '@/types/crm'
 import { brl, dataBR, totalDaLinha } from '@/types/crm'
 import { getWorkOrders, getMaterials, getClients } from '@/services/api'
 import { enderecoCompleto, linkMapa, temEndereco } from '@/lib/local'
+import { STATUS_PEDIDO, configStatus } from '@/lib/pedidoStatus'
 import type { WorkOrder } from '@/types/flservicos'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -603,15 +604,9 @@ export default function Painel() {
                       </span>
                       <Badge
                         variant="outline"
-                        className={`px-1 py-0 text-[8px] ${
-                          p.status === 'ENTREGUE'
-                            ? 'text-emerald-700'
-                            : p.status === 'FATURADO'
-                              ? 'text-[#0B3D91]'
-                              : 'text-amber-700'
-                        }`}
+                        className={`px-1 py-0 text-[8px] ${configStatus(p.status).texto}`}
                       >
-                        {p.status || 'PEDIDO'}
+                        {configStatus(p.status).rotulo}
                       </Badge>
                     </div>
                     <p className="truncate text-[10px] font-semibold">
