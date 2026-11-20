@@ -11,6 +11,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getQuote, updateQuote, createTransaction, getTransactionsByClient } from '@/services/crm'
 import { getEmpresa, urlArquivo, type Empresa } from '@/lib/empresa'
+import { getNextOrderNumber, createWorkOrder, addOrderMaterial } from '@/services/api'
+import { useAuth } from '@/contexts/AuthContext'
 import pb from '@/lib/pocketbase/client'
 import type { Quote, TransactionKind } from '@/types/crm'
 import { TIPOS, brl, dataBR } from '@/types/crm'
@@ -44,6 +46,7 @@ const ETAPAS: { valor: string; label: string }[] = [
 export default function OrcamentoDetalhePage() {
   const { id } = useParams()
   const navegar = useNavigate()
+  const { user } = useAuth()
   const [doc, setDoc] = useState<Quote | null>(null)
   const [empresa, setEmpresa] = useState<Empresa>({})
   const [carregando, setCarregando] = useState(true)
@@ -222,11 +225,54 @@ export default function OrcamentoDetalhePage() {
       return
     setSalvando(true)
     try {
-      const res = await pb.send('/backend/v1/crm/pedido-para-os', {
-        method: 'POST',
-        body: { quote: doc.id },
-      })
-      toast.success(`OS ${res.order_number} criada a partir do pedido.`)
+      /**
+       * Feito no cliente, e não por rota no servidor, por um motivo prático: a
+       * rota customizada sob /backend/v1 não subiu no deploy desta instância
+       * (responde 404 mesmo publicada). Fazer as três gravações daqui dá o
+       * mesmo resultado e não depende de hook.
+       */
+      const numero = await getNextOrderNumber()
+
+      const maoDeObra = itens
+        .filter((i) => i.kind === 'SERVICO')
+        .reduce((s, i) => s + Number(i.quantity) * Number(i.unit_price), 0)
+
+      const descricao =
+        itens
+          .filter((i) => i.kind === 'SERVICO')
+          .map((i) => i.description)
+          .join('; ')
+          .slice(0, 250) || `Pedido ${doc.id.slice(-6)}`
+
+      const os = await createWorkOrder(
+        {
+          order_number: numero,
+          client: doc.client,
+          service_type: 'Instalação',
+          status: 'ABERTA',
+          description: descricao,
+          opened_at: new Date().toISOString(),
+          service_value: maoDeObra,
+          quote_ref: doc.id,
+        } as any,
+        user?.name || 'Sistema',
+      )
+
+      // itens de produto viram material da OS
+      for (const i of itens) {
+        if (i.kind === 'SERVICO' || !i.material_id) continue
+        await addOrderMaterial({
+          work_order: os.id,
+          material: i.material_id,
+          quantity: Number(i.quantity),
+          unit: i.unit || 'UN',
+          unit_price: Number(i.unit_price),
+          kind: (i.kind as any) || 'CONSUMO',
+        } as any)
+      }
+
+      await updateQuote(doc.id, { work_order: os.id } as any)
+      toast.success(`OS ${numero} criada a partir do pedido.`)
       void carregar()
     } catch (e: any) {
       toast.error(e?.message || 'Não foi possível gerar a OS.')
