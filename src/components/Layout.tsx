@@ -23,6 +23,7 @@ import {
   TrendingUp,
   Settings,
   CheckSquare,
+  Percent,
 } from 'lucide-react'
 
 export default function Layout() {
@@ -34,6 +35,7 @@ export default function Layout() {
   // operação; o financeiro é do dono.
   const operacao = [
     { name: 'Painel', href: '/', icon: LayoutDashboard, adminOnly: false },
+    { name: 'Meus serviços', href: '/tecnico', icon: ClipboardList, adminOnly: false },
     { name: 'Ordens de Serviço', href: '/ordens', icon: ClipboardList, adminOnly: false },
     { name: 'Agenda', href: '/agenda', icon: CalendarDays, adminOnly: false },
     { name: 'Clientes', href: '/clientes', icon: Building2, adminOnly: false },
@@ -49,6 +51,7 @@ export default function Layout() {
     { name: 'Fluxo de caixa', href: '/fluxo-caixa', icon: TrendingUp, adminOnly: true },
     { name: 'Conferência OS', href: '/conferencia', icon: CheckSquare, adminOnly: true },
     { name: 'Custos e margem', href: '/custos', icon: TrendingUp, adminOnly: true },
+    { name: 'Comissões', href: '/comissoes', icon: Percent, adminOnly: true },
     { name: 'Manutenções Futuras', href: '/manutencoes', icon: CalendarDays, adminOnly: true },
     { name: 'Planilha', href: '/planilha', icon: FileSpreadsheet, adminOnly: true },
     { name: 'Conectores', href: '/conectores', icon: Plug, adminOnly: true },

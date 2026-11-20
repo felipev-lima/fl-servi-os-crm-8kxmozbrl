@@ -28,6 +28,8 @@ import AgendaPage from './pages/AgendaPage'
 import ConfiguracoesPage from './pages/ConfiguracoesPage'
 import ConferenciaOSPage from './pages/ConferenciaOSPage'
 import CustosPage from './pages/CustosPage'
+import ComissoesPage from './pages/ComissoesPage'
+import TecnicoPage from './pages/TecnicoPage'
 import NotFound from './pages/NotFound'
 
 const App = () => (
@@ -62,6 +64,8 @@ const App = () => (
             <Route path="/configuracoes" element={<ConfiguracoesPage />} />
             <Route path="/conferencia" element={<ConferenciaOSPage />} />
             <Route path="/custos" element={<CustosPage />} />
+            <Route path="/comissoes" element={<ComissoesPage />} />
+            <Route path="/tecnico" element={<TecnicoPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
