@@ -21,6 +21,7 @@ import { getClientsSummary, getTransactions, getBills } from '@/services/crm'
 import type { ClientSummary, Transaction, Bill } from '@/types/crm'
 import { brl, dataBR, totalDaLinha } from '@/types/crm'
 import { getWorkOrders, getMaterials, getClients } from '@/services/api'
+import { enderecoCompleto, linkMapa, temEndereco } from '@/lib/local'
 import type { WorkOrder } from '@/types/flservicos'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -44,6 +45,7 @@ import {
   ChevronUp,
   ShoppingCart,
   AlertTriangle,
+  Navigation,
 } from 'lucide-react'
 
 type StatusKey = 'ABERTA' | 'AGENDADA' | 'EM ANDAMENTO' | 'AGUARDANDO MATERIAL' | 'FINALIZADA'
@@ -440,10 +442,23 @@ export default function Painel() {
             {osVisiveis.map((o) => {
               const cfg = STATUS.find((s) => s.chave === o.status)
               return (
+                {/*
+                  DESTAQUE VERMELHO na OS aberta a partir do filtro.
+
+                  O Felipe pediu que a informação do pedido que está em
+                  destaque no painel fique com fundo puxado para o vermelho —
+                  é leitura rápida: "esta aqui é a que eu estou vendo".
+                  Atrasada também é vermelha, mas mais forte e com o rótulo,
+                  para não confundir uma coisa com a outra.
+                */}
                 <Link
                   key={o.id}
                   to={`/ordens/${o.id}`}
-                  className="flex items-center justify-between gap-2 rounded-lg border bg-card p-2.5 transition hover:border-[#0B3D91]/60"
+                  className={`flex items-center justify-between gap-2 rounded-lg border p-2.5 transition hover:border-rose-400 ${
+                    idsPendentes.has(o.id)
+                      ? 'border-rose-400 bg-rose-100'
+                      : 'border-rose-200 bg-rose-50/70'
+                  }`}
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5">
@@ -465,13 +480,36 @@ export default function Painel() {
                       {o.expand?.client?.nickname || o.expand?.client?.name || '—'}
                     </p>
                     <p className="truncate text-[9px] text-muted-foreground">{o.description}</p>
+                    {/*
+                      Endereço na lista: o técnico precisa saber PARA ONDE vai
+                      antes de abrir a OS, não depois.
+                    */}
+                    {temEndereco(o.expand?.client) && (
+                      <p className="truncate text-[9px] text-slate-600">
+                        📍 {enderecoCompleto(o.expand?.client)}
+                      </p>
+                    )}
                     {o.expand?.technician?.name && (
                       <p className="truncate text-[9px] text-[#0B3D91]/80">
                         Técnico: {o.expand.technician.name}
                       </p>
                     )}
                   </div>
-                  <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <div className="flex shrink-0 flex-col items-center gap-1">
+                    {temEndereco(o.expand?.client) && (
+                      <a
+                        href={linkMapa(o.expand?.client)}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="rounded border border-[#0B3D91]/30 bg-white px-1.5 py-1 text-[#0B3D91]"
+                        title="Abrir no Google Maps"
+                      >
+                        <Navigation className="h-3 w-3" />
+                      </a>
+                    )}
+                    <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+                  </div>
                 </Link>
               )
             })}

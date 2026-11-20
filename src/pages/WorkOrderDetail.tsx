@@ -38,6 +38,7 @@ import {
 import { ChecklistItem } from '@/types/checklist'
 import { baixarPorUsoNaOS, devolverPorRemocaoDaOS } from '@/lib/estoque'
 import { custoPorMarcacao } from '@/lib/precos'
+import { enderecoCompleto, linkMapa, temEndereco } from '@/lib/local'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -83,6 +84,7 @@ import {
   Images,
   X,
   Layers,
+  Navigation,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -1630,6 +1632,44 @@ ${
                     emptyText="Nenhum cliente com esse nome."
                     disabled={!canEdit}
                   />
+
+                  {/*
+                    ENDEREÇO + LOCALIZADOR do cliente escolhido.
+
+                    O técnico não deve precisar sair da OS e ir em Clientes para
+                    saber o endereço. Aqui aparece o endereço completo e o botão
+                    que abre a rota no Google Maps.
+                  */}
+                  {(() => {
+                    const cli = clients.find((c) => c.id === order.client)
+                    if (!cli || !temEndereco(cli)) return null
+                    return (
+                      <div className="rounded-lg border border-[#0B3D91]/30 bg-[#0B3D91]/5 p-2">
+                        <p className="flex items-start gap-1 text-[10px] leading-snug text-slate-700">
+                          <MapPin className="mt-0.5 h-3 w-3 shrink-0 text-[#0B3D91]" />
+                          <span>{enderecoCompleto(cli)}</span>
+                        </p>
+                        <div className="mt-1.5 flex flex-wrap gap-1">
+                          <a
+                            href={linkMapa(cli)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 rounded bg-[#0B3D91] px-2 py-1 text-[10px] font-semibold text-white"
+                          >
+                            <Navigation className="h-3 w-3" /> Rota até o local
+                          </a>
+                          <a
+                            href={linkMapa(cli, false)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 rounded border border-[#0B3D91]/40 bg-white px-2 py-1 text-[10px] font-semibold text-[#0B3D91]"
+                          >
+                            Ver no mapa
+                          </a>
+                        </div>
+                      </div>
+                    )
+                  })()}
                 </div>
 
                 {/* Técnico */}

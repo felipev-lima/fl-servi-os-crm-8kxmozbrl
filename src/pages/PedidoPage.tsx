@@ -26,6 +26,7 @@ import type { Material } from '@/types/flservicos'
 import type { Client } from '@/types/flservicos'
 import type { QuoteItem } from '@/types/crm'
 import { brl, dataBR } from '@/types/crm'
+import { enderecoCompleto, linkMapa, temEndereco } from '@/lib/local'
 import { prepararFoto } from '@/lib/imagem'
 import { SignaturePad } from '@/components/SignaturePad'
 import { Card, CardContent } from '@/components/ui/card'
@@ -45,6 +46,8 @@ import {
   User,
   AlertTriangle,
   CheckCircle2,
+  MapPin,
+  Navigation,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -441,8 +444,37 @@ export default function PedidoPage() {
           {cliente && (
             <p className="rounded border bg-slate-50 px-2 py-1 text-[9px] text-muted-foreground">
               {cliente.document || 'sem CNPJ'} · {cliente.phone || 'sem telefone'}
-              {cliente.address ? ` · ${cliente.address}` : ''}
             </p>
+          )}
+          {/*
+            Endereço e localizador do cliente do pedido.
+            Quem entrega precisa da rota, não do nome da rua decorado.
+          */}
+          {cliente && temEndereco(cliente) && (
+            <div className="rounded-lg border border-[#0B3D91]/30 bg-[#0B3D91]/5 p-2">
+              <p className="flex items-start gap-1 text-[10px] leading-snug text-slate-700">
+                <MapPin className="mt-0.5 h-3 w-3 shrink-0 text-[#0B3D91]" />
+                <span>{enderecoCompleto(cliente)}</span>
+              </p>
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                <a
+                  href={linkMapa(cliente)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 rounded bg-[#0B3D91] px-2 py-1 text-[10px] font-semibold text-white"
+                >
+                  <Navigation className="h-3 w-3" /> Rota até o local
+                </a>
+                <a
+                  href={linkMapa(cliente, false)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 rounded border border-[#0B3D91]/40 bg-white px-2 py-1 text-[10px] font-semibold text-[#0B3D91]"
+                >
+                  Ver no mapa
+                </a>
+              </div>
+            </div>
           )}
           <div className="space-y-1">
             <Label className="text-[10px] font-semibold">Data</Label>
@@ -696,8 +728,20 @@ export default function PedidoPage() {
                 {cliente?.document || 'sem documento'}
                 {cliente?.phone ? ` · ${cliente.phone}` : ''}
               </p>
-              {cliente?.address && <p className="text-[9px] text-slate-600">{cliente.address}</p>}
+              {cliente && temEndereco(cliente) && (
+                <p className="text-[9px] font-semibold text-slate-700">
+                  {enderecoCompleto(cliente)}
+                </p>
+              )}
             </div>
+
+            {/* local de entrega em destaque: é o que quem entrega precisa achar */}
+            {cliente && temEndereco(cliente) && (
+              <div className="mt-1 rounded border border-slate-300 p-1.5">
+                <p className="text-[8px] font-bold uppercase text-slate-500">Local de entrega</p>
+                <p className="text-[9px]">{enderecoCompleto(cliente)}</p>
+              </div>
+            )}
 
             {/* itens */}
             <table className="mt-2 w-full border-collapse text-[9px]">
