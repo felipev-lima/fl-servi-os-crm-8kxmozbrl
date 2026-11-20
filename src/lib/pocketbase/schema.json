@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-20T03:07:31.364Z",
+  "generatedAt": "2026-11-20T03:52:22.598Z",
   "collections": [
     {
       "name": "users",
@@ -250,6 +250,12 @@
           "type": "file",
           "required": false,
           "system": false
+        },
+        {
+          "name": "commission_percent",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -355,6 +361,24 @@
             "CONSUMO",
             "SERVICO"
           ]
+        },
+        {
+          "name": "cost",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "stock_min",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "control_stock",
+          "type": "bool",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -545,6 +569,17 @@
           "type": "date",
           "required": false,
           "system": false
+        },
+        {
+          "name": "planilha_conferida",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "PENDENTE",
+            "CONFERIDA",
+            "LANCADA_NO_CRM"
+          ]
         }
       ],
       "indexes": [
@@ -997,6 +1032,410 @@
       "indexes": [
         "CREATE INDEX idx_kit_items_kit ON material_kit_items (kit)"
       ]
+    },
+    {
+      "name": "transactions",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "update": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "delete": "@request.auth.id != '' && @request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "client",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "clients"
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "kind",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "CAPITAL",
+            "CONSUMO",
+            "SERVICO",
+            "DINHEIRO"
+          ]
+        },
+        {
+          "name": "item_type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "PRODUTO",
+            "SERVICO"
+          ]
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "details",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "quantity",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "unit_price",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "work_order_ref",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "quote_ref",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sent_to_finance",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "PENDENTE",
+            "ENVIADA"
+          ]
+        },
+        {
+          "name": "sent_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "legacy_row",
+          "type": "text",
+          "required": false,
+          "system": false
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "quotes",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "update": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "delete": "@request.auth.id != '' && @request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "client",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "clients"
+        },
+        {
+          "name": "number",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "items",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "ORCAMENTO",
+            "PEDIDO",
+            "ENTREGUE",
+            "FATURADO",
+            "CANCELADO"
+          ]
+        },
+        {
+          "name": "payment_terms",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "delivery_terms",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "validity_days",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "delivered_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "invoiced_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "delivered_by_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "delivered_by_role",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "signature_client",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "signature_deliverer",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "photos",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sent_to_finance",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "PENDENTE",
+            "ENVIADA"
+          ]
+        },
+        {
+          "name": "work_order",
+          "type": "text",
+          "required": false,
+          "system": false
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "bills",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "update": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "delete": "@request.auth.id != '' && @request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "supplier",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "category",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "FORNECEDOR",
+            "ALUGUEL",
+            "ENERGIA",
+            "AGUA",
+            "TELEFONE",
+            "SALARIO",
+            "IMPOSTO",
+            "OUTRO"
+          ]
+        },
+        {
+          "name": "amount",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "due_date",
+          "type": "date",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "paid_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "ABERTA",
+            "PAGA",
+            "ATRASADA"
+          ]
+        },
+        {
+          "name": "receipt",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "settings",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "update": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "delete": "@request.auth.id != '' && @request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "razao_social",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "nome_fantasia",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cnpj",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ie",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "endereco",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "telefone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "diretor_nome",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "logo",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "assinatura_diretor",
+          "type": "file",
+          "required": false,
+          "system": false
+        }
+      ],
+      "indexes": []
     }
   ]
 }
