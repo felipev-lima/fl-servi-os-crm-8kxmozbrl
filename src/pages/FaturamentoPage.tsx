@@ -84,9 +84,18 @@ export default function FaturamentoPage() {
       ])
       setLancamentos(tx.items)
       setMateriais(ms)
-      setImpProduto(String((emp as any).tax_product_percent ?? 8))
-      setImpServico(String((emp as any).tax_service_percent ?? 11))
-      setOperacional(String((emp as any).operational_percent ?? 3))
+      /**
+       * `?? 8` não servia: o PocketBase devolve `0` para campo numérico vazio,
+       * não `null`. Assim o padrão do Felipe (8/11/3) era sobrescrito por zero
+       * e o lucro saía sem desconto de imposto nenhum.
+       */
+      const pct = (v: any, padrao: number) => {
+        const n = Number(v)
+        return v === undefined || v === null || v === '' || n === 0 ? padrao : n
+      }
+      setImpProduto(String(pct((emp as any).tax_product_percent, 8)))
+      setImpServico(String(pct((emp as any).tax_service_percent, 11)))
+      setOperacional(String(pct((emp as any).operational_percent, 3)))
     } finally {
       setCarregando(false)
     }
