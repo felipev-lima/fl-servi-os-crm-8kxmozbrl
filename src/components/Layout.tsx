@@ -1,13 +1,177 @@
-/* Layout Component - A component that wraps the main content of the app
-   - Use this file to add a header, footer, or other elements that should be present on every page
-   - This component is used in the App.tsx file to wrap the main content of the app */
-
-import { Outlet } from 'react-router-dom'
+import React, { useState } from 'react'
+import { Outlet, Link, useLocation } from 'react-router-dom'
+import { useAuth } from '@/contexts/AuthContext'
+import { Button } from '@/components/ui/button'
+import {
+  LayoutDashboard,
+  ClipboardList,
+  Building2,
+  Wrench,
+  Package,
+  CalendarDays,
+  LogOut,
+  LogIn,
+  Menu,
+  X,
+  User,
+  Shield,
+  FileText,
+  UsersRound,
+  Layers,
+  FileSpreadsheet,
+  Plug,
+} from 'lucide-react'
 
 export default function Layout() {
+  const { user, isAuthenticated, logout, isAdmin } = useAuth()
+  const location = useLocation()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const navigation = [
+    { name: 'Painel', href: '/', icon: LayoutDashboard, adminOnly: false },
+    { name: 'Ordens de Serviço', href: '/ordens', icon: ClipboardList, adminOnly: false },
+    { name: 'Clientes', href: '/clientes', icon: Building2, adminOnly: false },
+    { name: 'Técnicos', href: '/tecnicos', icon: Wrench, adminOnly: false },
+    { name: 'Materiais', href: '/materiais', icon: Package, adminOnly: false },
+    { name: 'Listas de Material', href: '/listas-material', icon: Layers, adminOnly: false },
+    { name: 'Manutenções Futuras', href: '/manutencoes', icon: CalendarDays, adminOnly: false },
+    { name: 'Planilha', href: '/planilha', icon: FileSpreadsheet, adminOnly: true },
+    { name: 'Conectores', href: '/conectores', icon: Plug, adminOnly: true },
+    { name: 'Usuários', href: '/usuarios', icon: UsersRound, adminOnly: true },
+  ].filter((item) => !item.adminOnly || isAdmin)
+
+  const isActive = (path: string) => {
+    if (path === '/') return location.pathname === '/'
+    return location.pathname.startsWith(path)
+  }
+
   return (
-    <main className="flex flex-col min-h-screen">
-      <Outlet />
-    </main>
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+      {/* Cabeçalho Superior com Identidade F. L. SERVIÇOS (#0F6A3A / #2E8B57) */}
+      <header className="sticky top-0 z-40 bg-gradient-to-r from-[#0F6A3A] to-[#2E8B57] text-white shadow-md print:hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link to="/" className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-xl bg-white text-[#0F6A3A] flex items-center justify-center font-black text-lg shadow-inner">
+                FL
+              </div>
+              <div>
+                <span className="font-black text-lg tracking-tight uppercase block leading-none">
+                  F. L. SERVIÇOS
+                </span>
+                <span className="text-[10px] text-white/80 font-medium tracking-wider uppercase block">
+                  Macaé / RJ
+                </span>
+              </div>
+            </Link>
+          </div>
+
+          {/* Navegação Desktop */}
+          <nav className="hidden lg:flex items-center gap-1">
+            {navigation.map((item) => {
+              const Icon = item.icon
+              const active = isActive(item.href)
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                    active
+                      ? 'bg-white/20 text-white shadow-sm'
+                      : 'text-white/80 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {item.name}
+                </Link>
+              )
+            })}
+          </nav>
+
+          {/* Usuário / Login */}
+          <div className="flex items-center gap-2">
+            {isAuthenticated && user ? (
+              <div className="flex items-center gap-2">
+                <div className="hidden sm:flex flex-col items-end text-xs">
+                  <span className="font-bold text-white leading-tight">{user.name}</span>
+                  <span className="text-[10px] text-emerald-200 uppercase font-semibold">
+                    {user.role}
+                  </span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={logout}
+                  className="text-white hover:bg-white/10 h-8 px-2 text-xs gap-1"
+                  title="Sair da conta"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span className="hidden sm:inline">Sair</span>
+                </Button>
+              </div>
+            ) : (
+              <Button
+                asChild
+                size="sm"
+                className="bg-white text-[#0F6A3A] hover:bg-white/95 font-bold text-xs h-8 shadow"
+              >
+                <Link to="/login" className="flex items-center gap-1">
+                  <LogIn className="w-3.5 h-3.5" /> Entrar
+                </Link>
+              </Button>
+            )}
+
+            {/* Botão Menu Mobile */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden text-white hover:bg-white/10 p-1.5 h-8 w-8"
+              aria-label="Menu"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </Button>
+          </div>
+        </div>
+
+        {/* Menu Mobile Dropdown */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden bg-[#0F6A3A] border-t border-white/10 px-4 py-3 space-y-1 animate-slide-down">
+            {navigation.map((item) => {
+              const Icon = item.icon
+              const active = isActive(item.href)
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold ${
+                    active ? 'bg-white/20 text-white' : 'text-white/80 hover:bg-white/10'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {item.name}
+                </Link>
+              )
+            })}
+          </div>
+        )}
+      </header>
+
+      {/* Conteúdo Principal */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 print:p-0">
+        <Outlet />
+      </main>
+
+      {/* Rodapé Fixo na tela */}
+      <footer className="bg-white border-t border-slate-200 py-4 text-center text-xs text-muted-foreground print:hidden">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
+          <span>
+            <strong>F. L. SERVIÇOS</strong> • Gestão de Ordens de Serviço e Laudos Técnicos — Macaé
+            / RJ
+          </span>
+          <span className="text-[11px]">Substituição AppSheet • Relatórios PDF V3</span>
+        </div>
+      </footer>
+    </div>
   )
 }

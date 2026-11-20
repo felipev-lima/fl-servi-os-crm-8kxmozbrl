@@ -1,0 +1,20 @@
+{
+  "name": "F. L. SERVIÇOS — Ordens de Serviço",
+  "short_name": "F. L. SERVIÇOS",
+  "description": "Gestão de ordens de serviço, clientes e materiais da F. L. SERVIÇOS — Macaé/RJ",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#0F6A3A",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

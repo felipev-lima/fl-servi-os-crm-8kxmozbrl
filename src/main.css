@@ -113,6 +113,37 @@
     padding: 0 !important;
     margin: 0 !important;
   }
+
+  /* ÁREA SEGURA DO iPHONE
+     O index.html usa viewport-fit=cover, então a página ocupa a tela inteira —
+     inclusive o espaço da barra de status (hora, sinal, bateria) e o da barra
+     inferior do iPhone. Sem este respiro, o cabeçalho e os botões ficam
+     embaixo dos ícones do sistema e não dá para tocar.
+     env() vale 0 nos aparelhos que não têm notch, então não atrapalha. */
+  html {
+    background-color: #0f6a3a;
+  }
+
+  /* Com o modal aberto, o fundo não rola junto — no celular isso fazia a tela
+     "tremer" e o formulário parecer travado ao abrir o teclado. */
+  body[data-scroll-locked] {
+    overscroll-behavior: contain;
+  }
+
+  body {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  /* O cabeçalho é sticky: ao rolar, o conteúdo passa por baixo dele, mas ele
+     precisa continuar abaixo da barra de status. */
+  header.sticky {
+    top: env(safe-area-inset-top, 0px);
+  }
 }
 
 @layer utilities {
