@@ -81,13 +81,13 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Top Banner de Boas-vindas */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gradient-to-r from-[#0F6A3A] to-[#2E8B57] text-white p-5 rounded-2xl shadow-md">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gradient-to-r from-[#0B3D91] to-[#1E6FD9] text-white p-5 rounded-2xl shadow-md">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="bg-white/20 text-white text-[11px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">
               {user?.role || 'Usuário'}
             </span>
-            <span className="text-white/80 text-xs">F. L. SERVIÇOS • Macaé/RJ</span>
+            <span className="text-white/80 text-xs">FL SERVIÇOS • CRM • Macaé/RJ</span>
           </div>
           <h1 className="text-2xl font-black tracking-tight">Olá, {user?.name || 'Técnico'}!</h1>
           <p className="text-white/90 text-xs mt-0.5 max-w-xl">
@@ -99,10 +99,10 @@ export default function Dashboard() {
         {isTechnician && (
           <Button
             asChild
-            className="bg-white text-[#0F6A3A] hover:bg-white/95 font-bold shadow-lg transition-transform active:scale-95"
+            className="bg-white text-[#0B3D91] hover:bg-white/95 font-bold shadow-lg transition-transform active:scale-95"
           >
             <Link to="/ordens/nova" className="flex items-center gap-2">
-              <PlusCircle className="w-4 h-4 text-[#0F6A3A]" />
+              <PlusCircle className="w-4 h-4 text-[#0B3D91]" />
               Nova Ordem de Serviço
             </Link>
           </Button>
@@ -187,16 +187,16 @@ export default function Dashboard() {
 
         {/* Atendimentos do Dia */}
         <Link to="/ordens?status=HOJE" className="block">
-          <Card className="border-l-4 border-l-[#0F6A3A] bg-[#0F6A3A]/5 hover:shadow-md hover:border-l-[#0F6A3A]/70 transition cursor-pointer h-full">
+          <Card className="border-l-4 border-l-[#0B3D91] bg-[#0B3D91]/5 hover:shadow-md hover:border-l-[#0B3D91]/70 transition cursor-pointer h-full">
             <CardContent className="p-4 flex flex-col justify-between h-full">
-              <div className="flex items-center justify-between text-[#0F6A3A]">
+              <div className="flex items-center justify-between text-[#0B3D91]">
                 <span className="text-xs font-bold uppercase">
                   Hoje ({todayStr.slice(8, 10)}/{todayStr.slice(5, 7)})
                 </span>
-                <CalendarDays className="w-4 h-4 text-[#0F6A3A]" />
+                <CalendarDays className="w-4 h-4 text-[#0B3D91]" />
               </div>
-              <div className="text-2xl font-black text-[#0F6A3A] mt-2">{countHoje}</div>
-              <p className="text-[11px] text-[#0F6A3A]/80 mt-1 font-medium">Escaladas p/ hoje</p>
+              <div className="text-2xl font-black text-[#0B3D91] mt-2">{countHoje}</div>
+              <p className="text-[11px] text-[#0B3D91]/80 mt-1 font-medium">Escaladas p/ hoje</p>
             </CardContent>
           </Card>
         </Link>
@@ -231,12 +231,12 @@ export default function Dashboard() {
                 <Link
                   key={order.id}
                   to={`/ordens/${order.id}`}
-                  className="block p-3.5 bg-card border rounded-xl hover:border-[#0F6A3A]/50 hover:shadow-md transition-all group"
+                  className="block p-3.5 bg-card border rounded-xl hover:border-[#0B3D91]/50 hover:shadow-md transition-all group"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-sm text-[#0F6A3A]">
+                        <span className="font-mono font-bold text-sm text-[#0B3D91]">
                           OS #{order.order_number}
                         </span>
                         <span className="text-xs font-medium text-foreground">
@@ -255,7 +255,7 @@ export default function Dashboard() {
                         )}
                         {order.location_address && (
                           <span className="flex items-center gap-1 line-clamp-1">
-                            <MapPin className="w-3 h-3 text-[#0F6A3A]" /> Macaé/RJ
+                            <MapPin className="w-3 h-3 text-[#0B3D91]" /> Macaé/RJ
                           </span>
                         )}
                       </div>
@@ -265,7 +265,7 @@ export default function Dashboard() {
                       <Badge className={`text-[10px] px-2 py-0.5 font-bold border ${status.color}`}>
                         {status.label}
                       </Badge>
-                      <span className="text-[11px] text-muted-foreground group-hover:text-[#0F6A3A] font-medium flex items-center gap-1">
+                      <span className="text-[11px] text-muted-foreground group-hover:text-[#0B3D91] font-medium flex items-center gap-1">
                         Acessar <ArrowRight className="w-3 h-3" />
                       </span>
                     </div>
@@ -313,7 +313,7 @@ export default function Dashboard() {
                 </div>
                 <p className="text-xs text-slate-700 font-medium">{m.maintenance_type}</p>
                 <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                  <Calendar className="w-3.5 h-3.5 text-[#0F6A3A]" />
+                  <Calendar className="w-3.5 h-3.5 text-[#0B3D91]" />
                   <span>
                     {m.scheduled_date
                       ? new Date(m.scheduled_date).toLocaleDateString('pt-BR')
@@ -341,11 +341,11 @@ export default function Dashboard() {
                 <FileText className="w-4 h-4" /> Relatório Técnico PDF V3
               </div>
               <p className="text-slate-300 leading-relaxed">
-                Substituição do antigo AppSheet: relatórios agora contam com fotos, assinatura do
-                cliente, localização GPS e padronização verde A4 (#0F6A3A e #2E8B57).
+                CRM da FL SERVIÇOS: ordens de serviço, vendas de produto, orçamentos e faturamento
+                com imposto e lucro líquido.
               </p>
               <div className="pt-2 text-[11px] text-slate-400 border-t border-slate-700 flex justify-between">
-                <span>F. L. SERVIÇOS • Macaé/RJ</span>
+                <span>FL SERVIÇOS • Macaé/RJ</span>
                 <span className="text-emerald-400 font-semibold">100% Operacional</span>
               </div>
             </CardContent>
