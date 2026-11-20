@@ -29,6 +29,7 @@ import ConfiguracoesPage from './pages/ConfiguracoesPage'
 import ConferenciaOSPage from './pages/ConferenciaOSPage'
 import CustosPage from './pages/CustosPage'
 import EstoquePage from './pages/EstoquePage'
+import ContatosPage from './pages/ContatosPage'
 import ComissoesPage from './pages/ComissoesPage'
 import LucroPage from './pages/LucroPage'
 import FaturamentoPage from './pages/FaturamentoPage'
@@ -69,6 +70,7 @@ const App = () => (
             <Route path="/conferencia" element={<ConferenciaOSPage />} />
             <Route path="/custos" element={<CustosPage />} />
             <Route path="/estoque" element={<EstoquePage />} />
+            <Route path="/contatos" element={<ContatosPage />} />
             <Route path="/comissoes" element={<ComissoesPage />} />
             <Route path="/lucro" element={<LucroPage />} />
             <Route path="/faturamento" element={<FaturamentoPage />} />

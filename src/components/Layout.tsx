@@ -26,6 +26,7 @@ import {
   Percent,
   BarChart3,
   Boxes,
+  Phone,
 } from 'lucide-react'
 import { getEmpresa, urlArquivo, type Empresa } from '@/lib/empresa'
 
@@ -61,6 +62,7 @@ export default function Layout() {
     { name: 'Ordens de Serviço', href: '/ordens', icon: ClipboardList, adminOnly: false },
     { name: 'Agenda', href: '/agenda', icon: CalendarDays, adminOnly: false },
     { name: 'Clientes', href: '/clientes', icon: Building2, adminOnly: false },
+    { name: 'Contatos', href: '/contatos', icon: Phone, adminOnly: true },
     { name: 'Técnicos', href: '/tecnicos', icon: Wrench, adminOnly: false },
     { name: 'Materiais', href: '/materiais', icon: Package, adminOnly: false },
     { name: 'Listas de Material', href: '/listas-material', icon: Layers, adminOnly: false },
