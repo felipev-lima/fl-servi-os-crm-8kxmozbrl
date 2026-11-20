@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-20T03:52:22.598Z",
+  "generatedAt": "2026-11-20T03:53:18.562Z",
   "collections": [
     {
       "name": "users",
@@ -1431,6 +1431,86 @@
         {
           "name": "assinatura_diretor",
           "type": "file",
+          "required": false,
+          "system": false
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "client_summary",
+      "type": "view",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "nickname",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "document",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "phone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "city",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "capital",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "consumo",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "servico",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "dinheiro",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "saldo",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "lancamentos",
+          "type": "number",
           "required": false,
           "system": false
         }
