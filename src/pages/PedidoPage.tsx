@@ -36,6 +36,7 @@ import { brl, dataBR } from '@/types/crm'
 import { enderecoCompleto, linkMapa, temEndereco } from '@/lib/local'
 import { prepararFoto } from '@/lib/imagem'
 import { SignaturePad } from '@/components/SignaturePad'
+import { ProdutoRapidoDialog } from '@/components/ProdutoRapidoDialog'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -105,6 +106,9 @@ export default function PedidoPage() {
 
   // busca de cliente
   const [buscaCliente, setBuscaCliente] = useState('')
+
+  /** cadastro rápido de produto, sem sair do pedido */
+  const [novoProdutoAberto, setNovoProdutoAberto] = useState(false)
 
   // busca de produto
   const [busca, setBusca] = useState('')
@@ -579,17 +583,32 @@ export default function PedidoPage() {
           </h2>
 
           <div className="space-y-1.5 rounded-lg border bg-slate-50 p-2">
-            <div className="relative">
-              <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={busca}
-                onChange={(e) => {
-                  setBusca(e.target.value)
-                  setProdutoSel(null)
-                }}
-                placeholder="Buscar produto..."
-                className="h-8 pl-7 text-[11px]"
-              />
+            {/*
+              Campo de busca + BOTÃO DE MAIS para cadastrar produto na hora.
+              O Felipe pediu o atalho aqui dentro do pedido: quando o produto
+              não existe no catálogo, ele cria sem sair da tela.
+            */}
+            <div className="flex gap-1.5">
+              <div className="relative flex-1">
+                <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={busca}
+                  onChange={(e) => {
+                    setBusca(e.target.value)
+                    setProdutoSel(null)
+                  }}
+                  placeholder="Buscar produto..."
+                  className="h-8 pl-7 text-[11px]"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setNovoProdutoAberto(true)}
+                title="Cadastrar produto novo"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#0B3D91] text-white transition hover:bg-[#0B3D91]/90"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
             </div>
             {busca && !produtoSel && resultados.length > 0 && (
               <div className="max-h-40 overflow-y-auto rounded border bg-white">
@@ -879,6 +898,20 @@ export default function PedidoPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* cadastro rápido de produto: no pedido, com preço se for admin */}
+      <ProdutoRapidoDialog
+        open={novoProdutoAberto}
+        onOpenChange={setNovoProdutoAberto}
+        podeVerValores={podeVerValores}
+        onCriado={async (novo) => {
+          // o produto criado entra na lista na hora, já selecionado
+          setMateriais((prev) => [novo, ...prev])
+          setProdutoSel(novo)
+          setBusca(novo.name)
+          setPreco(precoBR(Number((novo as any).price || 0)))
+        }}
+      />
 
       {/* -------- o talão para impressão -------- */}
       <Card className="print:border-0 print:shadow-none">

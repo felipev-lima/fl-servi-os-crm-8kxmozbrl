@@ -35,14 +35,18 @@ export function ProdutoRapidoDialog({
   open,
   onOpenChange,
   onCriado,
+  podeVerValores = false,
 }: {
   open: boolean
   onOpenChange: (v: boolean) => void
   onCriado: (m: Material) => void
+  /** Administrador informa o preço de venda; o custo é calculado pela marcação */
+  podeVerValores?: boolean
 }) {
   const [nome, setNome] = useState('')
   const [unidade, setUnidade] = useState<(typeof UNIDADES)[number]>('UN')
   const [defaultKind, setDefaultKind] = useState<'' | MaterialKind>('')
+  const [preco, setPreco] = useState('')
   const [salvando, setSalvando] = useState(false)
 
   const salvar = async (e: React.FormEvent) => {
@@ -54,19 +58,34 @@ export function ProdutoRapidoDialog({
     }
     setSalvando(true)
     try {
+      /**
+       * Preço informado pelo ADMIN: o custo é derivado na hora pela marcação
+       * de 60% (preço ÷ 1,6) e o produto já entra pronto, sem pendência.
+       *
+       * Técnico não informa preço: entra zerado e MARCADO para revisão.
+       */
+      const precoNum = Number(String(preco).replace(',', '.')) || 0
+      const comPreco = podeVerValores && precoNum > 0
       const criado = await createMaterial({
         name: limpo,
         unit: unidade,
-        price: 0,
+        price: comPreco ? precoNum : 0,
+        cost: comPreco ? Math.round((precoNum / 1.6) * 100) / 100 : 0,
+        cost_estimated: comPreco,
         category: 'GERAL',
         default_kind: defaultKind || undefined,
-        pending_review: true,
+        pending_review: !comPreco,
       })
-      toast.success('Produto cadastrado! O administrador vai revisar depois.')
+      toast.success(
+        comPreco
+          ? 'Produto cadastrado com preço.'
+          : 'Produto cadastrado! Vai aparecer em vermelho para revisão.',
+      )
       onCriado(criado)
       setNome('')
       setUnidade('UN')
       setDefaultKind('')
+      setPreco('')
       onOpenChange(false)
     } catch (err: any) {
       toast.error(err?.message || 'Erro ao cadastrar o produto.')
@@ -129,9 +148,46 @@ export function ProdutoRapidoDialog({
             </select>
           </div>
 
-          <p className="text-[11px] text-muted-foreground leading-snug bg-amber-50 border border-amber-200 rounded p-2">
-            O produto entra marcado como <strong>aguardando revisão</strong>. O administrador
-            completa categoria e preço depois — não precisa preencher agora.
+          {podeVerValores && (
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold">Preço de venda (R$)</Label>
+              <Input
+                inputMode="decimal"
+                placeholder="0,00"
+                value={preco}
+                onChange={(e) => setPreco(e.target.value)}
+                className="h-10 text-sm"
+              />
+              {Number(String(preco).replace(',', '.')) > 0 && (
+                <p className="text-[10px] text-emerald-700">
+                  Custo calculado pela marcação de 60%:{' '}
+                  <strong>
+                    R${' '}
+                    {(Number(String(preco).replace(',', '.')) / 1.6).toFixed(2).replace('.', ',')}
+                  </strong>
+                </p>
+              )}
+            </div>
+          )}
+
+          <p
+            className={`text-[11px] leading-snug rounded p-2 ${
+              podeVerValores
+                ? 'bg-emerald-50 border border-emerald-200 text-emerald-900'
+                : 'bg-amber-50 border border-amber-200 text-muted-foreground'
+            }`}
+          >
+            {podeVerValores ? (
+              <>
+                Com preço preenchido, o produto já entra pronto no catálogo. Deixando zerado, ele
+                fica <strong>em vermelho para revisão</strong>.
+              </>
+            ) : (
+              <>
+                O produto entra marcado como <strong>aguardando revisão</strong> (em vermelho). O
+                administrador completa categoria e preço depois.
+              </>
+            )}
           </p>
 
           <DialogFooter className="pt-1">
