@@ -48,6 +48,7 @@ export default function Layout() {
     { name: 'Contas a pagar', href: '/contas-pagar', icon: Wallet, adminOnly: true },
     { name: 'Fluxo de caixa', href: '/fluxo-caixa', icon: TrendingUp, adminOnly: true },
     { name: 'Conferência OS', href: '/conferencia', icon: CheckSquare, adminOnly: true },
+    { name: 'Custos e margem', href: '/custos', icon: TrendingUp, adminOnly: true },
     { name: 'Manutenções Futuras', href: '/manutencoes', icon: CalendarDays, adminOnly: true },
     { name: 'Planilha', href: '/planilha', icon: FileSpreadsheet, adminOnly: true },
     { name: 'Conectores', href: '/conectores', icon: Plug, adminOnly: true },

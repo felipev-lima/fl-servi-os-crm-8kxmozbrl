@@ -27,6 +27,7 @@ import FluxoCaixaPage from './pages/FluxoCaixaPage'
 import AgendaPage from './pages/AgendaPage'
 import ConfiguracoesPage from './pages/ConfiguracoesPage'
 import ConferenciaOSPage from './pages/ConferenciaOSPage'
+import CustosPage from './pages/CustosPage'
 import NotFound from './pages/NotFound'
 
 const App = () => (
@@ -60,6 +61,7 @@ const App = () => (
             <Route path="/agenda" element={<AgendaPage />} />
             <Route path="/configuracoes" element={<ConfiguracoesPage />} />
             <Route path="/conferencia" element={<ConferenciaOSPage />} />
+            <Route path="/custos" element={<CustosPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
