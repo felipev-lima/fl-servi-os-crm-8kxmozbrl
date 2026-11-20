@@ -19,7 +19,14 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getClients, getMaterials, updateMaterial } from '@/services/api'
+import {
+  getClients,
+  getMaterials,
+  updateMaterial,
+  getTechnicians,
+  getFileUrl,
+} from '@/services/api'
+import { useAuth } from '@/contexts/AuthContext'
 import { createQuote, getQuote, updateQuote, totalDoDocumento, getClientes } from '@/services/crm'
 import { getEmpresa, type Empresa } from '@/lib/empresa'
 import type { Material } from '@/types/flservicos'
@@ -48,6 +55,7 @@ import {
   CheckCircle2,
   MapPin,
   Navigation,
+  Images,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -61,6 +69,19 @@ export default function PedidoPage() {
   const navigate = useNavigate()
   const ehNovo = !id || id === 'novo'
 
+  /**
+   * VALORES SÓ PARA ADMINISTRADOR (regra do Felipe, 20/11/2026).
+   *
+   * O técnico e os demais operadores veem o produto e a quantidade — o que
+   * precisam para separar e entregar. Preço, total e valor unitário não
+   * aparecem para eles: o faturamento é assunto do dono.
+   *
+   * `podeVerValores` governa a TELA; o talão impresso é montado depois e
+   * respeita a mesma flag.
+   */
+  const { isAdmin } = useAuth()
+  const podeVerValores = isAdmin
+
   const [empresa, setEmpresa] = useState<Empresa | null>(null)
   const [clientes, setClientes] = useState<Client[]>([])
   const [materiais, setMateriais] = useState<Material[]>([])
@@ -72,6 +93,8 @@ export default function PedidoPage() {
   const [itens, setItens] = useState<ItemLocal[]>([])
   const [obs, setObs] = useState('')
   const [entregador, setEntregador] = useState('')
+  const [entregadorId, setEntregadorId] = useState('')
+  const [tecnicos, setTecnicos] = useState<any[]>([])
   const [assinouCliente, setAssinouCliente] = useState(false)
   const [assinouEntregador, setAssinouEntregador] = useState(false)
   const [fotos, setFotos] = useState<File[]>([])
@@ -96,15 +119,22 @@ export default function PedidoPage() {
    */
   const canvasClienteRef = useRef<HTMLCanvasElement | null>(null)
   const canvasEntregadorRef = useRef<HTMLCanvasElement | null>(null)
-  const arquivoRef = useRef<HTMLInputElement>(null)
+  const cameraRef = useRef<HTMLInputElement>(null)
+  const galeriaRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     ;(async () => {
       try {
-        const [e, c, m] = await Promise.all([getEmpresa(), getClientes(), getMaterials()])
+        const [e, c, m, t] = await Promise.all([
+          getEmpresa(),
+          getClientes(),
+          getMaterials(),
+          getTechnicians(),
+        ])
         setEmpresa(e)
         setClientes(c)
         setMateriais(m)
+        setTecnicos(t.filter((x: any) => x.active !== false))
         if (!ehNovo && id) {
           const q = await getQuote(id)
           setSalvoId(q.id)
@@ -165,6 +195,18 @@ export default function PedidoPage() {
 
   const total = itens.reduce((s, i) => s + Number(i.quantity) * Number(i.unit_price), 0)
   const cliente = clientes.find((c) => c.id === clienteId)
+
+  /**
+   * Rubrica do técnico que vai entregar.
+   *
+   * Fica cadastrada em `technicians.signature` (desenhada uma vez). Aqui só
+   * montamos a URL do arquivo — nada de pedir para assinar de novo.
+   */
+  const rubricaEntregador = useMemo(() => {
+    const t = tecnicos.find((x) => x.id === entregadorId)
+    if (!t?.signature) return ''
+    return getFileUrl('technicians', t.id, t.signature)
+  }, [entregadorId, tecnicos])
 
   /**
    * Preço sempre com DUAS casas.
@@ -527,7 +569,9 @@ export default function PedidoPage() {
                 ))}
               </div>
             )}
-            <div className="grid grid-cols-3 gap-1.5">
+            <div
+              className={podeVerValores ? 'grid grid-cols-3 gap-1.5' : 'grid grid-cols-2 gap-1.5'}
+            >
               <div>
                 <Label className="text-[8px] text-muted-foreground">Qtd</Label>
                 <Input
@@ -538,16 +582,18 @@ export default function PedidoPage() {
                   className="h-8 text-[11px]"
                 />
               </div>
-              <div>
-                <Label className="text-[8px] text-muted-foreground">Preço un.</Label>
-                <Input
-                  inputMode="decimal"
-                  value={preco}
-                  onChange={(e) => setPreco(e.target.value)}
-                  placeholder="0,00"
-                  className="h-8 text-[11px]"
-                />
-              </div>
+              {podeVerValores && (
+                <div>
+                  <Label className="text-[8px] text-muted-foreground">Preço un.</Label>
+                  <Input
+                    inputMode="decimal"
+                    value={preco}
+                    onChange={(e) => setPreco(e.target.value)}
+                    placeholder="0,00"
+                    className="h-8 text-[11px]"
+                  />
+                </div>
+              )}
               <div className="flex items-end">
                 <Button
                   onClick={adicionar}
@@ -574,15 +620,23 @@ export default function PedidoPage() {
                         className="h-6 w-14 text-[10px]"
                       />
                       <span className="text-[9px] text-muted-foreground">×</span>
-                      <Input
-                        inputMode="decimal"
-                        value={precoBR(it.unit_price)}
-                        onChange={(e) => alterarItem(idx, 'unit_price', e.target.value)}
-                        className="h-6 w-20 text-[10px]"
-                      />
-                      <span className="ml-auto font-mono text-[10px] font-bold">
-                        {brl(Number(it.quantity) * Number(it.unit_price))}
-                      </span>
+                      {podeVerValores ? (
+                        <>
+                          <Input
+                            inputMode="decimal"
+                            value={precoBR(it.unit_price)}
+                            onChange={(e) => alterarItem(idx, 'unit_price', e.target.value)}
+                            className="h-6 w-20 text-[10px]"
+                          />
+                          <span className="ml-auto font-mono text-[10px] font-bold">
+                            {brl(Number(it.quantity) * Number(it.unit_price))}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="ml-auto text-[9px] font-semibold text-muted-foreground">
+                          {it.unidade || 'UN'}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <button
@@ -595,10 +649,12 @@ export default function PedidoPage() {
                   </button>
                 </div>
               ))}
-              <div className="flex items-center justify-between rounded-lg bg-[#0B3D91] px-2 py-1.5 text-white">
-                <span className="text-[10px] font-bold uppercase">Total</span>
-                <span className="font-mono text-sm font-black">{brl(total)}</span>
-              </div>
+              {podeVerValores && (
+                <div className="flex items-center justify-between rounded-lg bg-[#0B3D91] px-2 py-1.5 text-white">
+                  <span className="text-[10px] font-bold uppercase">Total</span>
+                  <span className="font-mono text-sm font-black">{brl(total)}</span>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
@@ -613,10 +669,37 @@ export default function PedidoPage() {
 
           <div className="space-y-1">
             <Label className="text-[10px] font-semibold">Quem entregou</Label>
+            {/*
+              Lista dos técnicos cadastrados: clicar escolhe a pessoa e já traz
+              a rubrica dela para o documento. Digitar à mão continua valendo
+              para quem não é da equipe (motorista terceirizado, por exemplo).
+            */}
+            <div className="flex flex-wrap gap-1">
+              {tecnicos.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => {
+                    setEntregadorId(t.id)
+                    setEntregador(t.name)
+                  }}
+                  className={`rounded-full border px-2 py-1 text-[10px] font-semibold transition ${
+                    entregadorId === t.id
+                      ? 'border-[#0B3D91] bg-[#0B3D91] text-white'
+                      : 'bg-white hover:border-[#0B3D91]/50'
+                  }`}
+                >
+                  {t.name.split(' ')[0]}
+                </button>
+              ))}
+            </div>
             <Input
               value={entregador}
-              onChange={(e) => setEntregador(e.target.value)}
-              placeholder="Nome do técnico ou responsável"
+              onChange={(e) => {
+                setEntregador(e.target.value)
+                setEntregadorId('')
+              }}
+              placeholder="Ou digite o nome de quem entregou"
               className="h-9 text-xs"
             />
           </div>
@@ -624,13 +707,37 @@ export default function PedidoPage() {
           <div className="grid gap-2 sm:grid-cols-2">
             <div className="space-y-1">
               <Label className="text-[10px] font-semibold">Assinatura de quem entregou</Label>
-              <div className="rounded-lg border bg-white p-1">
-                <SignaturePad
-                  onSave={() => setAssinouEntregador(true)}
-                  onCanvasReady={(c) => (canvasEntregadorRef.current = c)}
-                />
-              </div>
-              {assinouEntregador && <p className="text-[9px] text-emerald-700">✓ assinado</p>}
+              {/*
+                Técnico escolhido: usa a RUBRICA já cadastrada dele.
+                Ele desenhou uma vez no cadastro; repetir o desenho a cada
+                pedido é trabalho à toa e sai diferente do documento oficial.
+                Sem rubrica cadastrada, cai no campo de assinar.
+              */}
+              {entregador && rubricaEntregador ? (
+                <div className="flex flex-col items-center rounded-lg border bg-white p-2">
+                  <img
+                    src={rubricaEntregador}
+                    alt={`Rubrica de ${entregador}`}
+                    className="max-h-16 object-contain"
+                  />
+                  <p className="mt-1 text-[9px] font-semibold">{entregador}</p>
+                  <p className="text-[8px] text-muted-foreground">rubrica cadastrada</p>
+                </div>
+              ) : entregador ? (
+                <div className="rounded-lg border bg-white p-1">
+                  <SignaturePad
+                    onSave={() => setAssinouEntregador(true)}
+                    onCanvasReady={(c) => (canvasEntregadorRef.current = c)}
+                  />
+                </div>
+              ) : (
+                <p className="rounded-lg border border-dashed p-3 text-center text-[10px] text-muted-foreground">
+                  Escolha quem entregou para carregar a rubrica.
+                </p>
+              )}
+              {assinouEntregador && !rubricaEntregador && (
+                <p className="text-[9px] text-emerald-700">✓ assinado</p>
+              )}
             </div>
             <div className="space-y-1">
               <Label className="text-[10px] font-semibold">
@@ -654,8 +761,15 @@ export default function PedidoPage() {
 
           <div className="space-y-1">
             <Label className="text-[10px] font-semibold">Fotos da entrega</Label>
+            {/*
+              DOIS botões separados (pedido do Felipe, 20/11/2026).
+
+              Antes havia um só, com `capture="environment"`: no celular isso
+              abre a câmera direto e nunca a galeria. Separando os inputs, o
+              primeiro abre a câmera ao vivo e o segundo a galeria de fotos.
+            */}
             <input
-              ref={arquivoRef}
+              ref={cameraRef}
               type="file"
               accept="image/*"
               multiple
@@ -664,17 +778,42 @@ export default function PedidoPage() {
               onChange={(e) => {
                 const fs = Array.from(e.target.files || [])
                 setFotos((prev) => [...prev, ...fs])
+                e.target.value = ''
               }}
             />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => arquivoRef.current?.click()}
-              className="h-8 w-full gap-1.5 text-[11px]"
-            >
-              <Camera className="h-3.5 w-3.5" /> Tirar / escolher foto ({fotos.length})
-            </Button>
+            <input
+              ref={galeriaRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                const fs = Array.from(e.target.files || [])
+                setFotos((prev) => [...prev, ...fs])
+                e.target.value = ''
+              }}
+            />
+            <div className="grid grid-cols-2 gap-1.5">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => cameraRef.current?.click()}
+                className="h-8 gap-1.5 text-[11px]"
+              >
+                <Camera className="h-3.5 w-3.5" /> Tirar foto
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => galeriaRef.current?.click()}
+                className="h-8 gap-1.5 text-[11px]"
+              >
+                <Images className="h-3.5 w-3.5" /> Da galeria
+              </Button>
+            </div>
+            <p className="text-[9px] text-muted-foreground">{fotos.length} foto(s) anexada(s)</p>
             {fotos.length > 0 && (
               <p className="text-[9px] text-muted-foreground">
                 {fotos.map((f) => f.name).join(', ')}
@@ -756,12 +895,16 @@ export default function PedidoPage() {
                   <th className="border p-1 text-right" style={{ width: 40 }}>
                     QTD
                   </th>
-                  <th className="border p-1 text-right" style={{ width: 60 }}>
-                    UNIT.
-                  </th>
-                  <th className="border p-1 text-right" style={{ width: 65 }}>
-                    TOTAL
-                  </th>
+                  {podeVerValores && (
+                    <>
+                      <th className="border p-1 text-right" style={{ width: 60 }}>
+                        UNIT.
+                      </th>
+                      <th className="border p-1 text-right" style={{ width: 65 }}>
+                        TOTAL
+                      </th>
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -769,10 +912,14 @@ export default function PedidoPage() {
                   <tr key={i}>
                     <td className="border p-1">{it.nome}</td>
                     <td className="border p-1 text-right">{it.quantity}</td>
-                    <td className="border p-1 text-right">{brl(Number(it.unit_price))}</td>
-                    <td className="border p-1 text-right font-semibold">
-                      {brl(Number(it.quantity) * Number(it.unit_price))}
-                    </td>
+                    {podeVerValores && (
+                      <>
+                        <td className="border p-1 text-right">{brl(Number(it.unit_price))}</td>
+                        <td className="border p-1 text-right font-semibold">
+                          {brl(Number(it.quantity) * Number(it.unit_price))}
+                        </td>
+                      </>
+                    )}
                   </tr>
                 ))}
                 {itens.length === 0 && (
@@ -783,14 +930,18 @@ export default function PedidoPage() {
                   </tr>
                 )}
               </tbody>
-              <tfoot>
-                <tr className="bg-slate-100">
-                  <td className="border p-1 font-black" colSpan={3}>
-                    TOTAL DO PEDIDO
-                  </td>
-                  <td className="border p-1 text-right font-black text-[#0B3D91]">{brl(total)}</td>
-                </tr>
-              </tfoot>
+              {podeVerValores && (
+                <tfoot>
+                  <tr className="bg-slate-100">
+                    <td className="border p-1 font-black" colSpan={3}>
+                      TOTAL DO PEDIDO
+                    </td>
+                    <td className="border p-1 text-right font-black text-[#0B3D91]">
+                      {brl(total)}
+                    </td>
+                  </tr>
+                </tfoot>
+              )}
             </table>
 
             {obs && (
