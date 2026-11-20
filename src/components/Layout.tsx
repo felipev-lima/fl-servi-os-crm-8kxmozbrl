@@ -13,31 +13,46 @@ import {
   LogIn,
   Menu,
   X,
-  User,
-  Shield,
   FileText,
   UsersRound,
   Layers,
   FileSpreadsheet,
   Plug,
+  Receipt,
+  Wallet,
+  TrendingUp,
+  Settings,
 } from 'lucide-react'
 
 export default function Layout() {
   const { user, isAuthenticated, logout, isAdmin } = useAuth()
   const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const navigation = [
+  // Menu em dois grupos: OPERAÇÃO (o dia a dia, o que já existia na FL) e
+  // GESTÃO (o CRM: financeiro, orçamentos, relatórios). O técnico vê só
+  // operação; o financeiro é do dono.
+  const operacao = [
     { name: 'Painel', href: '/', icon: LayoutDashboard, adminOnly: false },
     { name: 'Ordens de Serviço', href: '/ordens', icon: ClipboardList, adminOnly: false },
+    { name: 'Agenda', href: '/agenda', icon: CalendarDays, adminOnly: false },
     { name: 'Clientes', href: '/clientes', icon: Building2, adminOnly: false },
     { name: 'Técnicos', href: '/tecnicos', icon: Wrench, adminOnly: false },
     { name: 'Materiais', href: '/materiais', icon: Package, adminOnly: false },
     { name: 'Listas de Material', href: '/listas-material', icon: Layers, adminOnly: false },
-    { name: 'Manutenções Futuras', href: '/manutencoes', icon: CalendarDays, adminOnly: false },
+  ]
+  const gestao = [
+    { name: 'Lançamentos', href: '/lancamentos', icon: Receipt, adminOnly: true },
+    { name: 'Orçamentos', href: '/orcamentos', icon: FileText, adminOnly: true },
+    { name: 'Relatórios', href: '/relatorios', icon: FileSpreadsheet, adminOnly: true },
+    { name: 'Contas a pagar', href: '/contas-pagar', icon: Wallet, adminOnly: true },
+    { name: 'Fluxo de caixa', href: '/fluxo-caixa', icon: TrendingUp, adminOnly: true },
+    { name: 'Manutenções Futuras', href: '/manutencoes', icon: CalendarDays, adminOnly: true },
     { name: 'Planilha', href: '/planilha', icon: FileSpreadsheet, adminOnly: true },
     { name: 'Conectores', href: '/conectores', icon: Plug, adminOnly: true },
+    { name: 'Configurações', href: '/configuracoes', icon: Settings, adminOnly: true },
     { name: 'Usuários', href: '/usuarios', icon: UsersRound, adminOnly: true },
-  ].filter((item) => !item.adminOnly || isAdmin)
+  ]
+  const navigation = [...operacao, ...gestao].filter((item) => !item.adminOnly || isAdmin)
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/'
@@ -46,17 +61,17 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
-      {/* Cabeçalho Superior com Identidade F. L. SERVIÇOS (#0F6A3A / #2E8B57) */}
-      <header className="sticky top-0 z-40 bg-gradient-to-r from-[#0F6A3A] to-[#2E8B57] text-white shadow-md print:hidden">
+      {/* Cabeçalho: identidade LM SERVIÇOS, azul #0B3D91 */}
+      <header className="sticky top-0 z-40 bg-gradient-to-r from-[#0B3D91] to-[#1E6FD9] text-white shadow-md print:hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link to="/" className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-xl bg-white text-[#0F6A3A] flex items-center justify-center font-black text-lg shadow-inner">
-                FL
+              <div className="w-10 h-10 rounded-xl bg-white text-[#0B3D91] flex items-center justify-center font-black text-lg shadow-inner">
+                LM
               </div>
               <div>
                 <span className="font-black text-lg tracking-tight uppercase block leading-none">
-                  F. L. SERVIÇOS
+                  LM SERVIÇOS
                 </span>
                 <span className="text-[10px] text-white/80 font-medium tracking-wider uppercase block">
                   Macaé / RJ
@@ -135,7 +150,7 @@ export default function Layout() {
 
         {/* Menu Mobile Dropdown */}
         {mobileMenuOpen && (
-          <div className="lg:hidden bg-[#0F6A3A] border-t border-white/10 px-4 py-3 space-y-1 animate-slide-down">
+          <div className="lg:hidden bg-[#0B3D91] border-t border-white/10 px-4 py-3 space-y-1 animate-slide-down">
             {navigation.map((item) => {
               const Icon = item.icon
               const active = isActive(item.href)
@@ -166,10 +181,9 @@ export default function Layout() {
       <footer className="bg-white border-t border-slate-200 py-4 text-center text-xs text-muted-foreground print:hidden">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
           <span>
-            <strong>F. L. SERVIÇOS</strong> • Gestão de Ordens de Serviço e Laudos Técnicos — Macaé
-            / RJ
+            <strong>LM SERVIÇOS</strong> • Gestão de OS, vendas e faturamento — Macaé / RJ
           </span>
-          <span className="text-[11px]">Substituição AppSheet • Relatórios PDF V3</span>
+          <span className="text-[11px]">CRM • Orçamentos, pedidos e financeiro</span>
         </div>
       </footer>
     </div>

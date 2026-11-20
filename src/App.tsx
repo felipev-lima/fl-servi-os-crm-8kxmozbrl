@@ -17,6 +17,15 @@ import FutureMaintenancesPage from './pages/FutureMaintenancesPage'
 import UsersPage from './pages/UsersPage'
 import PlanilhaPage from './pages/PlanilhaPage'
 import ConectoresPage from './pages/ConectoresPage'
+import LancamentosPage from './pages/LancamentosPage'
+import RelatoriosPage from './pages/RelatoriosPage'
+import PainelPage from './pages/PainelPage'
+import OrcamentosPage from './pages/OrcamentosPage'
+import OrcamentoDetalhePage from './pages/OrcamentoDetalhePage'
+import ContasPagarPage from './pages/ContasPagarPage'
+import FluxoCaixaPage from './pages/FluxoCaixaPage'
+import AgendaPage from './pages/AgendaPage'
+import ConfiguracoesPage from './pages/ConfiguracoesPage'
 import NotFound from './pages/NotFound'
 
 const App = () => (
@@ -39,6 +48,16 @@ const App = () => (
             <Route path="/usuarios" element={<UsersPage />} />
             <Route path="/planilha" element={<PlanilhaPage />} />
             <Route path="/conectores" element={<ConectoresPage />} />
+            {/* ---- CRM ---- */}
+            <Route path="/painel" element={<PainelPage />} />
+            <Route path="/lancamentos" element={<LancamentosPage />} />
+            <Route path="/relatorios" element={<RelatoriosPage />} />
+            <Route path="/orcamentos" element={<OrcamentosPage />} />
+            <Route path="/orcamentos/:id" element={<OrcamentoDetalhePage />} />
+            <Route path="/contas-pagar" element={<ContasPagarPage />} />
+            <Route path="/fluxo-caixa" element={<FluxoCaixaPage />} />
+            <Route path="/agenda" element={<AgendaPage />} />
+            <Route path="/configuracoes" element={<ConfiguracoesPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

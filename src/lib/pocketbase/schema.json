@@ -29,30 +29,21 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         },
         {
           "name": "role",
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": [
-            "admin",
-            "tecnico",
-            "consulta"
-          ]
+          "selectValues": ["admin", "tecnico", "consulta"]
         },
         {
           "name": "phone",
@@ -94,10 +85,7 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": [
-            "PF",
-            "PJ"
-          ]
+          "selectValues": ["PF", "PJ"]
         },
         {
           "name": "phone",
@@ -146,19 +134,14 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         },
         {
           "name": "nickname",
@@ -231,19 +214,14 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         },
         {
           "name": "signature",
@@ -285,16 +263,7 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": [
-            "UN",
-            "M",
-            "KG",
-            "L",
-            "CX",
-            "PC",
-            "PAR",
-            "ROLO"
-          ]
+          "selectValues": ["UN", "M", "KG", "L", "CX", "PC", "PAR", "ROLO"]
         },
         {
           "name": "category",
@@ -331,19 +300,14 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         },
         {
           "name": "pending_review",
@@ -356,11 +320,7 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": [
-            "CAPITAL",
-            "CONSUMO",
-            "SERVICO"
-          ]
+          "selectValues": ["CAPITAL", "CONSUMO", "SERVICO"]
         },
         {
           "name": "cost",
@@ -381,9 +341,7 @@
           "system": false
         }
       ],
-      "indexes": [
-        "CREATE INDEX idx_materials_name ON materials (name)"
-      ]
+      "indexes": ["CREATE INDEX idx_materials_name ON materials (name)"]
     },
     {
       "name": "work_orders",
@@ -522,19 +480,14 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         },
         {
           "name": "checklist",
@@ -559,10 +512,7 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": [
-            "PENDENTE",
-            "ENVIADA"
-          ]
+          "selectValues": ["PENDENTE", "ENVIADA"]
         },
         {
           "name": "planilha_enviada_em",
@@ -575,11 +525,7 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": [
-            "PENDENTE",
-            "CONFERIDA",
-            "LANCADA_NO_CRM"
-          ]
+          "selectValues": ["PENDENTE", "CONFERIDA", "LANCADA_NO_CRM"]
         }
       ],
       "indexes": [
@@ -649,30 +595,21 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         },
         {
           "name": "kind",
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": [
-            "CAPITAL",
-            "CONSUMO",
-            "SERVICO"
-          ]
+          "selectValues": ["CAPITAL", "CONSUMO", "SERVICO"]
         }
       ],
       "indexes": [
@@ -733,24 +670,17 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         }
       ],
-      "indexes": [
-        "CREATE INDEX idx_order_photos_wo ON order_photos (work_order)"
-      ]
+      "indexes": ["CREATE INDEX idx_order_photos_wo ON order_photos (work_order)"]
     },
     {
       "name": "order_history",
@@ -806,24 +736,17 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         }
       ],
-      "indexes": [
-        "CREATE INDEX idx_order_history_wo ON order_history (work_order)"
-      ]
+      "indexes": ["CREATE INDEX idx_order_history_wo ON order_history (work_order)"]
     },
     {
       "name": "future_maintenances",
@@ -867,11 +790,7 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": [
-            "PENDENTE",
-            "CONCLUIDA",
-            "CANCELADA"
-          ]
+          "selectValues": ["PENDENTE", "CONCLUIDA", "CANCELADA"]
         },
         {
           "name": "notes",
@@ -884,19 +803,14 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         }
       ],
       "indexes": [
@@ -953,24 +867,17 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         }
       ],
-      "indexes": [
-        "CREATE INDEX idx_material_kits_name ON material_kits (name)"
-      ]
+      "indexes": ["CREATE INDEX idx_material_kits_name ON material_kits (name)"]
     },
     {
       "name": "material_kit_items",
@@ -1014,24 +921,17 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         }
       ],
-      "indexes": [
-        "CREATE INDEX idx_kit_items_kit ON material_kit_items (kit)"
-      ]
+      "indexes": ["CREATE INDEX idx_kit_items_kit ON material_kit_items (kit)"]
     },
     {
       "name": "transactions",
@@ -1062,22 +962,14 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": [
-            "CAPITAL",
-            "CONSUMO",
-            "SERVICO",
-            "DINHEIRO"
-          ]
+          "selectValues": ["CAPITAL", "CONSUMO", "SERVICO", "DINHEIRO"]
         },
         {
           "name": "item_type",
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": [
-            "PRODUTO",
-            "SERVICO"
-          ]
+          "selectValues": ["PRODUTO", "SERVICO"]
         },
         {
           "name": "description",
@@ -1120,10 +1012,7 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": [
-            "PENDENTE",
-            "ENVIADA"
-          ]
+          "selectValues": ["PENDENTE", "ENVIADA"]
         },
         {
           "name": "sent_at",
@@ -1187,13 +1076,7 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": [
-            "ORCAMENTO",
-            "PEDIDO",
-            "ENTREGUE",
-            "FATURADO",
-            "CANCELADO"
-          ]
+          "selectValues": ["ORCAMENTO", "PEDIDO", "ENTREGUE", "FATURADO", "CANCELADO"]
         },
         {
           "name": "payment_terms",
@@ -1266,10 +1149,7 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": [
-            "PENDENTE",
-            "ENVIADA"
-          ]
+          "selectValues": ["PENDENTE", "ENVIADA"]
         },
         {
           "name": "work_order",
@@ -1342,11 +1222,7 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": [
-            "ABERTA",
-            "PAGA",
-            "ATRASADA"
-          ]
+          "selectValues": ["ABERTA", "PAGA", "ATRASADA"]
         },
         {
           "name": "receipt",
