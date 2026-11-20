@@ -1619,18 +1619,19 @@ ${
                     )}
                   </div>
                   {/*
-                    Um nome só na busca da OS (pedido do Felipe, 20/11/2026).
-                    Antes o `label` era a razão social completa; agora é o nome
-                    curto da escola, que é como ele reconhece o cliente. O nome
-                    legal e o CNPJ continuam no cadastro e no PDF, onde valem.
+                    NOME OFICIAL na busca da OS (esclarecido em 20/11/2026).
+                    O Felipe explicou que o nome principal é o oficial completo
+                    — "CONSELHO ESCOLAR DA ESCOLA MUNICIPAL PROFESSORA MARIA
+                    LETICIA..." — e o curto é só fantasia de digitação. Então a
+                    lista mostra o oficial e o apelido fica como palavra-chave:
+                    digitar "leticia" ainda acha.
                   */}
                   <SearchCombobox
                     options={clients.map((c) => ({
                       value: c.id,
-                      label: c.nickname || c.name,
-                      hint: c.city || 'Macaé',
-                      // a razão social vira palavra-chave: acha, mas não polui
-                      keywords: `${c.document || ''} ${c.name || ''}`,
+                      label: c.name,
+                      hint: c.nickname || c.city || 'Macaé',
+                      keywords: `${c.document || ''} ${c.nickname || ''}`,
                     }))}
                     value={order.client || ''}
                     onChange={(val) => setOrder((prev) => ({ ...prev, client: val }))}

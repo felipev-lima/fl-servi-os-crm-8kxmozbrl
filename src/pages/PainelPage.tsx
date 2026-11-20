@@ -470,8 +470,9 @@ export default function Painel() {
                         </span>
                       )}
                     </div>
-                    <p className="mt-0.5 truncate text-[11px] font-semibold">
-                      {o.expand?.client?.nickname || o.expand?.client?.name || '—'}
+                    {/* Nome oficial da escola, como no cadastro */}
+                    <p className="mt-0.5 text-[11px] font-semibold leading-tight">
+                      {o.expand?.client?.name || '—'}
                     </p>
                     <p className="truncate text-[9px] text-muted-foreground">{o.description}</p>
                     {/*
