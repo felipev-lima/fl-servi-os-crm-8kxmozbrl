@@ -1618,12 +1618,19 @@ ${
                       </Button>
                     )}
                   </div>
+                  {/*
+                    Um nome só na busca da OS (pedido do Felipe, 20/11/2026).
+                    Antes o `label` era a razão social completa; agora é o nome
+                    curto da escola, que é como ele reconhece o cliente. O nome
+                    legal e o CNPJ continuam no cadastro e no PDF, onde valem.
+                  */}
                   <SearchCombobox
                     options={clients.map((c) => ({
                       value: c.id,
-                      label: c.name,
+                      label: c.nickname || c.name,
                       hint: c.city || 'Macaé',
-                      keywords: c.document || '',
+                      // a razão social vira palavra-chave: acha, mas não polui
+                      keywords: `${c.document || ''} ${c.name || ''}`,
                     }))}
                     value={order.client || ''}
                     onChange={(val) => setOrder((prev) => ({ ...prev, client: val }))}

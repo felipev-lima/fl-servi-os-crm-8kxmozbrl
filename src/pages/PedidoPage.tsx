@@ -421,6 +421,13 @@ export default function PedidoPage() {
                     Nenhum cliente com "{buscaCliente}".
                   </p>
                 ) : (
+                  /*
+                   * UM nome só (pedido do Felipe, 20/11/2026).
+                   * A razão social embaixo do apelido deixava a lista carregada
+                   * e confundia: ele identifica a escola pelo nome curto, não
+                   * pelo "CONS ESC DA ESC MUN...". O CNPJ continua no talão,
+                   * que é onde o documento legal importa.
+                   */
                   clientesFiltrados.map((c) => (
                     <button
                       key={c.id}
@@ -429,12 +436,11 @@ export default function PedidoPage() {
                         setClienteId(c.id)
                         setBuscaCliente(c.nickname || c.name)
                       }}
-                      className="block w-full border-b px-2 py-1.5 text-left last:border-0 hover:bg-[#0B3D91]/5"
+                      className="block w-full border-b px-2 py-2 text-left last:border-0 hover:bg-[#0B3D91]/5"
                     >
-                      <span className="block text-[10px] font-semibold">
+                      <span className="block text-[11px] font-semibold">
                         {c.nickname || c.name}
                       </span>
-                      <span className="block text-[9px] text-muted-foreground">{c.name}</span>
                     </button>
                   ))
                 )}
@@ -723,7 +729,8 @@ export default function PedidoPage() {
             {/* cliente */}
             <div className="mt-2 rounded border border-slate-300 bg-slate-50 p-2">
               <p className="text-[9px] font-bold uppercase text-slate-500">Cliente</p>
-              <p className="text-[11px] font-bold">{cliente?.name || '—'}</p>
+              {/* Um nome só: o que ele usa para identificar a escola */}
+              <p className="text-[11px] font-bold">{cliente?.nickname || cliente?.name || '—'}</p>
               <p className="text-[9px] text-slate-600">
                 {cliente?.document || 'sem documento'}
                 {cliente?.phone ? ` · ${cliente.phone}` : ''}
@@ -804,7 +811,7 @@ export default function PedidoPage() {
               </div>
               <div className="text-center">
                 <div className="border-t border-slate-500 pt-1">
-                  <p className="text-[9px] font-bold">{cliente?.name || 'CLIENTE'}</p>
+                  <p className="text-[9px] font-bold">{cliente?.nickname || cliente?.name}</p>
                   <p className="text-[7px] text-slate-500">Recebi o material acima</p>
                 </div>
               </div>
