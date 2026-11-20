@@ -1,14 +1,22 @@
 /**
  * Painel — a primeira tela do dia.
  *
- * Responde em um olhar: quanto tenho a receber, quanto faturei no mês, quanto
- * recebi, quem mais me deve e o que vence esta semana.
+ * Duas coisas diferentes convivem aqui, e elas têm públicos diferentes:
  *
- * Todos os números são CALCULADOS — nada digitado à mão. A leitura vem da view
+ *   1. ORDENS DE SERVIÇO por status — é o que o técnico precisa ver. Fica em
+ *      destaque, em cartões grandes, e ao tocar em um deles a lista mostra
+ *      SOMENTE aquele status. Não acumula com o resto da página.
+ *
+ *   2. FINANCEIRO (a receber, recebido, a pagar, devedores) — só o
+ *      ADMINISTRADOR vê. Técnico não tem nada com o faturamento da empresa, e
+ *      mostrar isso para a equipe é expor dado que não é dela.
+ *
+ * Todos os números são CALCULADOS. A leitura financeira vem da view
  * `client_summary` (uma linha por cliente), nunca dos lançamentos inteiros.
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '@/contexts/AuthContext'
 import { getClientsSummary, getTransactions, getBills } from '@/services/crm'
 import type { ClientSummary, Transaction, Bill } from '@/types/crm'
 import { brl, dataBR, totalDaLinha } from '@/types/crm'
@@ -20,102 +28,197 @@ import { Badge } from '@/components/ui/badge'
 import {
   Wallet,
   TrendingUp,
-  Users,
   Loader2,
   ArrowRight,
   AlertCircle,
   Plus,
   Receipt,
+  ClipboardList,
+  Clock,
+  PlayCircle,
+  PackageOpen,
+  CheckCircle2,
   CalendarClock,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 
+type StatusKey = 'ABERTA' | 'AGENDADA' | 'EM ANDAMENTO' | 'AGUARDANDO MATERIAL' | 'FINALIZADA'
+
+/**
+ * Os cinco status, na ordem do trabalho.
+ *
+ * Cada um é um cartão grande e clicável. `cor` é o fundo do cartão quando
+ * selecionado; `borda` é a faixa lateral; `texto` pinta número e ícone.
+ */
+const STATUS: {
+  chave: StatusKey
+  rotulo: string
+  curto: string
+  icone: any
+  borda: string
+  bg: string
+  texto: string
+  ajuda: string
+}[] = [
+  {
+    chave: 'ABERTA',
+    rotulo: 'Abertas',
+    curto: 'Aberta',
+    icone: ClipboardList,
+    borda: 'border-l-slate-500',
+    bg: 'bg-slate-50',
+    texto: 'text-slate-800',
+    ajuda: 'Aguardando início',
+  },
+  {
+    chave: 'AGENDADA',
+    rotulo: 'Agendadas',
+    curto: 'Agendada',
+    icone: Clock,
+    borda: 'border-l-blue-600',
+    bg: 'bg-blue-50',
+    texto: 'text-blue-800',
+    ajuda: 'Com data definida',
+  },
+  {
+    chave: 'EM ANDAMENTO',
+    rotulo: 'Em andamento',
+    curto: 'Em andamento',
+    icone: PlayCircle,
+    borda: 'border-l-orange-500',
+    bg: 'bg-orange-50',
+    texto: 'text-orange-800',
+    ajuda: 'Atendimento ativo',
+  },
+  {
+    chave: 'AGUARDANDO MATERIAL',
+    rotulo: 'Aguard. material',
+    curto: 'Aguardando material',
+    icone: PackageOpen,
+    borda: 'border-l-amber-500',
+    bg: 'bg-amber-50',
+    texto: 'text-amber-800',
+    ajuda: 'Peça pendente',
+  },
+  {
+    chave: 'FINALIZADA',
+    rotulo: 'Finalizadas',
+    curto: 'Finalizada',
+    icone: CheckCircle2,
+    borda: 'border-l-emerald-600',
+    bg: 'bg-emerald-50',
+    texto: 'text-emerald-800',
+    ajuda: 'Serviço concluído',
+  },
+]
+
 export default function Painel() {
+  const { user, isAdmin } = useAuth()
+
+  const [os, setOs] = useState<WorkOrder[]>([])
+  const [carregando, setCarregando] = useState(true)
+
+  // financeiro — só carrega para administrador
   const [resumos, setResumos] = useState<ClientSummary[]>([])
   const [lancamentos, setLancamentos] = useState<Transaction[]>([])
   const [contas, setContas] = useState<Bill[]>([])
-  const [os, setOs] = useState<WorkOrder[]>([])
-  const [carregando, setCarregando] = useState(true)
-  /** pendências que o dono precisa ver ao abrir o sistema */
+  const [verFinanceiro, setVerFinanceiro] = useState(false)
+
+  // pendências operacionais
   const [estoqueBaixo, setEstoqueBaixo] = useState(0)
   const [semContato, setSemContato] = useState(0)
 
-  /**
-   * Filtro de status DENTRO do painel (pedido do Felipe, 20/11/2026).
-   *
-   * Antes, clicar em "Abertas" levava para /ordens e ele perdia o painel de
-   * vista. Agora o clique filtra a lista aqui embaixo, na mesma tela: ele vê
-   * o número, clica e continua trabalhando sem trocar de página.
-   *
-   * `null` = todos os status em aberto (o padrão).
-   */
-  const [filtroStatus, setFiltroStatus] = useState<string | null>(null)
+  /** Status selecionado. `null` = mostra todos os que estão em aberto. */
+  const [statusSel, setStatusSel] = useState<StatusKey | null>(null)
 
   useEffect(() => {
     ;(async () => {
       try {
-        const [rs, tx, bl, ordens] = await Promise.all([
+        setOs(await getWorkOrders())
+      } catch {
+        /* a lista de OS é o essencial; se falhar, a tela avisa embaixo */
+      } finally {
+        setCarregando(false)
+      }
+
+      // o financeiro não é carregado para técnico — nem chega ao navegador dele
+      if (!isAdmin) return
+      try {
+        const [rs, tx, bl] = await Promise.all([
           getClientsSummary(),
           getTransactions({ page: 1, perPage: 8 }),
           getBills(),
-          getWorkOrders(),
         ])
         setResumos(rs)
         setLancamentos(tx.items)
         setContas(bl)
-        setOs(ordens)
-        // contagem rápida das duas pendências que mais custam dinheiro
-        try {
-          const [mats, cls] = await Promise.all([getMaterials(), getClients()])
-          setEstoqueBaixo(
-            mats.filter(
-              (m: any) =>
-                m.control_stock &&
-                Number(m.stock_min || 0) > 0 &&
-                Number(m.current_stock || 0) < Number(m.stock_min || 0),
-            ).length,
-          )
-          setSemContato(cls.filter((c) => !(c.phone || '').trim()).length)
-        } catch {
-          /* painel funciona sem esses contadores */
-        }
-      } finally {
-        setCarregando(false)
+      } catch {
+        /* painel funciona sem o financeiro */
+      }
+      try {
+        const [mats, cls] = await Promise.all([getMaterials(), getClients()])
+        setEstoqueBaixo(
+          mats.filter(
+            (m: any) =>
+              m.control_stock &&
+              Number(m.stock_min || 0) > 0 &&
+              Number(m.current_stock || 0) < Number(m.stock_min || 0),
+          ).length,
+        )
+        setSemContato(cls.filter((c) => !(c.phone || '').trim()).length)
+      } catch {
+        /* contadores são opcionais */
       }
     })()
-  }, [])
+  }, [isAdmin])
 
   const hoje = new Date()
   const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`
+  const hojeStr = hoje.toISOString().slice(0, 10)
 
+  const contagem = useMemo(() => {
+    const c: Record<StatusKey, number> = {
+      ABERTA: 0,
+      AGENDADA: 0,
+      'EM ANDAMENTO': 0,
+      'AGUARDANDO MATERIAL': 0,
+      FINALIZADA: 0,
+    }
+    for (const o of os) {
+      if (o.status in c) c[o.status as StatusKey] += 1
+    }
+    return c
+  }, [os])
+
+  const emAberto = os.filter((o) => o.status !== 'FINALIZADA' && o.status !== 'CANCELADA')
+  const osHoje = os.filter((o) => (o.scheduled_date || '').slice(0, 10) === hojeStr)
+
+  /**
+   * A lista do painel.
+   *
+   * Sem seleção: as que ainda não terminaram (o trabalho pendente).
+   * Com seleção: APENAS aquele status — é o pedido do Felipe: clicar em
+   * "Agendadas" tem de mostrar só as agendadas, não a lista inteira com as
+   * agendadas misturadas.
+   */
+  const osVisiveis = useMemo(() => {
+    const base = statusSel ? os.filter((o) => o.status === statusSel) : emAberto
+    return [...base].sort((a, b) => {
+      const da = (a.scheduled_date || a.created || '').slice(0, 10)
+      const db = (b.scheduled_date || b.created || '').slice(0, 10)
+      if (da !== db) return db.localeCompare(da)
+      return Number(b.order_number) - Number(a.order_number)
+    })
+  }, [os, statusSel, emAberto])
+
+  // ---- financeiro (só admin) ----
   const aReceber = resumos.reduce((s, r) => s + (r.saldo > 0 ? r.saldo : 0), 0)
   const aCredito = resumos.reduce((s, r) => s + (r.saldo < 0 ? r.saldo : 0), 0)
   const devedores = resumos.filter((r) => r.saldo > 0.005).sort((a, b) => b.saldo - a.saldo)
-
   const recebidoMes = lancamentos
     .filter((t) => t.kind === 'DINHEIRO' && (t.date || '').slice(0, 7) === mesAtual)
     .reduce((s, t) => s + Math.abs(totalDaLinha(t)), 0)
-
-  const emAberto = os.filter((o) => o.status !== 'FINALIZADA' && o.status !== 'CANCELADA')
-  const hojeStr = hoje.toISOString().slice(0, 10)
-  const osHoje = os.filter((o) => (o.scheduled_date || '').slice(0, 10) === hojeStr)
-
-  /** Contagem por status, para os chips clicáveis do painel */
-  const contagemStatus = {
-    ABERTA: os.filter((o) => o.status === 'ABERTA').length,
-    AGENDADA: os.filter((o) => o.status === 'AGENDADA').length,
-    'EM ANDAMENTO': os.filter((o) => o.status === 'EM ANDAMENTO').length,
-    'AGUARDANDO MATERIAL': os.filter((o) => o.status === 'AGUARDANDO MATERIAL').length,
-    FINALIZADA: os.filter((o) => o.status === 'FINALIZADA').length,
-  }
-
-  /**
-   * A lista que aparece no painel.
-   *
-   * Sem filtro: as OS em aberto (o que ele precisa tocar hoje).
-   * Com filtro: exatamente o status escolhido, inclusive FINALIZADA.
-   */
-  const osVisiveis = filtroStatus ? os.filter((o) => o.status === filtroStatus) : emAberto
-
   const seteDias = new Date(hoje.getTime() + 7 * 86400000)
   const vencendo = contas.filter(
     (c) => (c.status || 'ABERTA') !== 'PAGA' && c.due_date && new Date(c.due_date) <= seteDias,
@@ -130,214 +233,156 @@ export default function Painel() {
     )
   }
 
-  const cartoes = [
-    {
-      titulo: 'A receber',
-      valor: brl(aReceber),
-      detalhe: `${devedores.length} cliente(s) devendo`,
-      icone: Wallet,
-      cor: 'text-amber-700',
-      bg: 'border-amber-200 bg-amber-50',
-    },
-    {
-      titulo: 'OS em aberto',
-      valor: String(emAberto.length),
-      detalhe: `${osHoje.length} agendada(s) para hoje`,
-      icone: CalendarClock,
-      cor: 'text-blue-700',
-      bg: 'border-blue-200 bg-blue-50',
-      // clicar filtra a lista abaixo, sem sair do painel
-      acao: () => setFiltroStatus(null),
-    },
-    {
-      titulo: 'Recebido no mês',
-      valor: brl(recebidoMes),
-      detalhe: 'pagamentos registrados',
-      icone: TrendingUp,
-      cor: 'text-emerald-700',
-      bg: 'border-emerald-200 bg-emerald-50',
-    },
-    {
-      titulo: 'A pagar (7 dias)',
-      valor: brl(totalVencendo),
-      detalhe: `${vencendo.length} conta(s) vencendo`,
-      icone: Receipt,
-      cor: 'text-rose-700',
-      bg: 'border-rose-200 bg-rose-50',
-    },
-  ]
-
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
+      {/* cabeçalho */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-xl font-black tracking-tight sm:text-2xl">Painel</h1>
           <p className="text-[11px] text-muted-foreground">
-            Tudo calculado — sem digitação de total
+            {emAberto.length} em aberto · {osHoje.length} agendada(s) para hoje
           </p>
         </div>
         <div className="flex gap-1.5">
-          <Button
-            asChild
-            className="h-9 shrink-0 gap-1.5 bg-[#0B3D91] font-semibold text-white hover:bg-[#0B3D91]/90"
-          >
-            <Link to="/lancamentos?novo=1">
-              <Plus className="h-4 w-4" /> Lançar
+          <Button asChild variant="outline" className="h-9 shrink-0 gap-1.5 text-xs">
+            <Link to="/ordens/nova">
+              <Plus className="h-4 w-4" /> Nova OS
             </Link>
           </Button>
+          {isAdmin && (
+            <Button
+              asChild
+              className="h-9 shrink-0 gap-1.5 bg-[#0B3D91] font-semibold text-white hover:bg-[#0B3D91]/90"
+            >
+              <Link to="/lancamentos?novo=1">
+                <Receipt className="h-4 w-4" /> Lançar
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-        {cartoes.map((c) => {
-          const Icone = c.icone
-          const clicavel = typeof (c as any).acao === 'function'
-          const conteudo = (
-            <CardContent className="p-3">
-              <div className="flex items-center justify-between">
-                <span className={`text-[10px] font-bold uppercase ${c.cor}`}>{c.titulo}</span>
-                <Icone className={`h-3.5 w-3.5 ${c.cor}`} />
-              </div>
-              <div className={`mt-1 text-lg font-black sm:text-xl ${c.cor}`}>{c.valor}</div>
-              <p className="mt-0.5 text-[9px] text-muted-foreground">{c.detalhe}</p>
-            </CardContent>
-          )
-          return clicavel ? (
+      {/* ---- CARTÕES DE STATUS: o centro do painel ---- */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+        {STATUS.map((s) => {
+          const Icone = s.icone
+          const ativo = statusSel === s.chave
+          const qtd = contagem[s.chave]
+          return (
             <button
-              key={c.titulo}
+              key={s.chave}
               type="button"
-              onClick={(c as any).acao}
+              onClick={() => setStatusSel(ativo ? null : s.chave)}
               className="text-left"
-              title="Ver as ordens no painel"
+              aria-pressed={ativo}
             >
-              <Card className={`border ${c.bg} transition hover:shadow-md`}>{conteudo}</Card>
+              <Card
+                className={`h-full border-l-4 ${s.borda} ${s.bg} transition-all ${
+                  ativo ? 'ring-2 ring-[#0B3D91] shadow-md' : 'hover:shadow-md'
+                }`}
+              >
+                <CardContent className="p-3">
+                  <div className="flex items-start justify-between gap-1">
+                    <span className={`text-[10px] font-bold uppercase leading-tight ${s.texto}`}>
+                      {s.rotulo}
+                    </span>
+                    <Icone className={`h-4 w-4 shrink-0 ${s.texto}`} />
+                  </div>
+                  <div className={`mt-1.5 text-2xl font-black leading-none ${s.texto}`}>{qtd}</div>
+                  <p className="mt-1 text-[9px] text-muted-foreground">{s.ajuda}</p>
+                  {ativo && (
+                    <span className="mt-1 block text-[9px] font-bold text-[#0B3D91]">
+                      ✓ filtrando
+                    </span>
+                  )}
+                </CardContent>
+              </Card>
             </button>
-          ) : (
-            <Card key={c.titulo} className={`border ${c.bg}`}>
-              {conteudo}
-            </Card>
           )
         })}
       </div>
 
-      {Math.abs(aCredito) > 0.005 && (
-        <div className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[10px] text-emerald-900">
-          <span className="shrink-0 font-bold">Crédito a devolver:</span>
-          <span>
-            {brl(Math.abs(aCredito))} — {resumos.filter((r) => r.saldo < -0.005).length} cliente(s).
-            Somando tudo, o saldo geral é{' '}
-            <strong>{brl(resumos.reduce((s, r) => s + r.saldo, 0))}</strong>.
-          </span>
-        </div>
-      )}
-
-      {/* OS em destaque */}
+      {/* ---- LISTA: só o que foi selecionado ---- */}
       <Card>
-        <CardContent className="p-3.5">
-          <div className="mb-2.5 flex items-center justify-between">
-            <div>
+        <CardContent className="p-3">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <div className="min-w-0">
               <h2 className="flex items-center gap-1.5 text-sm font-bold">
-                <CalendarClock className="h-4 w-4 text-[#0B3D91]" /> Ordens de serviço
+                <CalendarClock className="h-4 w-4 text-[#0B3D91]" />
+                {statusSel
+                  ? `${STATUS.find((s) => s.chave === statusSel)?.curto} — ${osVisiveis.length}`
+                  : `Em aberto — ${osVisiveis.length}`}
               </h2>
-              <p className="text-[10px] text-muted-foreground">
-                {emAberto.length} em aberto · {osHoje.length} hoje
-              </p>
+              {statusSel && (
+                <button
+                  type="button"
+                  onClick={() => setStatusSel(null)}
+                  className="mt-0.5 text-[10px] font-semibold text-[#0B3D91] underline"
+                >
+                  limpar filtro
+                </button>
+              )}
             </div>
-            <Button variant="outline" size="sm" asChild className="h-7 gap-1 text-[10px]">
+            <Button variant="outline" size="sm" asChild className="h-7 shrink-0 gap-1 text-[10px]">
               <Link to="/ordens">
                 Ver todas <ArrowRight className="h-3 w-3" />
               </Link>
             </Button>
           </div>
 
-          {/*
-            Chips de status clicáveis.
-            Filtram a lista AQUI, sem trocar de tela — o Felipe continua no
-            painel. Clicar de novo no mesmo chip volta a mostrar tudo em aberto.
-          */}
-          <div className="mb-2 flex flex-wrap gap-1">
-            {(
-              [
-                [null, 'Em aberto', emAberto.length, 'bg-slate-900 text-white'],
-                ['ABERTA', 'Abertas', contagemStatus.ABERTA, 'bg-slate-600 text-white'],
-                ['AGENDADA', 'Agendadas', contagemStatus.AGENDADA, 'bg-blue-600 text-white'],
-                [
-                  'EM ANDAMENTO',
-                  'Em andamento',
-                  contagemStatus['EM ANDAMENTO'],
-                  'bg-orange-600 text-white',
-                ],
-                [
-                  'AGUARDANDO MATERIAL',
-                  'Aguard. material',
-                  contagemStatus['AGUARDANDO MATERIAL'],
-                  'bg-amber-600 text-white',
-                ],
-                [
-                  'FINALIZADA',
-                  'Finalizadas',
-                  contagemStatus.FINALIZADA,
-                  'bg-emerald-700 text-white',
-                ],
-              ] as [string | null, string, number, string][]
-            ).map(([valor, rotulo, qtd, cor]) => {
-              const ativo = filtroStatus === valor
+          <div className="space-y-1.5">
+            {osVisiveis.map((o) => {
+              const cfg = STATUS.find((s) => s.chave === o.status)
               return (
-                <button
-                  key={rotulo}
-                  type="button"
-                  onClick={() => setFiltroStatus(ativo ? null : valor)}
-                  className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold transition ${
-                    ativo
-                      ? `${cor} border-transparent`
-                      : 'bg-white text-muted-foreground hover:border-[#0B3D91]/50'
-                  }`}
+                <Link
+                  key={o.id}
+                  to={`/ordens/${o.id}`}
+                  className="flex items-center justify-between gap-2 rounded-lg border bg-card p-2.5 transition hover:border-[#0B3D91]/60"
                 >
-                  {rotulo} ({qtd})
-                </button>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="font-mono text-[10px] font-bold text-[#0B3D91]">
+                        #{o.order_number}
+                      </span>
+                      {cfg && (
+                        <Badge variant="outline" className={`px-1 py-0 text-[8px] ${cfg.texto}`}>
+                          {cfg.curto}
+                        </Badge>
+                      )}
+                      {o.scheduled_date && (
+                        <span className="text-[9px] text-muted-foreground">
+                          {dataBR(o.scheduled_date)}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-0.5 truncate text-[11px] font-semibold">
+                      {o.expand?.client?.nickname || o.expand?.client?.name || '—'}
+                    </p>
+                    <p className="truncate text-[9px] text-muted-foreground">{o.description}</p>
+                    {o.expand?.technician?.name && (
+                      <p className="truncate text-[9px] text-[#0B3D91]/80">
+                        Técnico: {o.expand.technician.name}
+                      </p>
+                    )}
+                  </div>
+                  <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                </Link>
               )
             })}
-          </div>
 
-          <div className="space-y-1.5">
-            {osVisiveis.slice(0, 12).map((o) => (
-              <Link
-                key={o.id}
-                to={`/ordens/${o.id}`}
-                className="flex items-center justify-between gap-2 rounded-lg border bg-card p-2 transition hover:border-[#0B3D91]/50"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-semibold">
-                    #{o.order_number} · {o.expand?.client?.nickname || o.expand?.client?.name}
-                  </p>
-                  <p className="truncate text-[9px] text-muted-foreground">{o.description}</p>
-                </div>
-                <Badge variant="outline" className="shrink-0 text-[8px]">
-                  {o.status}
-                </Badge>
-              </Link>
-            ))}
             {osVisiveis.length === 0 && (
-              <p className="py-6 text-center text-xs text-muted-foreground">
-                {filtroStatus
-                  ? `Nenhuma OS com status "${filtroStatus}".`
-                  : 'Nenhuma OS em aberto.'}
-              </p>
-            )}
-            {osVisiveis.length > 12 && (
-              <p className="pt-1 text-center text-[9px] text-muted-foreground">
-                Mostrando 12 de {osVisiveis.length} —{' '}
-                <Link to="/ordens" className="text-[#0B3D91] underline">
-                  ver todas
-                </Link>
+              <p className="py-8 text-center text-xs text-muted-foreground">
+                {statusSel
+                  ? `Nenhuma OS ${STATUS.find((s) => s.chave === statusSel)?.curto.toLowerCase()}.`
+                  : 'Nenhuma OS em aberto. Tudo concluído.'}
               </p>
             )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Pendências que custam dinheiro se ficarem esquecidas */}
-      {(estoqueBaixo > 0 || semContato > 0) && (
+      {/* ---- PENDÊNCIAS: só admin, porque falam de dinheiro do cliente ---- */}
+      {isAdmin && (estoqueBaixo > 0 || semContato > 0) && (
         <Card className="border-rose-200 bg-rose-50/40">
           <CardContent className="space-y-1.5 p-3">
             <h2 className="flex items-center gap-1.5 text-sm font-bold text-rose-900">
@@ -369,83 +414,122 @@ export default function Painel() {
         </Card>
       )}
 
-      {/* Devedores */}
-      <Card>
-        <CardContent className="p-3.5">
-          <div className="mb-2.5 flex items-center justify-between">
-            <div>
-              <h2 className="flex items-center gap-1.5 text-sm font-bold">
-                <AlertCircle className="h-4 w-4 text-amber-600" /> Maiores devedores
-              </h2>
-              <p className="text-[10px] text-muted-foreground">Total em aberto: {brl(aReceber)}</p>
-            </div>
-            <Button variant="outline" size="sm" asChild className="h-7 gap-1 text-[10px]">
-              <Link to="/relatorios">
-                Relatórios <ArrowRight className="h-3 w-3" />
-              </Link>
-            </Button>
-          </div>
-          <div className="space-y-1.5">
-            {devedores.slice(0, 8).map((r) => (
-              <Link
-                key={r.id}
-                to={`/relatorios?cliente=${r.id}`}
-                className="flex items-center justify-between gap-2 rounded-lg border bg-card p-2 transition hover:border-[#0B3D91]/50"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-semibold">{r.nickname || r.name}</p>
-                  {r.nickname && (
-                    <p className="truncate text-[9px] text-muted-foreground">{r.name}</p>
-                  )}
-                </div>
-                <span className="shrink-0 font-mono text-xs font-bold text-amber-800">
-                  {brl(r.saldo)}
-                </span>
-              </Link>
-            ))}
-            {devedores.length === 0 && (
-              <p className="py-6 text-center text-xs text-muted-foreground">
-                Nenhum cliente com saldo em aberto.
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      {/*
+        FINANCEIRO — só administrador, e recolhido por padrão.
 
-      {/* Últimos lançamentos */}
-      <Card>
-        <CardContent className="p-3.5">
-          <h2 className="mb-2 text-sm font-bold">Últimos lançamentos</h2>
-          <div className="space-y-1">
-            {lancamentos.map((t) => {
-              const v = totalDaLinha(t)
-              return (
-                <div
-                  key={t.id}
-                  className="flex items-center gap-2 border-b p-1.5 text-[11px] last:border-0"
-                >
-                  <span className="shrink-0 text-muted-foreground">{dataBR(t.date)}</span>
-                  <span className="flex-1 truncate">
-                    {t.expand?.client?.nickname || t.expand?.client?.name || t.description}
-                  </span>
-                  <span
-                    className={`shrink-0 font-mono font-bold ${
-                      v < 0 ? 'text-emerald-700' : 'text-slate-800'
-                    }`}
-                  >
-                    {brl(v)}
-                  </span>
+        O Felipe pediu para tirar os cartões de dinheiro do painel: técnico não
+        precisa ver faturamento. Fica aqui, fechado, disponível para quando ele
+        quiser conferir sem sair da tela.
+      */}
+      {isAdmin && (
+        <Card>
+          <CardContent className="p-0">
+            <button
+              type="button"
+              onClick={() => setVerFinanceiro((v) => !v)}
+              className="flex w-full items-center justify-between gap-2 p-3 text-left"
+            >
+              <span className="flex items-center gap-1.5 text-sm font-bold">
+                <Wallet className="h-4 w-4 text-[#0B3D91]" /> Financeiro
+                <span className="text-[10px] font-normal text-muted-foreground">
+                  (só administrador)
+                </span>
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="font-mono text-xs font-bold text-amber-700">{brl(aReceber)}</span>
+                {verFinanceiro ? (
+                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                )}
+              </span>
+            </button>
+
+            {verFinanceiro && (
+              <div className="space-y-2 border-t p-3">
+                <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
+                  {[
+                    {
+                      titulo: 'A receber',
+                      valor: brl(aReceber),
+                      detalhe: `${devedores.length} cliente(s) devendo`,
+                      icone: Wallet,
+                      cor: 'text-amber-700',
+                      bg: 'border-amber-200 bg-amber-50',
+                    },
+                    {
+                      titulo: 'Recebido no mês',
+                      valor: brl(recebidoMes),
+                      detalhe: 'pagamentos registrados',
+                      icone: TrendingUp,
+                      cor: 'text-emerald-700',
+                      bg: 'border-emerald-200 bg-emerald-50',
+                    },
+                    {
+                      titulo: 'A pagar (7 dias)',
+                      valor: brl(totalVencendo),
+                      detalhe: `${vencendo.length} conta(s) vencendo`,
+                      icone: Receipt,
+                      cor: 'text-rose-700',
+                      bg: 'border-rose-200 bg-rose-50',
+                    },
+                  ].map((c) => {
+                    const Icone = c.icone
+                    return (
+                      <Card key={c.titulo} className={`border ${c.bg}`}>
+                        <CardContent className="p-3">
+                          <div className="flex items-center justify-between">
+                            <span className={`text-[10px] font-bold uppercase ${c.cor}`}>
+                              {c.titulo}
+                            </span>
+                            <Icone className={`h-3.5 w-3.5 ${c.cor}`} />
+                          </div>
+                          <div className={`mt-1 font-mono text-base font-black ${c.cor}`}>
+                            {c.valor}
+                          </div>
+                          <p className="mt-0.5 text-[9px] text-muted-foreground">{c.detalhe}</p>
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
                 </div>
-              )
-            })}
-            {lancamentos.length === 0 && (
-              <p className="py-6 text-center text-xs text-muted-foreground">
-                Nenhum lançamento ainda. Comece pelo botão <strong>Lançar</strong>.
-              </p>
+
+                {Math.abs(aCredito) > 0.005 && (
+                  <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1.5 text-[10px] text-emerald-900">
+                    Crédito a devolver: <strong>{brl(Math.abs(aCredito))}</strong> —{' '}
+                    {resumos.filter((r) => r.saldo < -0.005).length} cliente(s).
+                  </p>
+                )}
+
+                {devedores.length > 0 && (
+                  <div>
+                    <div className="mb-1 flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                        Maiores devedores
+                      </span>
+                      <Link to="/relatorios" className="text-[9px] text-[#0B3D91] underline">
+                        relatórios
+                      </Link>
+                    </div>
+                    {devedores.slice(0, 5).map((r) => (
+                      <Link
+                        key={r.id}
+                        to={`/relatorios?cliente=${r.id}`}
+                        className="flex items-center justify-between gap-2 border-b py-1 last:border-0"
+                      >
+                        <span className="truncate text-[10px]">{r.nickname || r.name}</span>
+                        <span className="shrink-0 font-mono text-[10px] font-bold text-amber-800">
+                          {brl(r.saldo)}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
