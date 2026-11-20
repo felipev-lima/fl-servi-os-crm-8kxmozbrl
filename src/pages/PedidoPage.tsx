@@ -126,11 +126,39 @@ export default function PedidoPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
+  /**
+   * Busca que ignora acento e maiúscula.
+   *
+   * "camera" precisa achar "CÂMERA" — o filtro do banco não faz isso, e digitar
+   * com acento no celular é lento. Sem normalizar, o Felipe não acharia nada.
+   */
+  const semAcento = (s?: string) =>
+    (s || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase()
+      .trim()
+
   const resultados = useMemo(() => {
-    const t = (busca || '').trim().toUpperCase()
+    const t = semAcento(busca)
     if (!t) return []
-    return materiais.filter((m) => (m.name || '').toUpperCase().includes(t)).slice(0, 8)
+    return materiais.filter((m) => semAcento(m.name).includes(t)).slice(0, 8)
   }, [busca, materiais])
+
+  /**
+   * Clientes filtrados por qualquer trecho do nome ou do apelido.
+   *
+   * Fica ANTES do uso no JSX: declarado depois, o navegador lança
+   * "clientesFiltrados is not defined" e a tela sai em branco — erro que só
+   * aparece em execução, o build passa.
+   */
+  const clientesFiltrados = useMemo(() => {
+    const t = semAcento(buscaCliente)
+    if (!t) return []
+    return clientes
+      .filter((c) => semAcento(c.name).includes(t) || semAcento(c.nickname).includes(t))
+      .slice(0, 12)
+  }, [buscaCliente, clientes])
 
   const total = itens.reduce((s, i) => s + Number(i.quantity) * Number(i.unit_price), 0)
   const cliente = clientes.find((c) => c.id === clienteId)
