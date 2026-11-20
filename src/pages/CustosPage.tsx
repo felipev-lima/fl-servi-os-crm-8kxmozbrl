@@ -30,6 +30,9 @@ import { toast } from 'sonner'
 
 const POR_PAGINA = 30
 
+/** Marcação usada no cálculo automático: preço = custo × 1,6 (60% sobre o custo) */
+const MARCACAO = 1.6
+
 export default function CustosPage() {
   const [materiais, setMateriais] = useState<Material[]>([])
   const [carregando, setCarregando] = useState(true)
@@ -91,6 +94,11 @@ export default function CustosPage() {
     return soma / validos.length
   }, [comCusto])
 
+  /** Quantos custos vieram do cálculo automático, não de conferência */
+  const estimados = materiais.filter(
+    (m) => Number(m.cost || 0) > 0 && (m as any).cost_estimated,
+  ).length
+
   const abaixoMinimo = materiais.filter(
     (m) =>
       (m as any).control_stock &&
@@ -117,6 +125,8 @@ export default function CustosPage() {
         current_stock: Number(String(estoque).replace(',', '.')) || 0,
         stock_min: Number(String(minimo).replace(',', '.')) || 0,
         control_stock: controlar,
+        // o Felipe conferiu este custo: deixa de ser estimativa
+        cost_estimated: false,
       }
       await updateMaterial(editando.id, dados)
       setMateriais((prev) =>
@@ -194,6 +204,14 @@ export default function CustosPage() {
         </Card>
       </div>
 
+      {estimados > 0 && (
+        <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-[10px] text-sky-900">
+          <strong>{estimados} produto(s)</strong> com custo <strong>calculado</strong> pela marcação
+          de 60% (custo = preço ÷ 1,6). Não é o custo real de compra — é a referência inicial. Ao
+          editar um produto e salvar, ele passa a contar como <strong>conferido</strong>.
+        </p>
+      )}
+
       {cobertura < 100 && (
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[10px] text-amber-900">
           A margem é calculada <strong>só sobre os {comCusto.length} produtos com custo</strong>.
@@ -248,6 +266,15 @@ export default function CustosPage() {
                     {Number(m.cost || 0) > 0 && ` · custo ${brl(Number(m.cost || 0))}`}
                   </p>
                 </div>
+                {(m as any).cost_estimated && Number(m.cost || 0) > 0 && (
+                  <Badge
+                    variant="outline"
+                    className="shrink-0 border-sky-300 px-1 py-0 text-[7px] text-sky-700"
+                    title="Custo calculado pela marcação de 60% — confira e edite se precisar"
+                  >
+                    estimado
+                  </Badge>
+                )}
                 {mg !== null ? (
                   <Badge
                     className={`shrink-0 border px-1.5 py-0 text-[8px] ${
