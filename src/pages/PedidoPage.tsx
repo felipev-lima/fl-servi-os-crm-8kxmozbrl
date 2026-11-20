@@ -74,9 +74,13 @@ export default function PedidoPage() {
   const [fotos, setFotos] = useState<File[]>([])
   const [salvoId, setSalvoId] = useState<string>('')
 
+  // busca de cliente
+  const [buscaCliente, setBuscaCliente] = useState('')
+
   // busca de produto
   const [busca, setBusca] = useState('')
-  const [qtd, setQtd] = useState('1')
+  /** quantidade começa VAZIA: o "1" obrigava apagar antes de digitar */
+  const [qtd, setQtd] = useState('')
   const [preco, setPreco] = useState('')
   const [produtoSel, setProdutoSel] = useState<Material | null>(null)
 
@@ -131,10 +135,19 @@ export default function PedidoPage() {
   const total = itens.reduce((s, i) => s + Number(i.quantity) * Number(i.unit_price), 0)
   const cliente = clientes.find((c) => c.id === clienteId)
 
+  /**
+   * Preço sempre com DUAS casas.
+   *
+   * Antes `String(4.5)` virava "4.5" e o campo mostrava 4,5 — o Felipe via
+   * "4,4" em vez de "4,40". Em dinheiro, centavo omitido parece erro de
+   * digitação e ainda muda a leitura do valor.
+   */
+  const precoBR = (v: number): string => (Number(v) || 0).toFixed(2).replace('.', ',')
+
   const escolherProduto = (m: Material) => {
     setProdutoSel(m)
     setBusca(m.name)
-    setPreco(String(m.price || 0))
+    setPreco(precoBR(Number(m.price || 0)))
   }
 
   const adicionar = () => {
@@ -164,7 +177,7 @@ export default function PedidoPage() {
     ])
     setProdutoSel(null)
     setBusca('')
-    setQtd('1')
+    setQtd('')
     setPreco('')
   }
 
@@ -346,18 +359,56 @@ export default function PedidoPage() {
           </h2>
           <div className="space-y-1">
             <Label className="text-[10px] font-semibold">Cliente *</Label>
-            <select
-              value={clienteId}
-              onChange={(e) => setClienteId(e.target.value)}
-              className="h-9 w-full rounded-md border bg-white px-2 text-xs"
-            >
-              <option value="">— escolha —</option>
-              {clientes.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nickname ? `${c.nickname} — ${c.name}` : c.name}
-                </option>
-              ))}
-            </select>
+            {/*
+              BUSCA POR PALAVRA (pedido do Felipe, 20/11/2026).
+
+              No lugar do <select> que obrigava a rolar a lista: digitar
+              "leticia" mostra todas as escolas com Letícia no nome, sem
+              precisar digitar "ESCOLA". Ignora acento e maiúscula.
+            */}
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={buscaCliente}
+                onChange={(e) => {
+                  setBuscaCliente(e.target.value)
+                  setClienteId('')
+                }}
+                placeholder="Digite parte do nome (ex.: leticia)"
+                className="h-9 pl-7 text-xs"
+              />
+            </div>
+            {cliente && (
+              <p className="flex items-center gap-1 rounded bg-[#0B3D91]/5 px-2 py-1 text-[10px] font-semibold text-[#0B3D91]">
+                <CheckCircle2 className="h-3 w-3" /> {cliente.nickname || cliente.name}
+              </p>
+            )}
+            {buscaCliente && !clienteId && (
+              <div className="max-h-40 overflow-y-auto rounded border bg-white">
+                {clientesFiltrados.length === 0 ? (
+                  <p className="px-2 py-2 text-[10px] text-muted-foreground">
+                    Nenhum cliente com "{buscaCliente}".
+                  </p>
+                ) : (
+                  clientesFiltrados.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => {
+                        setClienteId(c.id)
+                        setBuscaCliente(c.nickname || c.name)
+                      }}
+                      className="block w-full border-b px-2 py-1.5 text-left last:border-0 hover:bg-[#0B3D91]/5"
+                    >
+                      <span className="block text-[10px] font-semibold">
+                        {c.nickname || c.name}
+                      </span>
+                      <span className="block text-[9px] text-muted-foreground">{c.name}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
           </div>
           {cliente && (
             <p className="rounded border bg-slate-50 px-2 py-1 text-[9px] text-muted-foreground">
@@ -419,6 +470,7 @@ export default function PedidoPage() {
                   inputMode="decimal"
                   value={qtd}
                   onChange={(e) => setQtd(e.target.value)}
+                  placeholder="0"
                   className="h-8 text-[11px]"
                 />
               </div>
@@ -428,6 +480,7 @@ export default function PedidoPage() {
                   inputMode="decimal"
                   value={preco}
                   onChange={(e) => setPreco(e.target.value)}
+                  placeholder="0,00"
                   className="h-8 text-[11px]"
                 />
               </div>
@@ -459,7 +512,7 @@ export default function PedidoPage() {
                       <span className="text-[9px] text-muted-foreground">×</span>
                       <Input
                         inputMode="decimal"
-                        value={String(it.unit_price)}
+                        value={precoBR(it.unit_price)}
                         onChange={(e) => alterarItem(idx, 'unit_price', e.target.value)}
                         className="h-6 w-20 text-[10px]"
                       />
