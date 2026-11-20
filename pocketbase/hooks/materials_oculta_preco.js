@@ -13,23 +13,20 @@
  *     for nulo, `set` pode falhar silenciosamente, então também zeramos o
  *     objeto de resposta do item quando possível.
  */
-onRecordEnrich(
-  (e) => {
-    try {
-      const info = e.requestInfo()
-      const auth = info ? info.auth : null
-      const papel = auth ? String(auth.get('role') || '') : ''
-      const ehAdmin = papel === 'admin' || papel === 'superadmin'
-      console.log('[oculta_preco] papel=' + papel + ' admin=' + ehAdmin)
-      if (!ehAdmin) {
-        e.record.set('price', 0)
-        e.record.set('cost', 0)
-        console.log('[oculta_preco] zerou preco/custo de ' + e.record.get('name'))
-      }
-    } catch (err) {
-      console.log('[oculta_preco] ERRO: ' + err)
+onRecordEnrich((e) => {
+  try {
+    const info = e.requestInfo()
+    const auth = info ? info.auth : null
+    const papel = auth ? String(auth.get('role') || '') : ''
+    const ehAdmin = papel === 'admin' || papel === 'superadmin'
+    console.log('[oculta_preco] papel=' + papel + ' admin=' + ehAdmin)
+    if (!ehAdmin) {
+      e.record.set('price', 0)
+      e.record.set('cost', 0)
+      console.log('[oculta_preco] zerou preco/custo de ' + e.record.get('name'))
     }
-    e.next()
-  },
-  'materials',
-)
+  } catch (err) {
+    console.log('[oculta_preco] ERRO: ' + err)
+  }
+  e.next()
+}, 'materials')
