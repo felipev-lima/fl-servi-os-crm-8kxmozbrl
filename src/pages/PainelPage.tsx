@@ -441,16 +441,10 @@ export default function Painel() {
           <div className="space-y-1.5">
             {osVisiveis.map((o) => {
               const cfg = STATUS.find((s) => s.chave === o.status)
+              // DESTAQUE VERMELHO na OS do filtro: o Felipe pediu fundo
+              // puxado para o vermelho para achar rápido a que está vendo.
+              // Atrasada é vermelho mais forte, com o rótulo.
               return (
-                {/*
-                  DESTAQUE VERMELHO na OS aberta a partir do filtro.
-
-                  O Felipe pediu que a informação do pedido que está em
-                  destaque no painel fique com fundo puxado para o vermelho —
-                  é leitura rápida: "esta aqui é a que eu estou vendo".
-                  Atrasada também é vermelha, mas mais forte e com o rótulo,
-                  para não confundir uma coisa com a outra.
-                */}
                 <Link
                   key={o.id}
                   to={`/ordens/${o.id}`}
