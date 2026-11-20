@@ -51,8 +51,14 @@ migrate(
       app.save(col)
     }
 
-    // ---- numera os pedidos que já existem (do mais antigo para o mais novo) ----
-    const quotes = app.findRecordsByFilter('quotes', '', 'created', 100000, 0)
+    /**
+     * Numera os pedidos que já existem, do mais ANTIGO para o mais novo.
+     *
+     * `findRecordsByFilter` recusa 'created' como sort ("invalid sort field"):
+     * o campo de data automática não serve de ordenação ali. Ordenamos por
+     * `id`, que nesta base cresce na ordem de criação.
+     */
+    const quotes = app.findRecordsByFilter('quotes', '', 'id', 100000, 0)
     let n = 0
     for (const q of quotes) {
       n += 1
