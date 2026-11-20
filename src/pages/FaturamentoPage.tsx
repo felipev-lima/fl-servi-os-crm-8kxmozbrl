@@ -79,6 +79,17 @@ export default function FaturamentoPage() {
    */
   const [modo, setModo] = useState<'MES' | 'ANO' | 'TUDO'>('MES')
 
+  /**
+   * Base do imposto: o que foi FATURADO ou o que foi RECEBIDO.
+   *
+   * O Felipe informou que o Simples incide sobre produto (8%) e serviço (11%),
+   * e mais 3% de operacional sobre tudo. A dúvida que fica é a base: no
+   * Simples o tributo é sobre a receita, e receita mal paga ainda não é caixa.
+   * Em "Recebido" a alíquota é aplicada proporcionalmente ao que entrou, o que
+   * aproxima do imposto realmente devido no mês.
+   */
+  const [baseImposto, setBaseImposto] = useState<'FATURADO' | 'RECEBIDO'>('FATURADO')
+
   const inicio =
     modo === 'TUDO'
       ? '2000-01-01'
@@ -175,8 +186,21 @@ export default function FaturamentoPage() {
 
     const faturamento = vendaProduto + vendaServico
     const lucroBruto = faturamento - custo
-    const valorImpProduto = vendaProduto * (Number(String(impProduto).replace(',', '.')) / 100)
-    const valorImpServico = vendaServico * (Number(String(impServico).replace(',', '.')) / 100)
+
+    /**
+     * Proporção recebida.
+     *
+     * Em "Recebido", aplica ao imposto a mesma fração do faturamento que já
+     * entrou no caixa. É o mais próximo do que a guia do Simples cobra de quem
+     * ainda não recebeu boa parte do mês.
+     */
+    const proporcao =
+      baseImposto === 'RECEBIDO' && faturamento > 0 ? Math.min(1, recebido / faturamento) : 1
+
+    const valorImpProduto =
+      vendaProduto * (Number(String(impProduto).replace(',', '.')) / 100) * proporcao
+    const valorImpServico =
+      vendaServico * (Number(String(impServico).replace(',', '.')) / 100) * proporcao
     const imposto = valorImpProduto + valorImpServico
     const valorOperacional = faturamento * (Number(String(operacional).replace(',', '.')) / 100)
     const lucroLiquido = lucroBruto - imposto - valorOperacional
@@ -200,7 +224,7 @@ export default function FaturamentoPage() {
       // quanto da venda ainda não foi pago
       aReceber: faturamento - recebido,
     }
-  }, [lancamentos, custoPorNome, impProduto, impServico, operacional])
+  }, [lancamentos, custoPorNome, impProduto, impServico, operacional, baseImposto])
 
   /**
    * Resumo mês a mês dos lançamentos carregados.
@@ -421,6 +445,40 @@ export default function FaturamentoPage() {
         ))}
       </div>
 
+      {/*
+        Base do imposto.
+
+        No Simples Nacional o tributo incide sobre a RECEITA — e receita, na
+        prática, é o que entrou no caixa. Calcular sobre o faturado quando a
+        maior parte ainda não foi paga superestima o imposto do mês. Mas há
+        quem apure por competência. Fica na mão do Felipe escolher, e a tela
+        diz qual está usando.
+      */}
+      <div className="flex items-center gap-1.5 rounded-lg border bg-slate-50 px-2 py-1.5">
+        <span className="text-[10px] font-semibold text-muted-foreground">Imposto sobre:</span>
+        <button
+          type="button"
+          onClick={() => setBaseImposto('FATURADO')}
+          className={`rounded px-2 py-1 text-[10px] font-semibold ${
+            baseImposto === 'FATURADO' ? 'bg-[#0B3D91] text-white' : 'bg-white border'
+          }`}
+        >
+          Faturado
+        </button>
+        <button
+          type="button"
+          onClick={() => setBaseImposto('RECEBIDO')}
+          className={`rounded px-2 py-1 text-[10px] font-semibold ${
+            baseImposto === 'RECEBIDO' ? 'bg-[#0B3D91] text-white' : 'bg-white border'
+          }`}
+        >
+          Recebido
+        </button>
+        <span className="ml-auto font-mono text-[10px] font-bold text-[#0B3D91]">
+          {brl(n.imposto)}
+        </span>
+      </div>
+
       {/* seletor de período */}
       <Card>
         <CardContent className="flex items-center justify-between gap-2 p-2.5">
@@ -485,16 +543,27 @@ export default function FaturamentoPage() {
             rotulo={`Imposto sobre produto (${impProduto}%)`}
             valor={-n.valorImpProduto}
             sinal="menos"
+            detalhe={
+              baseImposto === 'RECEBIDO'
+                ? 'aplicado sobre a parte já recebida do faturamento'
+                : 'sobre a venda de produtos do período'
+            }
           />
           <Linha
             rotulo={`Imposto sobre serviço (${impServico}%)`}
             valor={-n.valorImpServico}
             sinal="menos"
+            detalhe={
+              baseImposto === 'RECEBIDO'
+                ? 'aplicado sobre a parte já recebida do faturamento'
+                : 'sobre a venda de serviços do período'
+            }
           />
           <Linha
             rotulo={`Custo operacional (${operacional}%)`}
             valor={-n.valorOperacional}
             sinal="menos"
+            detalhe="sobre o faturamento total do período"
           />
 
           <div className="bg-[#0B3D91] px-2 py-3">
