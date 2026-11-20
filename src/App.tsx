@@ -29,6 +29,7 @@ import ConfiguracoesPage from './pages/ConfiguracoesPage'
 import ConferenciaOSPage from './pages/ConferenciaOSPage'
 import CustosPage from './pages/CustosPage'
 import ComissoesPage from './pages/ComissoesPage'
+import LucroPage from './pages/LucroPage'
 import TecnicoPage from './pages/TecnicoPage'
 import NotFound from './pages/NotFound'
 
@@ -65,6 +66,7 @@ const App = () => (
             <Route path="/conferencia" element={<ConferenciaOSPage />} />
             <Route path="/custos" element={<CustosPage />} />
             <Route path="/comissoes" element={<ComissoesPage />} />
+            <Route path="/lucro" element={<LucroPage />} />
             <Route path="/tecnico" element={<TecnicoPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />

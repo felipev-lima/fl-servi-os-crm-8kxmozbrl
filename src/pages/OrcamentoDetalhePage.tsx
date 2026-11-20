@@ -30,6 +30,7 @@ import {
   Camera,
   X,
   CheckCircle2,
+  Wrench,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -209,6 +210,32 @@ export default function OrcamentoDetalhePage() {
   }
 
   /**
+   * C6 — transforma o pedido aprovado em OS, copiando cliente, itens e valores.
+   *
+   * É o caminho "aprovou, agora executa": em vez de redigitar tudo na OS, os
+   * itens do pedido entram como materiais da ordem e o valor de mão de obra
+   * vai em `service_value`. A OS sai ABERTA, pronta para o técnico.
+   */
+  const gerarOS = async () => {
+    if (!doc) return
+    if (!confirm(`Gerar uma OS a partir deste pedido?\n\n${itens.length} item(ns) serão copiados.`))
+      return
+    setSalvando(true)
+    try {
+      const res = await pb.send('/api/crm/pedido-para-os', {
+        method: 'POST',
+        body: { quote: doc.id },
+      })
+      toast.success(`OS ${res.order_number} criada a partir do pedido.`)
+      void carregar()
+    } catch (e: any) {
+      toast.error(e?.message || 'Não foi possível gerar a OS.')
+    } finally {
+      setSalvando(false)
+    }
+  }
+
+  /**
    * Gera o PDF de verdade e, no celular, abre o menu do sistema (onde fica o
    * Imprimir/AirPrint) — o Chrome do iPhone ignora window.print().
    */
@@ -350,6 +377,16 @@ export default function OrcamentoDetalhePage() {
             className="h-8 gap-1.5 text-[11px] text-emerald-800"
           >
             <Receipt className="h-3.5 w-3.5" /> Faturar
+          </Button>
+        )}
+        {(st === 'PEDIDO' || st === 'ENTREGUE') && !doc.work_order && (
+          <Button
+            variant="outline"
+            onClick={gerarOS}
+            disabled={salvando}
+            className="h-8 gap-1.5 text-[11px] text-blue-800"
+          >
+            <Wrench className="h-3.5 w-3.5" /> Gerar OS
           </Button>
         )}
         {st === 'ENTREGUE' && (
