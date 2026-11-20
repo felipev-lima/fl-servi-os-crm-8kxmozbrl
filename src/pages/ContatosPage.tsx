@@ -256,7 +256,14 @@ export default function ContatosPage() {
         .filter((l) => (l.telefone || l.email) && (l.nome || l.documento))
 
       setLinhas(lidas)
-      if (lidas.length === 0) toast.error('Nenhuma linha com telefone ou e-mail preenchido.')
+      if (lidas.length === 0) {
+        // diagnóstico na tela: sem isso só aparece "0" e não se sabe o motivo
+        toast.error(
+          `Nenhuma linha válida. Colunas achadas: ${chaves.join(' | ')}` +
+            (chaves.length ? '' : ' (nenhuma coluna lida)'),
+          { duration: 12000 },
+        )
+      }
     } catch (e) {
       toast.error('Não foi possível ler a planilha.')
     }
