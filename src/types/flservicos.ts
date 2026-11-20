@@ -33,6 +33,8 @@ export interface Company {
 export interface Client {
   id: string
   name: string
+  /** Apelido curto para BUSCA no CRM (ex.: "ESCOLA PARQUE"). Nunca impresso em PDF. */
+  nickname?: string
   type?: 'PF' | 'PJ'
   phone?: string
   email?: string
@@ -60,9 +62,18 @@ export interface Technician {
   updated: string
 }
 
+/**
+ * Classificação de todo lançamento: CAPITAL (equipamento), CONSUMO (cabo,
+ * conector...) ou SERVICO (mão de obra). O sinal vem do valor gravado, nunca
+ * do tipo de lançamento.
+ */
+export type MaterialKind = 'CAPITAL' | 'CONSUMO' | 'SERVICO'
+
 export interface Material {
   id: string
   name: string
+  /** Classificação padrão deste produto, aplicada ao lançar numa OS/orçamento */
+  default_kind?: MaterialKind
   unit: 'UN' | 'M' | 'KG' | 'L' | 'CX' | 'PC' | 'PAR' | 'ROLO'
   category?: string
   brand?: string
@@ -138,6 +149,8 @@ export interface OrderMaterial {
   material: string
   quantity: number
   unit: string
+  /** Tipo do lançamento, copiado do default_kind do produto na hora do lançamento */
+  kind?: MaterialKind
   unit_price?: number
   total_price?: number
   notes?: string

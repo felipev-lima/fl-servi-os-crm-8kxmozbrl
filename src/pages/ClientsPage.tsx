@@ -35,6 +35,7 @@ import {
 import { toast } from 'sonner'
 import ClientImportDialog from '@/components/ClientImportDialog'
 import { CAMPO_ALTO, uc } from '@/lib/texto'
+import { semAcento } from '@/lib/busca'
 
 export default function ClientsPage() {
   const { isTechnician, isAdmin } = useAuth()
@@ -47,6 +48,7 @@ export default function ClientsPage() {
   const [editingClient, setEditingClient] = useState<Client | null>(null)
   const [formData, setFormData] = useState<Partial<Client>>({
     name: '',
+    nickname: '',
     type: 'PJ',
     phone: '',
     email: '',
@@ -81,6 +83,7 @@ export default function ClientsPage() {
     setEditingClient(null)
     setFormData({
       name: '',
+      nickname: '',
       type: 'PJ',
       phone: '',
       email: '',
@@ -97,6 +100,7 @@ export default function ClientsPage() {
     setEditingClient(c)
     setFormData({
       name: c.name,
+      nickname: c.nickname || '',
       type: c.type || 'PJ',
       phone: c.phone || '',
       email: c.email || '',
@@ -124,6 +128,7 @@ export default function ClientsPage() {
       const dados: Partial<Client> = {
         ...formData,
         name: uc(formData.name).trim(),
+        nickname: uc(formData.nickname || '').trim(),
         document: uc(formData.document).trim(),
         address: uc(formData.address).trim(),
         neighborhood: uc(formData.neighborhood).trim(),
@@ -159,11 +164,16 @@ export default function ClientsPage() {
   }
 
   const filtered = clients.filter((c) => {
-    const term = search.toLowerCase()
+    // IGNORA ACENTO E MAIÚSCULA: o filtro do PocketBase não ignora acento, então
+    // a lista vem inteira e o filtro é local. Busca por apelido, razão social,
+    // documento e cidade.
+    const term = semAcento(search)
+    if (!term) return true
     return (
-      c.name.toLowerCase().includes(term) ||
-      (c.city || '').toLowerCase().includes(term) ||
-      (c.document || '').toLowerCase().includes(term)
+      semAcento(c.name).includes(term) ||
+      semAcento(c.nickname).includes(term) ||
+      semAcento(c.document).includes(term) ||
+      semAcento(c.city).includes(term)
     )
   })
 
@@ -224,6 +234,11 @@ export default function ClientsPage() {
                     <h3 className="font-bold text-sm text-foreground line-clamp-1">
                       {client.name}
                     </h3>
+                    {client.nickname && (
+                      <span className="block text-[10px] text-[#0F6A3A] font-semibold uppercase">
+                        {client.nickname}
+                      </span>
+                    )}
                     <span className="text-[10px] text-muted-foreground uppercase font-semibold">
                       {client.type || 'PJ'} {client.document ? `• ${client.document}` : ''}
                     </span>
@@ -313,6 +328,22 @@ export default function ClientsPage() {
                 required
                 className={`h-9 text-xs ${CAMPO_ALTO}`}
               />
+              <p className="text-[10px] text-muted-foreground">
+                Este é o nome impresso no PDF da OS.
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold">Apelido (busca no CRM)</Label>
+              <Input
+                placeholder="Ex: ESCOLA PARQUE"
+                value={formData.nickname || ''}
+                onChange={(e) => setFormData((prev) => ({ ...prev, nickname: uc(e.target.value) }))}
+                className={`h-9 text-xs ${CAMPO_ALTO}`}
+              />
+              <p className="text-[10px] text-muted-foreground">
+                Nome curto para achar o cliente na busca. Não aparece no PDF.
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-2">

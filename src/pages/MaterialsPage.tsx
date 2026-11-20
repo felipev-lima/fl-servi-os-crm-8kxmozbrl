@@ -33,7 +33,15 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 import { CAMPO_ALTO, uc } from '@/lib/texto'
+import { semAcento } from '@/lib/busca'
+import { MaterialKind } from '@/types/flservicos'
 import { toast } from 'sonner'
+
+const KINDS: { value: MaterialKind; label: string; desc: string }[] = [
+  { value: 'CAPITAL', label: 'CAPITAL', desc: 'equipamento — câmera, DVR, switch, rack...' },
+  { value: 'CONSUMO', label: 'CONSUMO', desc: 'cabo, conector, fita, toner...' },
+  { value: 'SERVICO', label: 'SERVICO', desc: 'mão de obra — instalação, manutenção, vistoria' },
+]
 
 export default function MaterialsPage() {
   const { isAdmin } = useAuth()
@@ -49,6 +57,7 @@ export default function MaterialsPage() {
   const [formData, setFormData] = useState<Partial<Material>>({
     name: '',
     unit: 'UN',
+    default_kind: undefined,
     category: '',
     brand: '',
     price: 0,
@@ -83,6 +92,7 @@ export default function MaterialsPage() {
     setFormData({
       name: '',
       unit: 'UN',
+      default_kind: undefined,
       category: '',
       brand: '',
       price: 0,
@@ -99,6 +109,7 @@ export default function MaterialsPage() {
     setFormData({
       name: m.name,
       unit: m.unit,
+      default_kind: (m.default_kind as MaterialKind) || undefined,
       category: m.category || '',
       brand: m.brand || '',
       price: m.price || 0,
@@ -154,11 +165,13 @@ export default function MaterialsPage() {
   const pendentes = materials.filter((m) => m.pending_review)
 
   const filtered = (aba === 'pendentes' ? pendentes : materials).filter((m) => {
-    const term = search.toLowerCase()
+    // IGNORA ACENTO E MAIÚSCULA (a lista já vem inteira do backend, o filtro é local)
+    const term = semAcento(search)
+    if (!term) return true
     return (
-      m.name.toLowerCase().includes(term) ||
-      (m.category || '').toLowerCase().includes(term) ||
-      (m.brand || '').toLowerCase().includes(term)
+      semAcento(m.name).includes(term) ||
+      semAcento(m.category).includes(term) ||
+      semAcento(m.brand).includes(term)
     )
   })
 
@@ -280,6 +293,19 @@ export default function MaterialsPage() {
                         aguardando revisão
                       </span>
                     )}
+                    {mat.default_kind && (
+                      <span
+                        className={`inline-block mr-1 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                          mat.default_kind === 'CAPITAL'
+                            ? 'bg-[#0B3D91]/10 text-[#0B3D91]'
+                            : mat.default_kind === 'CONSUMO'
+                              ? 'bg-amber-100 text-amber-700'
+                              : 'bg-emerald-100 text-emerald-700'
+                        }`}
+                      >
+                        {mat.default_kind}
+                      </span>
+                    )}
                     <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                       <span className="font-semibold text-slate-700 bg-slate-100 px-1.5 py-0.2 rounded">
                         {mat.unit}
@@ -398,6 +424,30 @@ export default function MaterialsPage() {
                   className={`h-9 text-xs ${CAMPO_ALTO}`}
                 />
               </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold">Tipo (classificação)</Label>
+              <Select
+                value={formData.default_kind || ''}
+                onValueChange={(val) =>
+                  setFormData((prev) => ({ ...prev, default_kind: val as MaterialKind }))
+                }
+              >
+                <SelectTrigger className="h-9 text-xs">
+                  <SelectValue placeholder="Selecione CAPITAL, CONSUMO ou SERVICO" />
+                </SelectTrigger>
+                <SelectContent>
+                  {KINDS.map((k) => (
+                    <SelectItem key={k.value} value={k.value} className="text-xs">
+                      {k.label} — {k.desc}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[10px] text-muted-foreground">
+                Vem preenchido automaticamente ao lançar o produto numa OS ou orçamento.
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-2">

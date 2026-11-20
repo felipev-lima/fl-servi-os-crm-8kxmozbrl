@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { createMaterial } from '@/services/api'
-import { Material } from '@/types/flservicos'
+import { Material, MaterialKind } from '@/types/flservicos'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,6 +12,13 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Loader2, PackagePlus } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { CAMPO_ALTO, uc } from '@/lib/texto'
 import { toast } from 'sonner'
 
@@ -35,6 +42,7 @@ export function ProdutoRapidoDialog({
 }) {
   const [nome, setNome] = useState('')
   const [unidade, setUnidade] = useState<(typeof UNIDADES)[number]>('UN')
+  const [defaultKind, setDefaultKind] = useState<'' | MaterialKind>('')
   const [salvando, setSalvando] = useState(false)
 
   const salvar = async (e: React.FormEvent) => {
@@ -51,12 +59,14 @@ export function ProdutoRapidoDialog({
         unit: unidade,
         price: 0,
         category: 'GERAL',
+        default_kind: defaultKind || undefined,
         pending_review: true,
       })
       toast.success('Produto cadastrado! O administrador vai revisar depois.')
       onCriado(criado)
       setNome('')
       setUnidade('UN')
+      setDefaultKind('')
       onOpenChange(false)
     } catch (err: any) {
       toast.error(err?.message || 'Erro ao cadastrar o produto.')
@@ -86,6 +96,22 @@ export function ProdutoRapidoDialog({
               className={`h-10 text-sm ${CAMPO_ALTO}`}
               required
             />
+          </div>
+
+          <div className="space-y-1">
+            <Label className="text-xs font-semibold">Tipo</Label>
+            <Select value={defaultKind} onValueChange={(v) => setDefaultKind(v as any)}>
+              <SelectTrigger className="h-10">
+                <SelectValue placeholder="— (revisão decide)" />
+              </SelectTrigger>
+              <SelectContent>
+                {(['CAPITAL', 'CONSUMO', 'SERVICO'] as MaterialKind[]).map((k) => (
+                  <SelectItem key={k} value={k}>
+                    {k}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-1">

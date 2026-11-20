@@ -33,6 +33,7 @@ import {
   OrderStatus,
   ServiceType,
   MaterialKit,
+  MaterialKind,
 } from '@/types/flservicos'
 import { ChecklistItem } from '@/types/checklist'
 import { Button } from '@/components/ui/button'
@@ -309,6 +310,24 @@ export default function WorkOrderDetail() {
   }
 
   /**
+   * Corrige o tipo (CAPITAL/CONSUMO/SERVICO) de uma linha JÁ LANÇADA na OS.
+   *
+   * O tipo vem preenchido do cadastro do produto (default_kind) — este ajuste
+   * é pontual: vale só para este lançamento, não mexe no cadastro.
+   */
+  const handleAlterarKindMaterial = async (mat: OrderMaterial, novoKind: string) => {
+    const kind = (novoKind || '') as MaterialKind
+    setOrderMaterials((prev) => prev.map((m) => (m.id === mat.id ? { ...m, kind } : m)))
+    try {
+      await updateOrderMaterial(mat.id, { kind } as any)
+      if (kind) toast.success(`Tipo alterado para ${kind}.`)
+    } catch (err) {
+      setOrderMaterials((prev) => prev.map((m) => (m.id === mat.id ? { ...m, kind: mat.kind } : m)))
+      toast.error('Erro ao alterar o tipo do lançamento.')
+    }
+  }
+
+  /**
    * Alinha o preço das linhas da OS com o preço atual do catálogo.
    *
    * Quando o material entra na OS, o preço é copiado do produto naquele
@@ -512,11 +531,14 @@ export default function WorkOrderDetail() {
       const unitPrice = mat.price || 0
       const totalPrice = Number((qty * unitPrice).toFixed(2))
 
+      // CLASSIFICACAO AUTOMATICA: o tipo do lancamento vem do cadastro do
+      // produto (default_kind) e pode ser corrigido ponto a ponto na tabela.
       await addOrderMaterial({
         work_order: id,
         material: mat.id,
         quantity: qty,
         unit: mat.unit,
+        kind: mat.default_kind || undefined,
         unit_price: unitPrice,
         total_price: totalPrice,
         notes: materialNotes,
@@ -576,6 +598,7 @@ export default function WorkOrderDetail() {
           material: mat.id,
           quantity: qty,
           unit: mat.unit,
+          kind: mat.default_kind || undefined,
           unit_price: unitPrice,
           total_price: Number((qty * unitPrice).toFixed(2)),
           notes: item.notes || '',
@@ -1866,10 +1889,12 @@ ${
                       options={materialsCatalog.map((m) => ({
                         value: m.id,
                         label: (m as any).pending_review ? `● ${m.name}` : m.name,
-                        hint: `${m.unit}${m.category ? ' · ' + m.category : ''}${
+                        hint: `${
+                          m.default_kind ? m.default_kind + ' · ' : ''
+                        }${m.unit}${m.category ? ' · ' + m.category : ''}${
                           isAdmin && m.price ? ' · R$ ' + m.price.toFixed(2) : ''
                         }${(m as any).pending_review ? ' · AGUARDA REVISÃO' : ''}`,
-                        keywords: m.category || '',
+                        keywords: [m.category || '', m.default_kind || ''].join(' '),
                       }))}
                       value={selectedMaterialId}
                       onChange={setSelectedMaterialId}
@@ -1948,6 +1973,35 @@ ${
                       <p className="text-[10px] text-muted-foreground leading-snug">{mat.notes}</p>
                     )}
 
+                    {canEdit ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-semibold uppercase text-muted-foreground">
+                          Tipo
+                        </span>
+                        <Select
+                          value={mat.kind || ''}
+                          onValueChange={(val) => handleAlterarKindMaterial(mat, val)}
+                        >
+                          <SelectTrigger className="h-8 w-[8.5rem] text-[10px] font-bold">
+                            <SelectValue placeholder="—" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {['CAPITAL', 'CONSUMO', 'SERVICO'].map((k) => (
+                              <SelectItem key={k} value={k} className="text-xs font-semibold">
+                                {k}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ) : (
+                      mat.kind && (
+                        <span className="inline-block text-[9px] font-bold uppercase bg-muted px-1.5 py-0.5 rounded">
+                          {mat.kind}
+                        </span>
+                      )
+                    )}
+
                     <div className="flex flex-wrap items-end gap-2">
                       <div className="flex items-center gap-1.5">
                         <span className="text-[10px] font-semibold uppercase text-muted-foreground">
@@ -2022,6 +2076,7 @@ ${
                   <thead className="bg-muted text-muted-foreground font-semibold border-b">
                     <tr>
                       <th className="p-2.5">Material</th>
+                      <th className="p-2.5 text-center">Tipo</th>
                       <th className="p-2.5 text-center">Quantidade</th>
                       <th className="p-2.5 text-center">Unidade</th>
                       {isAdmin && (
@@ -2053,6 +2108,29 @@ ${
                             <span className="block text-[11px] text-muted-foreground">
                               {mat.notes}
                             </span>
+                          )}
+                        </td>
+                        <td className="p-2.5 text-center">
+                          {canEdit ? (
+                            <Select
+                              value={mat.kind || ''}
+                              onValueChange={(val) => handleAlterarKindMaterial(mat, val)}
+                            >
+                              <SelectTrigger className="h-7 w-[7.5rem] text-[10px] font-bold mx-auto">
+                                <SelectValue placeholder="—" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {['CAPITAL', 'CONSUMO', 'SERVICO'].map((k) => (
+                                  <SelectItem key={k} value={k} className="text-xs font-semibold">
+                                    {k}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : mat.kind ? (
+                            <span className="text-[10px] font-bold uppercase">{mat.kind}</span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
                           )}
                         </td>
                         <td className="p-2.5 text-center font-mono">
@@ -2119,7 +2197,7 @@ ${
                     {orderMaterials.length === 0 && (
                       <tr>
                         <td
-                          colSpan={(canEdit ? 1 : 0) + (isAdmin ? 5 : 3)}
+                          colSpan={(canEdit ? 1 : 0) + (isAdmin ? 5 : 4)}
                           className="p-6 text-center text-muted-foreground"
                         >
                           Nenhum material adicionado a esta OS ainda.
