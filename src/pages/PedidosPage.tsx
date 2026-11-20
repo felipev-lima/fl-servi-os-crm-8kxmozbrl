@@ -34,7 +34,7 @@ export default function PedidosPage() {
   const [pedidos, setPedidos] = useState<Quote[]>([])
   const [carregando, setCarregando] = useState(true)
   const [busca, setBusca] = useState('')
-  const [filtro, setFiltro] = useState<'TODOS' | 'PEDIDO' | 'ENTREGUE'>('TODOS')
+  const [filtro, setFiltro] = useState<string>('TODOS')
 
   useEffect(() => {
     ;(async () => {
@@ -57,7 +57,12 @@ export default function PedidosPage() {
   const lista = useMemo(() => {
     const t = norm(busca)
     return pedidos.filter((p) => {
-      if (filtro !== 'TODOS' && (p.status || 'PEDIDO') !== filtro) return false
+      if (filtro !== 'TODOS') {
+        const st = p.status || 'ORCAMENTO'
+        // pedidos antigos gravados como FATURADO contam como LANÇADO
+        const bate = st === filtro || (filtro === 'LANCADO' && st === 'FATURADO')
+        if (!bate) return false
+      }
       if (!t) return true
       const nome = norm(p.expand?.client?.name)
       const apel = norm((p.expand?.client as any)?.nickname)
@@ -102,25 +107,50 @@ export default function PedidosPage() {
         />
       </div>
 
-      <div className="flex flex-wrap gap-1">
-        {[
-          ['TODOS', `Todos (${pedidos.length})`],
-          [
-            'PEDIDO',
-            `Em aberto (${pedidos.filter((p) => (p.status || 'PEDIDO') === 'PEDIDO').length})`,
-          ],
-          ['ENTREGUE', `Entregues (${pedidos.filter((p) => p.status === 'ENTREGUE').length})`],
-        ].map(([v, rot]) => (
-          <Button
-            key={v}
-            size="sm"
-            variant={filtro === v ? 'default' : 'outline'}
-            onClick={() => setFiltro(v as any)}
-            className={`h-7 text-[10px] ${filtro === v ? 'bg-slate-900 text-white' : ''}`}
-          >
-            {rot}
-          </Button>
-        ))}
+      {/*
+        ATALHOS DE STATUS COLORIDOS (pedido do Felipe, 20/11/2026).
+        Cada etapa da esteira tem sua cor, e o MESMO esquema pinta o cartão do
+        pedido na lista — ele bate o olho e sabe em que pé está.
+        Tocar no atalho filtra; tocar de novo volta para todos.
+      */}
+      <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
+        <button
+          type="button"
+          onClick={() => setFiltro('TODOS')}
+          className={`flex flex-col items-center justify-center rounded-xl border-l-4 border-l-slate-500 bg-slate-50 px-1 py-2 transition-all ${
+            filtro === 'TODOS' ? 'ring-2 ring-slate-700 shadow-md' : 'hover:shadow-md'
+          }`}
+        >
+          <span className="text-[9px] font-bold uppercase leading-none text-slate-700">Todos</span>
+          <span className="mt-0.5 text-lg font-black leading-none text-slate-800">
+            {pedidos.length}
+          </span>
+        </button>
+
+        {STATUS_PEDIDO.map((s) => {
+          const ativo = filtro === s.chave
+          const qtd = pedidos.filter(
+            (p) =>
+              (p.status || 'ORCAMENTO') === s.chave ||
+              (s.chave === 'LANCADO' && p.status === 'FATURADO'),
+          ).length
+          return (
+            <button
+              key={s.chave}
+              type="button"
+              onClick={() => setFiltro(ativo ? 'TODOS' : (s.chave as any))}
+              title={s.ajuda}
+              className={`flex flex-col items-center justify-center rounded-xl border-l-4 px-1 py-2 transition-all ${s.cor} ${
+                ativo ? 'ring-2 ring-slate-700 shadow-md' : 'hover:shadow-md'
+              }`}
+            >
+              <span className={`text-[9px] font-bold uppercase leading-none ${s.texto}`}>
+                {s.rotulo}
+              </span>
+              <span className={`mt-0.5 text-lg font-black leading-none ${s.texto}`}>{qtd}</span>
+            </button>
+          )
+        })}
       </div>
 
       <div className="space-y-1.5">
