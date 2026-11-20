@@ -28,6 +28,7 @@ import {
   Boxes,
   Phone,
   FileBadge,
+  ShoppingCart,
 } from 'lucide-react'
 import { getEmpresa, urlArquivo, type Empresa } from '@/lib/empresa'
 
@@ -80,6 +81,7 @@ export default function Layout() {
     { name: 'Comissões', href: '/comissoes', icon: Percent, adminOnly: true },
     { name: 'Lucro', href: '/lucro', icon: TrendingUp, adminOnly: true },
     { name: 'Faturamento', href: '/faturamento', icon: BarChart3, adminOnly: true },
+    { name: 'Pedidos', href: '/pedidos', icon: ShoppingCart, adminOnly: false },
     { name: 'Nota fiscal', href: '/nota-fiscal', icon: FileBadge, adminOnly: true },
     { name: 'Alíquotas', href: '/aliquotas', icon: Percent, adminOnly: true },
     { name: 'Manutenções Futuras', href: '/manutencoes', icon: CalendarDays, adminOnly: true },

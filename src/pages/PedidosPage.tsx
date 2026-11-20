@@ -1,0 +1,189 @@
+/**
+ * Lista de pedidos — o que foi vendido, para reabrir e reimprimir.
+ *
+ * Antes só existia a criação (`/pedido/novo`): o pedido era salvo e sumia de
+ * vista, sem lugar para consultar. Aqui ficam todos, com busca por cliente e
+ * atalho para abrir o talão de novo.
+ *
+ * Valores só aparecem para administrador — mesma regra do pedido.
+ */
+import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { getQuotes, totalDoDocumento } from '@/services/crm'
+import type { Quote } from '@/types/crm'
+import { brl, dataBR } from '@/types/crm'
+import { useAuth } from '@/contexts/AuthContext'
+import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import {
+  Loader2,
+  Plus,
+  Search,
+  ShoppingCart,
+  ArrowRight,
+  CheckCircle2,
+  Clock,
+  FileText,
+} from 'lucide-react'
+
+export default function PedidosPage() {
+  const { isAdmin } = useAuth()
+  const [pedidos, setPedidos] = useState<Quote[]>([])
+  const [carregando, setCarregando] = useState(true)
+  const [busca, setBusca] = useState('')
+  const [filtro, setFiltro] = useState<'TODOS' | 'PEDIDO' | 'ENTREGUE'>('TODOS')
+
+  useEffect(() => {
+    ;(async () => {
+      try {
+        setPedidos(await getQuotes())
+      } catch {
+        /* a lista avisa vazia */
+      } finally {
+        setCarregando(false)
+      }
+    })()
+  }, [])
+
+  const norm = (s?: string) =>
+    (s || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+
+  const lista = useMemo(() => {
+    const t = norm(busca)
+    return pedidos.filter((p) => {
+      if (filtro !== 'TODOS' && (p.status || 'PEDIDO') !== filtro) return false
+      if (!t) return true
+      const nome = norm(p.expand?.client?.name)
+      const apel = norm((p.expand?.client as any)?.nickname)
+      return nome.includes(t) || apel.includes(t)
+    })
+  }, [pedidos, busca, filtro])
+
+  if (carregando) {
+    return (
+      <div className="flex items-center justify-center gap-2 py-20 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" /> Carregando...
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h1 className="text-xl font-black tracking-tight sm:text-2xl">Pedidos</h1>
+          <p className="text-[11px] text-muted-foreground">
+            {pedidos.length} pedido(s) · toque para abrir e reimprimir
+          </p>
+        </div>
+        <Button
+          asChild
+          className="h-9 shrink-0 gap-1.5 bg-[#0B3D91] text-xs font-semibold text-white hover:bg-[#0B3D91]/90"
+        >
+          <Link to="/pedido/novo">
+            <Plus className="h-4 w-4" /> Novo pedido
+          </Link>
+        </Button>
+      </div>
+
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          placeholder="Buscar por cliente..."
+          className="h-9 pl-9 text-xs"
+        />
+      </div>
+
+      <div className="flex flex-wrap gap-1">
+        {[
+          ['TODOS', `Todos (${pedidos.length})`],
+          [
+            'PEDIDO',
+            `Em aberto (${pedidos.filter((p) => (p.status || 'PEDIDO') === 'PEDIDO').length})`,
+          ],
+          ['ENTREGUE', `Entregues (${pedidos.filter((p) => p.status === 'ENTREGUE').length})`],
+        ].map(([v, rot]) => (
+          <Button
+            key={v}
+            size="sm"
+            variant={filtro === v ? 'default' : 'outline'}
+            onClick={() => setFiltro(v as any)}
+            className={`h-7 text-[10px] ${filtro === v ? 'bg-slate-900 text-white' : ''}`}
+          >
+            {rot}
+          </Button>
+        ))}
+      </div>
+
+      <div className="space-y-1.5">
+        {lista.map((p) => {
+          const itens = p.items || []
+          const total = totalDoDocumento(itens)
+          const entregue = p.status === 'ENTREGUE'
+          return (
+            <Link key={p.id} to={`/pedido/${p.id}`} className="block">
+              <Card className={entregue ? 'border-emerald-200' : 'border-amber-200'}>
+                <CardContent className="flex items-center gap-2 p-2.5">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Badge
+                        className={`px-1.5 py-0 text-[8px] ${
+                          entregue
+                            ? 'border-emerald-300 bg-emerald-100 text-emerald-800'
+                            : 'border-amber-300 bg-amber-100 text-amber-800'
+                        }`}
+                      >
+                        {entregue ? 'ENTREGUE' : 'EM ABERTO'}
+                      </Badge>
+                      <span className="text-[9px] text-muted-foreground">{dataBR(p.date)}</span>
+                      <span className="text-[9px] text-muted-foreground">
+                        · {itens.length} item(ns)
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-[11px] font-semibold leading-tight">
+                      {p.expand?.client?.name || '—'}
+                    </p>
+                    {p.delivered_by_name && (
+                      <p className="truncate text-[9px] text-muted-foreground">
+                        Entregue por {p.delivered_by_name}
+                      </p>
+                    )}
+                  </div>
+                  <div className="shrink-0 text-right">
+                    {isAdmin && (
+                      <span className="block font-mono text-xs font-bold text-[#0B3D91]">
+                        {brl(total)}
+                      </span>
+                    )}
+                    <ArrowRight className="mt-0.5 ml-auto h-3.5 w-3.5 text-muted-foreground" />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          )
+        })}
+
+        {lista.length === 0 && (
+          <div className="rounded-xl border-2 border-dashed p-10 text-center">
+            <ShoppingCart className="mx-auto mb-2 h-7 w-7 text-muted-foreground" />
+            <p className="text-sm font-semibold">
+              {pedidos.length === 0 ? 'Nenhum pedido ainda' : 'Nada neste filtro'}
+            </p>
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              {pedidos.length === 0
+                ? 'Crie o primeiro pelo botão "Novo pedido".'
+                : 'Tente outro termo de busca.'}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
