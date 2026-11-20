@@ -57,6 +57,7 @@ import {
   MapPin,
   Navigation,
   Images,
+  X,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -388,9 +389,17 @@ export default function PedidoPage() {
         const f = base64ParaArquivo(sigEntregador, 'assinatura-entregador.png')
         if (f) fd.append('signature_deliverer', f)
       }
+      /**
+       * BUG CORRIGIDO (20/11/2026): o envio mandava o OBJETO devolvido por
+       * `prepararFoto` em vez do arquivo dentro dele. O FormData recebia algo
+       * que não é Blob — o salvamento estourava com "Something went wrong" e
+       * nenhuma foto chegava ao servidor. Por isso o PDF saía sem imagem.
+       *
+       * O certo é `preparada.arquivo`.
+       */
       for (const f of fotos) {
         const preparada = await prepararFoto(f)
-        fd.append('photos', preparada)
+        fd.append('photos', preparada.arquivo, preparada.arquivo.name || 'foto.jpg')
       }
 
       const r = salvoId ? await updateQuote(salvoId, fd as any) : await createQuote(fd as any)
@@ -399,8 +408,29 @@ export default function PedidoPage() {
       toast.success(salvoId ? 'Pedido atualizado.' : 'Pedido criado.')
       return (r as any).id
     } catch (e: any) {
-      const msg = e?.response?.data?.message || e?.message || 'Não foi possível salvar o pedido.'
-      toast.error(msg)
+      /**
+       * Mensagem de erro ÚTIL.
+       *
+       * Antes o PocketBase devolvia "Something went wrong while processing your
+       * request" e o Felipe ficava sem saber o que corrigir. Aqui a mensagem
+       * real do campo (que vem em `response.data.data`) é mostrada, junto com
+       * o campo culpado.
+       */
+      const dados = e?.response?.data
+      let msg = dados?.message || e?.message || 'Não foi possível salvar o pedido.'
+      const campos = dados?.data
+      if (campos && typeof campos === 'object') {
+        const detalhes = Object.entries(campos)
+          .map(([campo, info]: any) => `${campo}: ${info?.message || 'inválido'}`)
+          .join(' · ')
+        if (detalhes) msg = `${msg} (${detalhes})`
+      }
+      // caso clássico: foto grande demais
+      if (/413|too large|exceed/i.test(msg)) {
+        msg = 'A foto é grande demais para o servidor. Tente uma foto menor.'
+      }
+      toast.error(msg, { duration: 8000 })
+      console.error('Erro ao salvar pedido:', e?.response || e)
       return null
     } finally {
       setSalvando(false)
@@ -879,7 +909,44 @@ export default function PedidoPage() {
                 <Images className="h-3.5 w-3.5" /> Da galeria
               </Button>
             </div>
-            <p className="text-[9px] text-muted-foreground">{fotos.length} foto(s) anexada(s)</p>
+            {/*
+              PRÉVIA DAS FOTOS (pedido do Felipe, 20/11/2026).
+              Antes a tela só dizia "3 foto(s) anexada(s)" — ele não sabia qual
+              foto estava indo, nem se estava torta ou escura. Agora cada foto
+              aparece em miniatura, com botão de remover.
+            */}
+            {fotos.length > 0 && (
+              <>
+                <p className="text-[9px] text-muted-foreground">
+                  {fotos.length} foto(s) — toque no X para remover
+                </p>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {fotos.map((f, i) => (
+                    <div
+                      key={`${f.name}-${i}`}
+                      className="relative overflow-hidden rounded-md border"
+                    >
+                      <img
+                        src={URL.createObjectURL(f)}
+                        alt={f.name}
+                        className="h-20 w-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setFotos((prev) => prev.filter((_, k) => k !== i))}
+                        className="absolute right-0.5 top-0.5 rounded-full bg-black/70 p-0.5 text-white"
+                        aria-label="Remover foto"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                      <span className="absolute bottom-0 left-0 right-0 bg-black/60 px-1 py-0.5 text-[7px] text-white">
+                        {(f.size / 1024).toFixed(0)} KB
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
             {fotos.length > 0 && (
               <p className="text-[9px] text-muted-foreground">
                 {fotos.map((f) => f.name).join(', ')}
@@ -1063,6 +1130,30 @@ export default function PedidoPage() {
                 </div>
               </div>
             </div>
+
+            {/*
+              FOTOS NO PDF (pedido do Felipe, 20/11/2026).
+              O talão saía só com texto; ele precisava mostrar ao cliente o que
+              foi entregue. As fotos entram em miniatura, 3 por linha, antes do
+              rodapé — assim cabem na mesma página do documento.
+            */}
+            {fotos.length > 0 && (
+              <div className="mt-3 border-t pt-2">
+                <p className="mb-1 text-[8px] font-bold uppercase text-slate-500">
+                  Fotos da entrega
+                </p>
+                <div className="grid grid-cols-3 gap-1">
+                  {fotos.map((f, i) => (
+                    <img
+                      key={i}
+                      src={URL.createObjectURL(f)}
+                      alt=""
+                      className="h-24 w-full rounded border object-cover"
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
 
             <p className="mt-3 border-t pt-1 text-center text-[7px] text-slate-500">
               {empresa?.endereco} · {empresa?.telefone} · {empresa?.email}
