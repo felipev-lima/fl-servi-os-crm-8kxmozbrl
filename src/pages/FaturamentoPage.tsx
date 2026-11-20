@@ -71,8 +71,33 @@ export default function FaturamentoPage() {
   const [operacional, setOperacional] = useState('3')
   const [salvandoPct, setSalvandoPct] = useState(false)
 
-  const inicio = `${ano}-${String(mes).padStart(2, '0')}-01`
-  const fim = new Date(ano, mes, 0).toISOString().slice(0, 10)
+  /**
+   * Três recortes:
+   *   MES   o mês escolhido (padrão)
+   *   ANO   o ano inteiro, mês a mês no rodapé
+   *   TUDO  tudo o que já foi lançado — o "até agora" que ele pediu
+   */
+  const [modo, setModo] = useState<'MES' | 'ANO' | 'TUDO'>('MES')
+
+  const inicio =
+    modo === 'TUDO'
+      ? '2000-01-01'
+      : modo === 'ANO'
+        ? `${ano}-01-01`
+        : `${ano}-${String(mes).padStart(2, '0')}-01`
+  const fim =
+    modo === 'TUDO'
+      ? '2100-12-31'
+      : modo === 'ANO'
+        ? `${ano}-12-31`
+        : new Date(ano, mes, 0).toISOString().slice(0, 10)
+
+  const rotuloPeriodo =
+    modo === 'TUDO'
+      ? 'Tudo (acumulado)'
+      : modo === 'ANO'
+        ? `Ano ${ano}`
+        : `${MESES[mes - 1]} / ${ano}`
 
   const carregar = async () => {
     setCarregando(true)
@@ -104,7 +129,7 @@ export default function FaturamentoPage() {
   useEffect(() => {
     void carregar()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ano, mes])
+  }, [ano, mes, modo])
 
   /** custo por nome de produto, para casar o lançamento (texto) com o cadastro */
   const custoPorNome = useMemo(() => {
@@ -175,6 +200,60 @@ export default function FaturamentoPage() {
       // quanto da venda ainda não foi pago
       aReceber: faturamento - recebido,
     }
+  }, [lancamentos, custoPorNome, impProduto, impServico, operacional])
+
+  /**
+   * Resumo mês a mês dos lançamentos carregados.
+   *
+   * Serve para ver a evolução: em "Até agora" ou "Ano", aparece a linha de cada
+   * mês com faturamento, lucro bruto, líquido e a margem.
+   */
+  const porMes = useMemo(() => {
+    const mapa = new Map<
+      string,
+      { chave: string; rotulo: string; prod: number; serv: number; custo: number }
+    >()
+    for (const t of lancamentos) {
+      if (t.kind === 'DINHEIRO') continue
+      const chave = (t.date || '').slice(0, 7)
+      if (!chave) continue
+      if (!mapa.has(chave))
+        mapa.set(chave, {
+          chave,
+          rotulo: `${MESES[Number(chave.slice(5, 7)) - 1]?.slice(0, 3)}/${chave.slice(2, 4)}`,
+          prod: 0,
+          serv: 0,
+          custo: 0,
+        })
+      const alvo = mapa.get(chave)!
+      const v = totalDaLinha(t)
+      if (t.item_type === 'SERVICO' || t.kind === 'SERVICO') {
+        alvo.serv += v
+      } else {
+        alvo.prod += v
+        const c = custoPorNome.get((t.description || '').trim().toUpperCase()) || 0
+        alvo.custo += c * Number(t.quantity || 0)
+      }
+    }
+
+    const pp = Number(String(impProduto).replace(',', '.')) / 100
+    const ps = Number(String(impServico).replace(',', '.')) / 100
+    const po = Number(String(operacional).replace(',', '.')) / 100
+
+    return Array.from(mapa.values())
+      .map((m) => {
+        const fat = m.prod + m.serv
+        const bruto = fat - m.custo
+        const liq = bruto - m.prod * pp - m.serv * ps - fat * po
+        return {
+          ...m,
+          faturamento: fat,
+          lucroBruto: bruto,
+          lucroLiquido: liq,
+          margemLiquida: fat > 0 ? (liq / fat) * 100 : 0,
+        }
+      })
+      .sort((a, b) => a.chave.localeCompare(b.chave))
   }, [lancamentos, custoPorNome, impProduto, impServico, operacional])
 
   const salvarPercentuais = async () => {
@@ -323,21 +402,50 @@ export default function FaturamentoPage() {
         </Button>
       </div>
 
-      {/* seletor de mês */}
+      {/* recorte do período */}
+      <div className="flex flex-wrap gap-1">
+        {[
+          ['MES', 'Mês'],
+          ['ANO', 'Ano'],
+          ['TUDO', 'Até agora'],
+        ].map(([v, rot]) => (
+          <Button
+            key={v}
+            size="sm"
+            variant={modo === v ? 'default' : 'outline'}
+            onClick={() => setModo(v as any)}
+            className={`h-7 text-[10px] ${modo === v ? 'bg-slate-900 text-white' : ''}`}
+          >
+            {rot}
+          </Button>
+        ))}
+      </div>
+
+      {/* seletor de período */}
       <Card>
         <CardContent className="flex items-center justify-between gap-2 p-2.5">
-          <Button size="sm" variant="ghost" onClick={() => mudarMes(-1)} className="h-8 w-8 p-0">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => mudarMes(-1)}
+            disabled={modo === 'TUDO'}
+            className="h-8 w-8 p-0"
+          >
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <div className="text-center">
-            <span className="block text-sm font-black capitalize">
-              {MESES[mes - 1]} / {ano}
-            </span>
+            <span className="block text-sm font-black capitalize">{rotuloPeriodo}</span>
             <span className="block text-[9px] text-muted-foreground">
               {lancamentos.length} lançamento(s)
             </span>
           </div>
-          <Button size="sm" variant="ghost" onClick={() => mudarMes(1)} className="h-8 w-8 p-0">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => mudarMes(1)}
+            disabled={modo === 'TUDO'}
+            className="h-8 w-8 p-0"
+          >
             <ChevronRight className="h-4 w-4" />
           </Button>
         </CardContent>
@@ -435,6 +543,55 @@ export default function FaturamentoPage() {
           custo cadastrado. O lucro bruto e o líquido estão <strong>subestimados</strong> — o custo
           real desses itens não entrou na conta. Cadastre em <strong>Custos e margem</strong>.
         </p>
+      )}
+
+      {/* mês a mês: o acompanhamento que ele quer a partir de dezembro */}
+      {porMes.length > 1 && (
+        <Card>
+          <CardContent className="p-0">
+            <div className="border-b bg-slate-50 px-2 py-1.5">
+              <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                Mês a mês
+              </span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-[10px]">
+                <thead>
+                  <tr className="bg-[#0B3D91] text-white">
+                    <th className="p-1.5 text-left">MÊS</th>
+                    <th className="p-1.5 text-right">FATURAM.</th>
+                    <th className="p-1.5 text-right">LUCRO BRUTO</th>
+                    <th className="p-1.5 text-right">LÍQUIDO</th>
+                    <th className="p-1.5 text-right">%</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {porMes.map((m) => (
+                    <tr key={m.chave} className="border-b last:border-0">
+                      <td className="whitespace-nowrap p-1.5 font-semibold capitalize">
+                        {m.rotulo}
+                      </td>
+                      <td className="p-1.5 text-right font-mono">{brl(m.faturamento)}</td>
+                      <td className="p-1.5 text-right font-mono text-emerald-700">
+                        {brl(m.lucroBruto)}
+                      </td>
+                      <td
+                        className={`p-1.5 text-right font-mono font-bold ${
+                          m.lucroLiquido >= 0 ? 'text-emerald-800' : 'text-rose-700'
+                        }`}
+                      >
+                        {brl(m.lucroLiquido)}
+                      </td>
+                      <td className="p-1.5 text-right font-mono text-muted-foreground">
+                        {m.margemLiquida.toFixed(0)}%
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* percentuais editáveis */}
