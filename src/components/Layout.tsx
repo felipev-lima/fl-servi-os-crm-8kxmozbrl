@@ -25,6 +25,7 @@ import {
   CheckSquare,
   Percent,
   BarChart3,
+  Boxes,
 } from 'lucide-react'
 import { getEmpresa, urlArquivo, type Empresa } from '@/lib/empresa'
 
@@ -72,6 +73,7 @@ export default function Layout() {
     { name: 'Fluxo de caixa', href: '/fluxo-caixa', icon: TrendingUp, adminOnly: true },
     { name: 'Conferência OS', href: '/conferencia', icon: CheckSquare, adminOnly: true },
     { name: 'Custos e margem', href: '/custos', icon: TrendingUp, adminOnly: true },
+    { name: 'Estoque', href: '/estoque', icon: Boxes, adminOnly: true },
     { name: 'Comissões', href: '/comissoes', icon: Percent, adminOnly: true },
     { name: 'Lucro', href: '/lucro', icon: TrendingUp, adminOnly: true },
     { name: 'Faturamento', href: '/faturamento', icon: BarChart3, adminOnly: true },

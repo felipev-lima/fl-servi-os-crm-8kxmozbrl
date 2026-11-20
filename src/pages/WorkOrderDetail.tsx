@@ -36,6 +36,7 @@ import {
   MaterialKind,
 } from '@/types/flservicos'
 import { ChecklistItem } from '@/types/checklist'
+import { baixarPorUsoNaOS, devolverPorRemocaoDaOS } from '@/lib/estoque'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -544,6 +545,34 @@ export default function WorkOrderDetail() {
         notes: materialNotes,
       })
 
+      /**
+       * Baixa de estoque ao usar o material.
+       *
+       * Só age em produto com `control_stock` ligado e quantidade > 0 — a
+       * lista padrão entra zerada de propósito e não pode virar baixa.
+       * Falhar aqui NÃO desfaz o lançamento: o serviço aconteceu de verdade,
+       * e o aviso aparece para o Felipe corrigir o saldo depois.
+       */
+      if ((mat as any).control_stock && qty > 0) {
+        try {
+          const r = await baixarPorUsoNaOS({
+            materialId: mat.id,
+            quantity: qty,
+            saldoAtual: Number(mat.current_stock || 0),
+            orderNumber: order?.order_number,
+            userName: user?.name,
+          })
+          if (r.ficouNegativo) {
+            toast.warning(
+              `Estoque de ${mat.name} ficou negativo (${r.saldo}). Confira a contagem.`,
+              { duration: 6000 },
+            )
+          }
+        } catch {
+          /* o lançamento na OS vale mais que o estoque; segue */
+        }
+      }
+
       toast.success('Material adicionado ao atendimento!')
       setSelectedMaterialId('')
       setMaterialQty('')
@@ -657,7 +686,33 @@ export default function WorkOrderDetail() {
   const handleDeleteMaterial = async (matId: string) => {
     if (!confirm('Deseja remover este material da OS?')) return
     try {
+      // antes de apagar, guarda os dados para devolver ao estoque
+      const itemRemovido = orderMaterials.find((m) => m.id === matId)
+      const produtoRemovido =
+        itemRemovido?.expand?.material ||
+        materialsCatalog.find((mm) => mm.id === itemRemovido?.material)
+
       await deleteOrderMaterial(matId)
+
+      // devolve ao estoque se o produto é controlado
+      if (
+        produtoRemovido &&
+        (produtoRemovido as any).control_stock &&
+        Number(itemRemovido?.quantity || 0) > 0
+      ) {
+        try {
+          await devolverPorRemocaoDaOS({
+            materialId: produtoRemovido.id,
+            quantity: Number(itemRemovido!.quantity),
+            saldoAtual: Number((produtoRemovido as any).current_stock || 0),
+            orderNumber: order?.order_number,
+            userName: user?.name,
+          })
+        } catch {
+          /* a remoção já aconteceu; o saldo é corrigível */
+        }
+      }
+
       toast.success('Material removido.')
       if (id) {
         const updated = await getOrderMaterials(id)
