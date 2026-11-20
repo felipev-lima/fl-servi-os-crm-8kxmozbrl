@@ -12,7 +12,7 @@ import { Link } from 'react-router-dom'
 import { getClientsSummary, getTransactions, getBills } from '@/services/crm'
 import type { ClientSummary, Transaction, Bill } from '@/types/crm'
 import { brl, dataBR, totalDaLinha } from '@/types/crm'
-import { getWorkOrders } from '@/services/api'
+import { getWorkOrders, getMaterials, getClients } from '@/services/api'
 import type { WorkOrder } from '@/types/flservicos'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -35,6 +35,9 @@ export default function Painel() {
   const [contas, setContas] = useState<Bill[]>([])
   const [os, setOs] = useState<WorkOrder[]>([])
   const [carregando, setCarregando] = useState(true)
+  /** pendências que o dono precisa ver ao abrir o sistema */
+  const [estoqueBaixo, setEstoqueBaixo] = useState(0)
+  const [semContato, setSemContato] = useState(0)
 
   useEffect(() => {
     ;(async () => {
@@ -49,6 +52,21 @@ export default function Painel() {
         setLancamentos(tx.items)
         setContas(bl)
         setOs(ordens)
+        // contagem rápida das duas pendências que mais custam dinheiro
+        try {
+          const [mats, cls] = await Promise.all([getMaterials(), getClients()])
+          setEstoqueBaixo(
+            mats.filter(
+              (m: any) =>
+                m.control_stock &&
+                Number(m.stock_min || 0) > 0 &&
+                Number(m.current_stock || 0) < Number(m.stock_min || 0),
+            ).length,
+          )
+          setSemContato(cls.filter((c) => !(c.phone || '').trim()).length)
+        } catch {
+          /* painel funciona sem esses contadores */
+        }
       } finally {
         setCarregando(false)
       }
@@ -213,6 +231,39 @@ export default function Painel() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Pendências que custam dinheiro se ficarem esquecidas */}
+      {(estoqueBaixo > 0 || semContato > 0) && (
+        <Card className="border-rose-200 bg-rose-50/40">
+          <CardContent className="space-y-1.5 p-3">
+            <h2 className="flex items-center gap-1.5 text-sm font-bold text-rose-900">
+              <AlertCircle className="h-4 w-4" /> Precisa de atenção
+            </h2>
+            {estoqueBaixo > 0 && (
+              <Link
+                to="/estoque"
+                className="flex items-center justify-between rounded-lg border border-rose-200 bg-white p-2 transition hover:border-rose-400"
+              >
+                <span className="text-[11px] font-semibold">
+                  {estoqueBaixo} produto(s) abaixo do estoque mínimo
+                </span>
+                <ArrowRight className="h-3.5 w-3.5 text-rose-600" />
+              </Link>
+            )}
+            {semContato > 0 && (
+              <Link
+                to="/contatos"
+                className="flex items-center justify-between rounded-lg border border-rose-200 bg-white p-2 transition hover:border-rose-400"
+              >
+                <span className="text-[11px] font-semibold">
+                  {semContato} cliente(s) sem telefone — impossível cobrar
+                </span>
+                <ArrowRight className="h-3.5 w-3.5 text-rose-600" />
+              </Link>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Devedores */}
       <Card>
