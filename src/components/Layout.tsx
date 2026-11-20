@@ -55,6 +55,7 @@ export default function Layout() {
     { name: 'Comissões', href: '/comissoes', icon: Percent, adminOnly: true },
     { name: 'Lucro', href: '/lucro', icon: TrendingUp, adminOnly: true },
     { name: 'Faturamento', href: '/faturamento', icon: BarChart3, adminOnly: true },
+    { name: 'Alíquotas', href: '/aliquotas', icon: Percent, adminOnly: true },
     { name: 'Manutenções Futuras', href: '/manutencoes', icon: CalendarDays, adminOnly: true },
     { name: 'Planilha', href: '/planilha', icon: FileSpreadsheet, adminOnly: true },
     { name: 'Conectores', href: '/conectores', icon: Plug, adminOnly: true },

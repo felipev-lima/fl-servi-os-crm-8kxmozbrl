@@ -19,6 +19,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { getTransactions, getClientsSummary } from '@/services/crm'
 import { getMaterials } from '@/services/api'
 import { getEmpresa } from '@/lib/empresa'
+import { aliquotaDoMes, salvarAliquota, rotuloPeriodo } from '@/lib/aliquotas'
 import type { Transaction } from '@/types/crm'
 import type { Material } from '@/types/flservicos'
 import { brl, TIPOS, totalDaLinha } from '@/types/crm'
@@ -70,6 +71,9 @@ export default function FaturamentoPage() {
   const [impServico, setImpServico] = useState('11')
   const [operacional, setOperacional] = useState('3')
   const [salvandoPct, setSalvandoPct] = useState(false)
+  /** de onde veio a alíquota: deste mês, de um mês anterior ou do padrão */
+  const [origemAliquota, setOrigemAliquota] = useState<'MES' | 'ANTERIOR' | 'PADRAO'>('PADRAO')
+  const [periodoAliquota, setPeriodoAliquota] = useState('')
 
   /**
    * Três recortes:
@@ -121,17 +125,20 @@ export default function FaturamentoPage() {
       setLancamentos(tx.items)
       setMateriais(ms)
       /**
-       * `?? 8` não servia: o PocketBase devolve `0` para campo numérico vazio,
-       * não `null`. Assim o padrão do Felipe (8/11/3) era sobrescrito por zero
-       * e o lucro saía sem desconto de imposto nenhum.
+       * A alíquota vem do MÊS consultado, não de um valor único.
+       *
+       * O Felipe apura a carga com o contador mês a mês. Guardar por período
+       * impede que a alíquota de dezembro reescreva o resultado de novembro.
+       * Sem linha para o mês, vale a mais recente anterior; sem nenhuma, o
+       * padrão 8 / 11 / 3.
        */
-      const pct = (v: any, padrao: number) => {
-        const n = Number(v)
-        return v === undefined || v === null || v === '' || n === 0 ? padrao : n
-      }
-      setImpProduto(String(pct((emp as any).tax_product_percent, 8)))
-      setImpServico(String(pct((emp as any).tax_service_percent, 11)))
-      setOperacional(String(pct((emp as any).operational_percent, 3)))
+      const periodoAtual = modo === 'MES' ? `${ano}-${String(mes).padStart(2, '0')}` : `${ano}-12`
+      const aliq = await aliquotaDoMes(periodoAtual)
+      setImpProduto(String(aliq.product_percent))
+      setImpServico(String(aliq.service_percent))
+      setOperacional(String(aliq.operational_percent))
+      setOrigemAliquota(aliq.origem)
+      setPeriodoAliquota(aliq.periodoUsado || '')
     } finally {
       setCarregando(false)
     }
@@ -280,17 +287,32 @@ export default function FaturamentoPage() {
       .sort((a, b) => a.chave.localeCompare(b.chave))
   }, [lancamentos, custoPorNome, impProduto, impServico, operacional])
 
+  /**
+   * Grava a alíquota NO MÊS consultado — não globalmente.
+   *
+   * É o que o Felipe pediu: quando o contador manda a nova carga, ele ajusta
+   * aqui e o mês anterior continua com o número que valia nele.
+   */
   const salvarPercentuais = async () => {
+    // em "Ano" e "Até agora" não há um mês único para gravar
+    if (modo !== 'MES') {
+      toast.info('Escolha um mês específico para gravar a alíquota.', { duration: 3000 })
+      return
+    }
     setSalvandoPct(true)
     try {
-      const { salvarEmpresa } = await import('@/lib/empresa')
-      await salvarEmpresa({
-        tax_product_percent: Number(String(impProduto).replace(',', '.')) || 0,
-        tax_service_percent: Number(String(impServico).replace(',', '.')) || 0,
+      const periodo = `${ano}-${String(mes).padStart(2, '0')}`
+      await salvarAliquota({
+        periodo,
+        product_percent: Number(String(impProduto).replace(',', '.')) || 0,
+        service_percent: Number(String(impServico).replace(',', '.')) || 0,
         operational_percent: Number(String(operacional).replace(',', '.')) || 0,
-      } as any)
+      })
+      setOrigemAliquota('MES')
+      setPeriodoAliquota(periodo)
+      toast.success(`Alíquota de ${rotuloPeriodo(periodo)} gravada.`)
     } catch {
-      /* o cálculo na tela já reflete o que foi digitado */
+      toast.error('Não foi possível gravar a alíquota.')
     } finally {
       setSalvandoPct(false)
     }
@@ -703,8 +725,20 @@ export default function FaturamentoPage() {
             </div>
           </div>
           <p className="text-[9px] text-muted-foreground">
-            {salvandoPct ? 'Salvando...' : 'A edição vale para todos os meses e fica gravada.'}
+            {salvandoPct
+              ? 'Gravando...'
+              : origemAliquota === 'MES'
+                ? `Alíquota de ${rotuloPeriodo(periodoAliquota)}. Alterar aqui muda SÓ este mês.`
+                : origemAliquota === 'ANTERIOR'
+                  ? `Sem alíquota própria: usando a de ${rotuloPeriodo(periodoAliquota)}. Editar grava no mês consultado.`
+                  : 'Nenhuma alíquota cadastrada ainda — usando o padrão 8 / 11 / 3.'}
           </p>
+          {modo === 'MES' && (
+            <p className="text-[9px] text-muted-foreground">
+              Ao sair do campo, grava em{' '}
+              <strong>{rotuloPeriodo(`${ano}-${String(mes).padStart(2, '0')}`)}</strong>.
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>
