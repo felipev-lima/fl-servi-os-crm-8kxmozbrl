@@ -17,6 +17,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { getMaterials, updateMaterial } from '@/services/api'
 import type { Material } from '@/types/flservicos'
 import { brl } from '@/types/crm'
+import { custoAoMudarPreco, margem as calcMargem, marcacaoSobreCusto } from '@/lib/precos'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -144,12 +145,45 @@ export default function CustosPage() {
   const salvarLinha = async (m: Material) => {
     const r = rascunho[m.id]
     if (!r) return
-    const custoNum =
+    const custoDigitado =
       r.cost !== undefined ? Number(String(r.cost).replace(',', '.')) || 0 : Number(m.cost || 0)
     const precoNum =
       r.price !== undefined ? Number(String(r.price).replace(',', '.')) || 0 : Number(m.price || 0)
 
-    if (custoNum === Number(m.cost || 0) && precoNum === Number(m.price || 0)) {
+    /**
+     * Custo: quem decide é quem TEM o custo.
+     *
+     * - Ele digitou o custo nesta linha -> é o custo REAL, vale e deixa de ser
+     *   estimativa.
+     * - Ele só mudou o preço, e o custo era ESTIMADO -> o custo acompanha o
+     *   preço pela marcação, senão a margem passaria a mentir.
+     * - O custo é REAL e ele mexeu só no preço -> o custo de compra NÃO muda
+     *   porque o preço de venda mudou. Isso é o normal no comércio.
+     */
+    const mexeuNoCusto =
+      r.cost !== undefined && Math.abs(custoDigitado - Number(m.cost || 0)) > 0.005
+    const mexeuNoPreco = Math.abs(precoNum - Number(m.price || 0)) > 0.005
+
+    let custoNum = custoDigitado
+    let estimadoAgora = false
+
+    if (mexeuNoCusto) {
+      // custo informado por ele: real, confirmado
+      estimadoAgora = false
+    } else if (mexeuNoPreco) {
+      const r2 = custoAoMudarPreco(m as any, precoNum)
+      custoNum = r2.cost
+      // segue estimado se já era; vira real se ele não tinha custo nenhum
+      estimadoAgora = !!(m as any).cost_estimated && custoNum > 0
+    } else {
+      return // nada mudou
+    }
+
+    if (
+      Math.abs(custoNum - Number(m.cost || 0)) < 0.005 &&
+      Math.abs(precoNum - Number(m.price || 0)) < 0.005 &&
+      estimadoAgora === !!(m as any).cost_estimated
+    ) {
       setRascunho((x) => {
         const c = { ...x }
         delete c[m.id]
@@ -163,12 +197,17 @@ export default function CustosPage() {
       await updateMaterial(m.id, {
         cost: custoNum,
         price: precoNum,
-        cost_estimated: false,
+        cost_estimated: estimadoAgora,
       } as any)
       setMateriais((prev) =>
         prev.map((x) =>
           x.id === m.id
-            ? ({ ...x, cost: custoNum, price: precoNum, cost_estimated: false } as any)
+            ? ({
+                ...x,
+                cost: custoNum,
+                price: precoNum,
+                cost_estimated: estimadoAgora,
+              } as any)
             : x,
         ),
       )
@@ -444,6 +483,18 @@ export default function CustosPage() {
                     <strong className="font-mono text-emerald-700">
                       {brl(Number(valorDe(m, 'price') || 0) - Number(valorDe(m, 'cost') || 0))}
                     </strong>
+                    {(() => {
+                      const mk = marcacaoSobreCusto(
+                        Number(valorDe(m, 'price') || 0),
+                        Number(valorDe(m, 'cost') || 0),
+                      )
+                      return mk !== null ? (
+                        <>
+                          {' · '}marcação <strong className="font-mono">{mk.toFixed(0)}%</strong>{' '}
+                          sobre o custo
+                        </>
+                      ) : null
+                    })()}
                   </p>
                 )}
               </CardContent>
