@@ -42,6 +42,8 @@ import {
   CalendarDays,
   ChevronDown,
   ChevronUp,
+  ShoppingCart,
+  AlertTriangle,
 } from 'lucide-react'
 
 type StatusKey = 'ABERTA' | 'AGENDADA' | 'EM ANDAMENTO' | 'AGUARDANDO MATERIAL' | 'FINALIZADA'
@@ -142,6 +144,9 @@ export default function Painel() {
    */
   const [filtroHoje, setFiltroHoje] = useState(false)
 
+  /** Filtro das atrasadas: data vencida e ainda não concluída */
+  const [soPendentes, setSoPendentes] = useState(false)
+
   useEffect(() => {
     ;(async () => {
       try {
@@ -205,6 +210,24 @@ export default function Painel() {
   const osHoje = os.filter((o) => (o.scheduled_date || '').slice(0, 10) === hojeStr)
 
   /**
+   * PENDENTES = atrasadas de verdade.
+   *
+   * Data marcada no passado e a OS ainda não finalizada nem cancelada. É o
+   * vermelho que o Felipe pediu: a entrega que era para ontem e ninguém fez.
+   * OS sem data NÃO entra — não dá para estar atrasada sem prazo.
+   */
+  const pendentes = useMemo(() => {
+    return os.filter((o) => {
+      if (o.status === 'FINALIZADA' || o.status === 'CANCELADA') return false
+      const d = (o.scheduled_date || '').slice(0, 10)
+      return !!d && d < hojeStr
+    })
+  }, [os, hojeStr])
+
+  /** conjunto de ids atrasados, para marcar em vermelho dentro de qualquer lista */
+  const idsPendentes = useMemo(() => new Set(pendentes.map((o) => o.id)), [pendentes])
+
+  /**
    * A lista do painel.
    *
    * Sem seleção: as que ainda não terminaram (o trabalho pendente).
@@ -213,7 +236,11 @@ export default function Painel() {
    * agendadas misturadas.
    */
   const osVisiveis = useMemo(() => {
-    let base = statusSel ? os.filter((o) => o.status === statusSel) : emAberto
+    let base = soPendentes
+      ? pendentes
+      : statusSel
+        ? os.filter((o) => o.status === statusSel)
+        : emAberto
     if (filtroHoje) {
       base = base.filter(
         (o) =>
@@ -227,7 +254,7 @@ export default function Painel() {
       if (da !== db) return db.localeCompare(da)
       return Number(b.order_number) - Number(a.order_number)
     })
-  }, [os, statusSel, emAberto, filtroHoje, hojeStr])
+  }, [os, statusSel, emAberto, filtroHoje, hojeStr, soPendentes, pendentes])
 
   // ---- financeiro (só admin) ----
   const aReceber = resumos.reduce((s, r) => s + (r.saldo > 0 ? r.saldo : 0), 0)
@@ -266,6 +293,12 @@ export default function Painel() {
               <Plus className="h-4 w-4" /> Nova OS
             </Link>
           </Button>
+          {/* Pedido de venda: talão com itens, foto e assinatura na entrega */}
+          <Button asChild variant="outline" className="h-9 shrink-0 gap-1.5 text-xs">
+            <Link to="/pedido/novo">
+              <ShoppingCart className="h-4 w-4" /> Novo Pedido
+            </Link>
+          </Button>
           {isAdmin && (
             <Button
               asChild
@@ -280,88 +313,91 @@ export default function Painel() {
       </div>
 
       {/*
-        BOTÃO HOJE — o Felipe pediu de volta.
-        Fica acima dos status porque é a pergunta do começo do dia: o que é
-        meu, agora? Clicar filtra as OS agendadas ou abertas de HOJE.
+        TILES DE STATUS — compactos, quadradinhos, todos na mesma linha.
+
+        São sete: HOJE e PENDENTE entram no MESMO formato dos cinco status,
+        porque para quem trabalha na rua "o que é hoje" e "o que está atrasado"
+        são status tanto quanto "em andamento".
+
+        PENDENTE em vermelho: data já passou e ninguém movimentou a OS. Antes
+        essas sumiam no meio da lista sem chamar atenção.
       */}
-      <button type="button" onClick={() => setFiltroHoje((v) => !v)} className="w-full text-left">
-        <Card
-          className={`border-l-4 transition-all ${
-            filtroHoje
-              ? 'border-l-[#0B3D91] bg-[#0B3D91]/5 ring-2 ring-[#0B3D91] shadow-md'
-              : 'border-l-[#0B3D91] hover:shadow-md'
+      <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-7">
+        {/* HOJE */}
+        <button
+          type="button"
+          onClick={() => {
+            setStatusSel(null)
+            setFiltroHoje((v) => !v)
+          }}
+          aria-pressed={filtroHoje}
+          title="Tarefas marcadas para hoje"
+          className={`flex flex-col items-center justify-center rounded-xl border-l-4 border-l-[#0B3D91] bg-[#0B3D91]/5 px-1 py-2 transition-all ${
+            filtroHoje ? 'ring-2 ring-[#0B3D91] shadow-md' : 'hover:shadow-md'
           }`}
         >
-          <CardContent className="flex items-center justify-between gap-2 p-3">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#0B3D91] text-white">
-                <CalendarDays className="h-5 w-5" />
-              </div>
-              <div>
-                <span className="block text-[11px] font-bold uppercase text-[#0B3D91]">
-                  Hoje — minhas tarefas
-                </span>
-                <span className="block text-[10px] text-muted-foreground">
-                  {new Date().toLocaleDateString('pt-BR', {
-                    weekday: 'long',
-                    day: '2-digit',
-                    month: 'long',
-                  })}
-                  {filtroHoje ? ' · filtrando' : ''}
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-black leading-none text-[#0B3D91]">
-                {osHoje.length}
-              </span>
-              <ArrowRight className="h-4 w-4 text-[#0B3D91]" />
-            </div>
-          </CardContent>
-        </Card>
-      </button>
+          <CalendarDays className="mb-0.5 h-3.5 w-3.5 text-[#0B3D91]" />
+          <span className="text-[9px] font-bold uppercase leading-none text-[#0B3D91]">Hoje</span>
+          <span className="mt-0.5 text-lg font-black leading-none text-[#0B3D91]">
+            {osHoje.length}
+          </span>
+        </button>
 
-      {/* ---- CARTÕES DE STATUS: o centro do painel ---- */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
         {STATUS.map((s) => {
           const Icone = s.icone
           const ativo = statusSel === s.chave
-          const qtd = contagem[s.chave]
           return (
             <button
               key={s.chave}
               type="button"
               onClick={() => {
-                setFiltroHoje(false) // status e Hoje não competem
+                setFiltroHoje(false)
+                setSoPendentes(false)
                 setStatusSel(ativo ? null : s.chave)
               }}
-              className="text-left"
               aria-pressed={ativo}
+              title={s.ajuda}
+              className={`flex flex-col items-center justify-center rounded-xl border-l-4 ${s.borda} ${s.bg} px-1 py-2 transition-all ${
+                ativo ? 'ring-2 ring-[#0B3D91] shadow-md' : 'hover:shadow-md'
+              }`}
             >
-              <Card
-                className={`h-full border-l-4 ${s.borda} ${s.bg} transition-all ${
-                  ativo ? 'ring-2 ring-[#0B3D91] shadow-md' : 'hover:shadow-md'
-                }`}
-              >
-                <CardContent className="p-3">
-                  <div className="flex items-start justify-between gap-1">
-                    <span className={`text-[10px] font-bold uppercase leading-tight ${s.texto}`}>
-                      {s.rotulo}
-                    </span>
-                    <Icone className={`h-4 w-4 shrink-0 ${s.texto}`} />
-                  </div>
-                  <div className={`mt-1.5 text-2xl font-black leading-none ${s.texto}`}>{qtd}</div>
-                  <p className="mt-1 text-[9px] text-muted-foreground">{s.ajuda}</p>
-                  {ativo && (
-                    <span className="mt-1 block text-[9px] font-bold text-[#0B3D91]">
-                      ✓ filtrando
-                    </span>
-                  )}
-                </CardContent>
-              </Card>
+              <Icone className={`mb-0.5 h-3.5 w-3.5 ${s.texto}`} />
+              <span className={`text-[9px] font-bold uppercase leading-none ${s.texto}`}>
+                {s.rotulo}
+              </span>
+              <span className={`mt-0.5 text-lg font-black leading-none ${s.texto}`}>
+                {contagem[s.chave]}
+              </span>
             </button>
           )
         })}
+
+        {/* PENDENTE — atrasadas */}
+        <button
+          type="button"
+          onClick={() => {
+            setFiltroHoje(false)
+            setStatusSel(null)
+            setSoPendentes((v) => !v)
+          }}
+          aria-pressed={soPendentes}
+          title="Entregas e serviços com data vencida e ainda não concluídos"
+          className={`flex flex-col items-center justify-center rounded-xl border-l-4 border-l-rose-600 bg-rose-50 px-1 py-2 transition-all ${
+            soPendentes ? 'ring-2 ring-rose-600 shadow-md' : 'hover:shadow-md'
+          }`}
+        >
+          <AlertTriangle className="mb-0.5 h-3.5 w-3.5 text-rose-700" />
+          <span className="text-[9px] font-bold uppercase leading-none text-rose-700">
+            Pendente
+          </span>
+          <span
+            className={`mt-0.5 text-lg font-black leading-none ${
+              pendentes.length > 0 ? 'text-rose-700' : 'text-muted-foreground'
+            }`}
+          >
+            {pendentes.length}
+          </span>
+        </button>
       </div>
 
       {/* ---- LISTA: só o que foi selecionado ---- */}
@@ -371,18 +407,21 @@ export default function Painel() {
             <div className="min-w-0">
               <h2 className="flex items-center gap-1.5 text-sm font-bold">
                 <CalendarClock className="h-4 w-4 text-[#0B3D91]" />
-                {filtroHoje
-                  ? `Hoje — ${osVisiveis.length}`
-                  : statusSel
-                    ? `${STATUS.find((s) => s.chave === statusSel)?.curto} — ${osVisiveis.length}`
-                    : `Em aberto — ${osVisiveis.length}`}
+                {soPendentes
+                  ? `Pendentes (atrasadas) — ${osVisiveis.length}`
+                  : filtroHoje
+                    ? `Hoje — ${osVisiveis.length}`
+                    : statusSel
+                      ? `${STATUS.find((s) => s.chave === statusSel)?.curto} — ${osVisiveis.length}`
+                      : `Em aberto — ${osVisiveis.length}`}
               </h2>
-              {(statusSel || filtroHoje) && (
+              {(statusSel || filtroHoje || soPendentes) && (
                 <button
                   type="button"
                   onClick={() => {
                     setStatusSel(null)
                     setFiltroHoje(false)
+                    setSoPendentes(false)
                   }}
                   className="mt-0.5 text-[10px] font-semibold text-[#0B3D91] underline"
                 >
@@ -439,11 +478,13 @@ export default function Painel() {
 
             {osVisiveis.length === 0 && (
               <p className="py-8 text-center text-xs text-muted-foreground">
-                {filtroHoje
-                  ? 'Nenhuma tarefa para hoje. Nada agendado.'
-                  : statusSel
-                    ? `Nenhuma OS ${STATUS.find((s) => s.chave === statusSel)?.curto.toLowerCase()}.`
-                    : 'Nenhuma OS em aberto. Tudo concluído.'}
+                {soPendentes
+                  ? 'Nenhuma pendência: nada atrasado.'
+                  : filtroHoje
+                    ? 'Nenhuma tarefa para hoje. Nada agendado.'
+                    : statusSel
+                      ? `Nenhuma OS ${STATUS.find((s) => s.chave === statusSel)?.curto.toLowerCase()}.`
+                      : 'Nenhuma OS em aberto. Tudo concluído.'}
               </p>
             )}
           </div>
