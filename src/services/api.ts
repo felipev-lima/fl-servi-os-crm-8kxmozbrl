@@ -21,11 +21,12 @@ export function getFileUrl(collectionName: string, recordId: string, filename: s
 }
 
 // ---------------- CLIENTES ----------------
+/** Clientes — 97 registros, mas sem `sort` no servidor pelo mesmo motivo. */
 export async function getClients(): Promise<Client[]> {
-  const records = await pb.collection('clients').getFullList({
-    sort: 'name',
-  })
-  return records as unknown as Client[]
+  const records = await pb.collection('clients').getFullList()
+  return (records as unknown as Client[]).sort((a, b) =>
+    (a.name || '').localeCompare(b.name || '', 'pt-BR'),
+  )
 }
 
 export async function getClientById(id: string): Promise<Client> {
@@ -70,11 +71,28 @@ export async function deleteTechnician(id: string): Promise<boolean> {
 }
 
 // ---------------- MATERIAIS ----------------
+/**
+ * Catálogo completo, em blocos de 500 ordenados NO NAVEGADOR.
+ *
+ * POR QUE NÃO `getFullList({ sort: 'name' })`: com 1.511 produtos, ordenar por
+ * nome no servidor a cada página estourava o tempo e a requisição morria por
+ * timeout — a tela de Custos e a de Pedido ficavam presas em "Carregando"
+ * para sempre. Sem o `sort` a mesma leitura responde em menos de 1s.
+ *
+ * A ordenação que o usuário vê é feita aqui, no cliente: mesma lista, sem
+ * custo no banco.
+ */
 export async function getMaterials(): Promise<Material[]> {
-  const records = await pb.collection('materials').getFullList({
-    sort: 'name',
-  })
-  return records as unknown as Material[]
+  const todos: Material[] = []
+  let pagina = 1
+  // perPage menor: cada resposta fica leve e nenhuma passa do tempo limite
+  while (pagina <= 10) {
+    const lote = await pb.collection('materials').getList(pagina, 200)
+    todos.push(...(lote.items as unknown as Material[]))
+    if (pagina >= lote.totalPages) break
+    pagina += 1
+  }
+  return todos.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR'))
 }
 
 export async function createMaterial(data: Partial<Material>): Promise<Material> {
