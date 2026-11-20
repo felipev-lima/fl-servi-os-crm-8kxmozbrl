@@ -592,10 +592,14 @@ export default function Painel() {
                   'text-[#0B3D91]',
                 ],
               ].map(([rot, qtd, cor]) => (
-                <div key={String(rot)} className="rounded-lg border px-2 py-1.5 text-center">
+                <Link
+                  key={String(rot)}
+                  to="/pedidos"
+                  className={`rounded-lg border px-2 py-1.5 text-center transition hover:shadow-md`}
+                >
                   <span className={`block text-[9px] font-bold uppercase ${cor}`}>{rot}</span>
                   <span className={`block text-lg font-black leading-none ${cor}`}>{qtd}</span>
-                </div>
+                </Link>
               ))}
             </div>
             <div className="space-y-1">
