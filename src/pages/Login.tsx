@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import { getEmpresa, urlArquivo } from '@/lib/empresa'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -16,6 +17,14 @@ import { toast } from 'sonner'
 
 export default function Login() {
   const { login, isAuthenticated, user, logout } = useAuth()
+
+  /** logomarca das Configurações; aparece mesmo antes de entrar */
+  const [logoLogin, setLogoLogin] = useState('')
+  useEffect(() => {
+    getEmpresa()
+      .then((e) => setLogoLogin(urlArquivo(e, 'logo')))
+      .catch(() => setLogoLogin(''))
+  }, [])
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -78,14 +87,16 @@ export default function Login() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[100svh] py-6 px-4">
       <div className="w-full max-w-md mb-4 text-center">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-[#0F6A3A] to-[#2E8B57] text-white shadow-lg mb-3">
-          <Wrench className="w-7 h-7" />
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white border border-slate-200 shadow-lg mb-3 overflow-hidden p-1.5">
+          {logoLogin ? (
+            <img src={logoLogin} alt="FL SERVIÇOS" className="w-full h-full object-contain" />
+          ) : (
+            <span className="text-[#0B3D91] font-black text-lg">FL</span>
+          )}
         </div>
-        <h1 className="text-2xl font-black text-[#0F6A3A] tracking-tight uppercase">
-          F. L. SERVIÇOS
-        </h1>
+        <h1 className="text-2xl font-black text-[#0B3D91] tracking-tight uppercase">FL SERVIÇOS</h1>
         <p className="text-xs text-muted-foreground font-medium">
-          Macaé/RJ • Gestão de Ordens de Serviço e Atendimentos em Campo
+          CRM • OS, vendas e faturamento — Macaé/RJ
         </p>
       </div>
 
@@ -129,18 +140,25 @@ export default function Login() {
               />
             </div>
 
-            {/* Acesso rápido para demonstração dos 3 perfis */}
+            {/*
+              Atalhos de acesso.
+
+              Os e-mails precisam ser os que EXISTEM na coleção `users` deste
+              projeto — os antigos (felipev.lima1981@flservicos.com,
+              filipe.pinheiro@flservicos.com) não existem aqui e o botão só
+              preenchia um endereço inválido.
+            */}
             <div className="pt-2 border-t text-xs">
               <p className="text-muted-foreground font-medium mb-1.5">
-                Contas disponíveis para teste imediato:
+                Atalhos — preenchem o e-mail, a senha é digitada:
               </p>
-              <div className="grid grid-cols-3 gap-1.5">
+              <div className="grid grid-cols-2 gap-1.5">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => handleQuickLogin('felipev.lima1981@flservicos.com')}
-                  className="text-[11px] h-7 px-1 text-[#0F6A3A] border-[#0F6A3A]/30 hover:bg-[#0F6A3A]/10"
+                  onClick={() => handleQuickLogin('felipev.lima1981@gmail.com')}
+                  className="text-[11px] h-7 px-1 text-[#0B3D91] border-[#0B3D91]/30 hover:bg-[#0B3D91]/10"
                 >
                   Admin
                 </Button>
@@ -148,19 +166,10 @@ export default function Login() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => handleQuickLogin('filipe.pinheiro@flservicos.com')}
+                  onClick={() => handleQuickLogin('fp52172@gmail.com')}
                   className="text-[11px] h-7 px-1 text-blue-600 border-blue-200 hover:bg-blue-50"
                 >
                   Técnico
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleQuickLogin('william.inacio@flservicos.com')}
-                  className="text-[11px] h-7 px-1 text-slate-600 border-slate-200 hover:bg-slate-50"
-                >
-                  Consulta
                 </Button>
               </div>
             </div>
