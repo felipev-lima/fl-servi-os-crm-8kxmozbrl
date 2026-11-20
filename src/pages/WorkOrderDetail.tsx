@@ -37,6 +37,7 @@ import {
 } from '@/types/flservicos'
 import { ChecklistItem } from '@/types/checklist'
 import { baixarPorUsoNaOS, devolverPorRemocaoDaOS } from '@/lib/estoque'
+import { custoPorMarcacao } from '@/lib/precos'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -286,14 +287,34 @@ export default function WorkOrderDetail() {
       })
 
       if (atualizarCatalogo && mat.material) {
-        await updateMaterial(mat.material, { price: preco })
+        /**
+         * Ao gravar o preço no catálogo, o CUSTO acompanha pela marcação.
+         *
+         * Mesma regra da tela de custos: o preço é a âncora. Manter o custo
+         * antigo faria um produto de R$ 5,00 vendido a R$ 690 aparecer com
+         * 99% de margem. Se o custo dele era confirmado, a pergunta já foi
+         * feita acima; aqui o padrão é recalcular.
+         */
+        const prod = materialsCatalog.find((mm) => mm.id === mat.material)
+        const custoNovo = custoPorMarcacao(preco)
+        const dados: any = { price: preco, cost_estimated: true }
+        if (custoNovo > 0) dados.cost = custoNovo
+
+        await updateMaterial(mat.material, dados)
+        setMaterialsCatalog((prev) =>
+          prev.map((mm) => (mm.id === mat.material ? ({ ...mm, ...dados } as any) : mm)),
+        )
         // marca o produto do catálogo para não ser sobrescrito pela
         // sincronização automática de preço ao reabrir a OS
         const novos = orderMaterials.map((m) =>
           m.material === mat.material ? { ...m, unit_price: preco } : m,
         )
         setOrderMaterials(novos)
-        toast.success('Valor atualizado na OS e no cadastro do produto.')
+        toast.success(
+          custoNovo > 0 && prod
+            ? `Preço e custo atualizados no cadastro (custo R$ ${custoNovo.toFixed(2)}).`
+            : 'Valor atualizado na OS e no cadastro do produto.',
+        )
       } else {
         toast.success('Valor atualizado só nesta OS.')
       }

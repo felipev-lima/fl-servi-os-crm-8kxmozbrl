@@ -62,27 +62,45 @@ export interface MaterialPreco {
 /**
  * Decide o que gravar ao mudar o preço de um produto.
  *
- * Devolve o custo que deve ir junto — o mesmo, quando ele informou o custo
- * real; recalculado, quando o custo era só uma estimativa derivada do preço.
+ * REGRA CORRIGIDA (Felipe, 20/11/2026 — ele estava certo):
+ *
+ * O padrão é sempre RECALCULAR o custo pela marcação de 60% sobre o preço.
+ * Manter o custo antigo produz margem falsa: um monitor com custo de R$ 5,00
+ * vendido por R$ 690 daria 99% de margem, e o lucro do relatório viraria
+ * ficção. O preço de venda é a âncora; o custo vem dele.
+ *
+ * A ÚNICA exceção é o custo que ele confirmou à mão. Nesse caso a função
+ * sinaliza `precisaPerguntar` e quem chama pergunta:
+ *   "manter este custo ou recalcular pela marcação?"
+ *
+ * Deixar de perguntar era o defeito anterior: tratava R$ 5,00 de placeholder
+ * como custo real e nunca corrigia.
  */
 export function custoAoMudarPreco(
   material: MaterialPreco,
   novoPreco: number,
   marcacao = MARCACAO_PADRAO,
-): { cost: number; recalculou: boolean } {
+): { cost: number; recalculou: boolean; precisaPerguntar: boolean } {
   const custoAtual = Number(material.cost) || 0
-  const estimado = !!material.cost_estimated
+  const eraConfirmado = material.cost_estimated === false && custoAtual > 0
 
-  // custo real informado por ele: nunca mexer
-  if (!estimado && custoAtual > 0) {
-    return { cost: custoAtual, recalculou: false }
-  }
-
-  // sem custo nenhum e sem preço: nada a calcular
   if (novoPreco <= 0) {
-    return { cost: custoAtual, recalculou: false }
+    return { cost: custoAtual, recalculou: false, precisaPerguntar: false }
   }
 
   const novoCusto = custoPorMarcacao(novoPreco, marcacao)
-  return { cost: novoCusto, recalculou: Math.abs(novoCusto - custoAtual) > 0.005 }
+  const mudou = Math.abs(novoCusto - custoAtual) > 0.005
+
+  // custo confirmado por ele: aplica a marcação por padrão, mas avisa que dá
+  // para manter — quem pergunta é a tela
+  if (eraConfirmado) {
+    return { cost: novoCusto, recalculou: mudou, precisaPerguntar: mudou }
+  }
+
+  return { cost: novoCusto, recalculou: mudou, precisaPerguntar: false }
+}
+
+/** Marca um valor como suspeito de ser placeholder, não custo real */
+export function custoPlaceholder(custo: number): boolean {
+  return custo > 0 && custo <= 5.01
 }

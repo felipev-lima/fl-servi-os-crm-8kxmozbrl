@@ -17,7 +17,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { getMaterials, updateMaterial } from '@/services/api'
 import type { Material } from '@/types/flservicos'
 import { brl } from '@/types/crm'
-import { custoAoMudarPreco, margem as calcMargem, marcacaoSobreCusto } from '@/lib/precos'
+import { custoAoMudarPreco, custoPorMarcacao, marcacaoSobreCusto } from '@/lib/precos'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -171,10 +171,32 @@ export default function CustosPage() {
       // custo informado por ele: real, confirmado
       estimadoAgora = false
     } else if (mexeuNoPreco) {
+      const custoTela = custoPorMarcacao(precoNum)
       const r2 = custoAoMudarPreco(m as any, precoNum)
       custoNum = r2.cost
-      // segue estimado se já era; vira real se ele não tinha custo nenhum
-      estimadoAgora = !!(m as any).cost_estimated && custoNum > 0
+      estimadoAgora = true // acompanha o preço, portanto é estimativa
+
+      /**
+       * Custo confirmado à mão + preço novo: ele decide.
+       *
+       * Antes eu mantinha o custo antigo em silêncio, e um monitor de R$ 5,00
+       * vendido a R$ 690 saía com 99% de margem falsa. Agora pergunto: o padrão
+       * (OK) é recalcular pela marcação de 60%; o custo antigo só fica se ele
+       * disser que aquele valor era real.
+       */
+      if (r2.precisaPerguntar) {
+        const manter = confirm(
+          `Preço alterado para R$ ${precoNum.toFixed(2)}.\n\n` +
+            `O custo atual é R$ ${Number(m.cost || 0).toFixed(2)} (informado por você).\n` +
+            `Pela marcação de 60%, o custo seria R$ ${custoTela.toFixed(2)}.\n\n` +
+            'OK = recalcular o custo pela marcação (recomendado)\n' +
+            'Cancelar = manter o custo que você informou',
+        )
+        if (manter === false) {
+          custoNum = Number(m.cost || 0)
+          estimadoAgora = false
+        }
+      }
     } else {
       return // nada mudou
     }
