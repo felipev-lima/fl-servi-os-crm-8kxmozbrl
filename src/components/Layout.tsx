@@ -24,6 +24,7 @@ import {
   Settings,
   CheckSquare,
   Percent,
+  BarChart3,
 } from 'lucide-react'
 
 export default function Layout() {
@@ -53,6 +54,7 @@ export default function Layout() {
     { name: 'Custos e margem', href: '/custos', icon: TrendingUp, adminOnly: true },
     { name: 'Comissões', href: '/comissoes', icon: Percent, adminOnly: true },
     { name: 'Lucro', href: '/lucro', icon: TrendingUp, adminOnly: true },
+    { name: 'Faturamento', href: '/faturamento', icon: BarChart3, adminOnly: true },
     { name: 'Manutenções Futuras', href: '/manutencoes', icon: CalendarDays, adminOnly: true },
     { name: 'Planilha', href: '/planilha', icon: FileSpreadsheet, adminOnly: true },
     { name: 'Conectores', href: '/conectores', icon: Plug, adminOnly: true },

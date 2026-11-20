@@ -18,6 +18,12 @@ export interface Empresa {
   diretor_nome?: string
   logo?: string
   assinatura_diretor?: string
+  /** Percentual de imposto sobre a venda de PRODUTO (padrão 8%) */
+  tax_product_percent?: number
+  /** Percentual de imposto sobre a venda de SERVIÇO (padrão 11%) */
+  tax_service_percent?: number
+  /** Custo operacional como percentual do faturamento (padrão 3%) */
+  operational_percent?: number
 }
 
 /**
