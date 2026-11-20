@@ -222,7 +222,7 @@ export default function OrcamentoDetalhePage() {
       return
     setSalvando(true)
     try {
-      const res = await pb.send('/api/crm/pedido-para-os', {
+      const res = await pb.send('/backend/v1/crm/pedido-para-os', {
         method: 'POST',
         body: { quote: doc.id },
       })

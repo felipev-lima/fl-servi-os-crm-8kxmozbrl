@@ -14,7 +14,7 @@
  */
 routerAdd(
   'POST',
-  '/api/crm/pedido-para-os',
+  '/backend/v1/crm/pedido-para-os',
   (c) => {
     const auth = c.get('authRecord')
     if (!auth || auth.getString('role') !== 'admin') {
