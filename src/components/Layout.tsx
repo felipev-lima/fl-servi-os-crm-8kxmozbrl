@@ -41,20 +41,16 @@ export default function Layout() {
    */
   const [logoUrl, setLogoUrl] = useState('')
   /**
-   * Só consulta depois de autenticado.
+   * Busca sempre — a coleção `settings` é pública para leitura (migration 0033).
    *
-   * A coleção `settings` exige login; rodando uma vez só, no primeiro render
-   * (deslogado), a consulta falhava e a logo nunca aparecia no cabeçalho.
+   * Antes a consulta rodava uma vez só, ainda deslogado, e recebia 403: a logo
+   * nunca aparecia no cabeçalho.
    */
   useEffect(() => {
-    if (!isAuthenticated) {
-      setLogoUrl('')
-      return
-    }
     getEmpresa(true)
       .then((e: Empresa) => setLogoUrl(urlArquivo(e, 'logo')))
       .catch(() => setLogoUrl(''))
-  }, [isAuthenticated])
+  }, [])
   // Menu em dois grupos: OPERAÇÃO (o dia a dia, o que já existia na FL) e
   // GESTÃO (o CRM: financeiro, orçamentos, relatórios). O técnico vê só
   // operação; o financeiro é do dono.
