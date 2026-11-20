@@ -553,7 +553,15 @@ export default function Painel() {
         Ele quis o pedido no painel inicial, com número e situação, para
         gerenciar o que está faltando entregar — como já faz com a OS.
       */}
-      {isAdmin && pedidos.length > 0 && (
+      {/*
+        BLOCO DE PEDIDOS — aparece SEMPRE para admin (mudança de 20/11/2026).
+
+        Antes a condição era `pedidos.length > 0`: sem nenhum pedido, o bloco
+        simplesmente não existia na tela, e o Felipe não tinha como saber onde
+        ficava. Agora ele aparece com contadores zerados e o convite a criar o
+        primeiro — lugar visível desde o começo.
+      */}
+      {isAdmin && (
         <Card>
           <CardContent className="p-3">
             <div className="mb-2 flex items-center justify-between">
@@ -591,6 +599,12 @@ export default function Painel() {
               ))}
             </div>
             <div className="space-y-1">
+              {pedidos.length === 0 && (
+                <p className="rounded-lg border border-dashed p-3 text-center text-[10px] text-muted-foreground">
+                  Nenhum pedido ainda. Comece um orçamento pelo botão <strong>Novo Pedido</strong>,
+                  aqui em cima.
+                </p>
+              )}
               {pedidos.slice(0, 4).map((p) => (
                 <Link
                   key={p.id}
