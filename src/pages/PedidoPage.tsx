@@ -564,7 +564,12 @@ export default function PedidoPage() {
                     className="block w-full border-b px-2 py-1.5 text-left text-[10px] last:border-0 hover:bg-[#0B3D91]/5"
                   >
                     <span className="font-semibold">{m.name}</span>
-                    <span className="ml-1 text-muted-foreground">{brl(Number(m.price || 0))}</span>
+                    {/* preço na lista de busca: só para administrador */}
+                    {podeVerValores && (
+                      <span className="ml-1 text-muted-foreground">
+                        {brl(Number(m.price || 0))}
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
