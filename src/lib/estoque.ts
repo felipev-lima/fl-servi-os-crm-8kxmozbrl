@@ -77,7 +77,16 @@ export async function movimentar(dados: {
   else if (dados.type === 'SAIDA' || dados.type === 'PERDA') novo -= qtd
   else novo = Number(dados.quantity) || 0
 
-  const ficouNegativo = novo < 0
+  /**
+   * O saldo NUNCA fica negativo (decisão do Felipe, 20/11/2026).
+   *
+   * Ele ainda não faz controle de entrada/saída: vende o produto e o estoque
+   * não deve virar dívida imaginária. O piso é zero. Quando ele passar a
+   * controlar de verdade, é aqui que se volta a permitir negativo (com alerta).
+   */
+  if (novo < 0) novo = 0
+
+  const ficouNegativo = false
 
   await pb.collection('materials').update(dados.materialId, { current_stock: novo } as any)
   try {
