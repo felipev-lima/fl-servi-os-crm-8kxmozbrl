@@ -20,6 +20,24 @@ export interface Empresa {
   assinatura_diretor?: string
 }
 
+/**
+ * Dados fixos da empresa, usados por código que gera arquivo (planilha de
+ * orçamento) e não pode esperar a consulta ao banco.
+ *
+ * A fonte é a mesma de `settings`, mas aqui em constante para o gerador de
+ * planilha — que é síncrono e precisa do nome da empresa no ato.
+ */
+export const EMPRESA = {
+  razao_social: 'FL THOMAZ SERVIÇOS E DISTRIBUIÇÃO',
+  nome_fantasia: 'LM SERVIÇOS',
+  cnpj: '44.288.125/0001-34',
+  ie: '12.290.12-8',
+  endereco: 'VILA UNIÃO, 92 - LAGOMAR - MACAÉ/RJ - CEP 27.966-507',
+  telefone: '(22) 9922-0470',
+  email: 'flservicosmacae@gmail.com',
+  diretor_nome: 'FELIPE LIMA',
+}
+
 export function urlArquivo(e: Empresa, campo: 'logo' | 'assinatura_diretor'): string {
   const nome = e[campo]
   if (!nome || !e.id) return ''
