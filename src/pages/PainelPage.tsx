@@ -151,12 +151,23 @@ export default function Painel() {
 
   useEffect(() => {
     ;(async () => {
+      /**
+       * CARGA EM ETAPAS, e a tela NUNCA espera tudo junto.
+       *
+       * O backend oscila (a mesma consulta faz 0s e depois 40s). Antes, o
+       * `await` de todas as chamadas num bloco só deixava o painel preso em
+       * "Carregando..." até a última responder — e se uma travasse, nada
+       * aparecia. Agora:
+       *   1. as OS saem primeiro e a tela já libera o `carregando`;
+       *   2. o financeiro e as pendências chegam depois, cada um no seu ritmo;
+       *   3. se um pedaço falhar, o resto continua na tela.
+       */
       try {
         setOs(await getWorkOrders())
       } catch {
         /* a lista de OS é o essencial; se falhar, a tela avisa embaixo */
       } finally {
-        setCarregando(false)
+        setCarregando(false) // libera a tela com o que já houver
       }
 
       // o financeiro não é carregado para técnico — nem chega ao navegador dele

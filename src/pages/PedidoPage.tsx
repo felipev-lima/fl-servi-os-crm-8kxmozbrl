@@ -127,17 +127,23 @@ export default function PedidoPage() {
 
   useEffect(() => {
     ;(async () => {
+      /**
+       * Carga em duas ondas, para a tela não ficar presa.
+       *
+       * O catálogo (1.511 itens) é o mais pesado e o backend oscila. Primeiro
+       * chegam empresa, clientes e técnicos — a tela já fica utilizável —
+       * e o catálogo entra em seguida, sozinho.
+       */
       try {
-        const [e, c, m, t] = await Promise.all([
-          getEmpresa(),
-          getClientes(),
-          getMaterials(),
-          getTechnicians(),
-        ])
+        const [e, c, t] = await Promise.all([getEmpresa(), getClientes(), getTechnicians()])
         setEmpresa(e)
         setClientes(c)
-        setMateriais(m)
         setTecnicos(t.filter((x: any) => x.active !== false))
+      } catch {
+        /* segue: o catálogo abaixo ainda pode carregar */
+      }
+      try {
+        setMateriais(await getMaterials())
         if (!ehNovo && id) {
           const q = await getQuote(id)
           setSalvoId(q.id)
