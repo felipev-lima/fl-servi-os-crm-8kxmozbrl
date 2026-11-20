@@ -39,6 +39,17 @@ export default function Painel() {
   const [estoqueBaixo, setEstoqueBaixo] = useState(0)
   const [semContato, setSemContato] = useState(0)
 
+  /**
+   * Filtro de status DENTRO do painel (pedido do Felipe, 20/11/2026).
+   *
+   * Antes, clicar em "Abertas" levava para /ordens e ele perdia o painel de
+   * vista. Agora o clique filtra a lista aqui embaixo, na mesma tela: ele vê
+   * o número, clica e continua trabalhando sem trocar de página.
+   *
+   * `null` = todos os status em aberto (o padrão).
+   */
+  const [filtroStatus, setFiltroStatus] = useState<string | null>(null)
+
   useEffect(() => {
     ;(async () => {
       try {
@@ -88,6 +99,23 @@ export default function Painel() {
   const hojeStr = hoje.toISOString().slice(0, 10)
   const osHoje = os.filter((o) => (o.scheduled_date || '').slice(0, 10) === hojeStr)
 
+  /** Contagem por status, para os chips clicáveis do painel */
+  const contagemStatus = {
+    ABERTA: os.filter((o) => o.status === 'ABERTA').length,
+    AGENDADA: os.filter((o) => o.status === 'AGENDADA').length,
+    'EM ANDAMENTO': os.filter((o) => o.status === 'EM ANDAMENTO').length,
+    'AGUARDANDO MATERIAL': os.filter((o) => o.status === 'AGUARDANDO MATERIAL').length,
+    FINALIZADA: os.filter((o) => o.status === 'FINALIZADA').length,
+  }
+
+  /**
+   * A lista que aparece no painel.
+   *
+   * Sem filtro: as OS em aberto (o que ele precisa tocar hoje).
+   * Com filtro: exatamente o status escolhido, inclusive FINALIZADA.
+   */
+  const osVisiveis = filtroStatus ? os.filter((o) => o.status === filtroStatus) : emAberto
+
   const seteDias = new Date(hoje.getTime() + 7 * 86400000)
   const vencendo = contas.filter(
     (c) => (c.status || 'ABERTA') !== 'PAGA' && c.due_date && new Date(c.due_date) <= seteDias,
@@ -118,6 +146,8 @@ export default function Painel() {
       icone: CalendarClock,
       cor: 'text-blue-700',
       bg: 'border-blue-200 bg-blue-50',
+      // clicar filtra a lista abaixo, sem sair do painel
+      acao: () => setFiltroStatus(null),
     },
     {
       titulo: 'Recebido no mês',
@@ -161,16 +191,30 @@ export default function Painel() {
       <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
         {cartoes.map((c) => {
           const Icone = c.icone
-          return (
+          const clicavel = typeof (c as any).acao === 'function'
+          const conteudo = (
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between">
+                <span className={`text-[10px] font-bold uppercase ${c.cor}`}>{c.titulo}</span>
+                <Icone className={`h-3.5 w-3.5 ${c.cor}`} />
+              </div>
+              <div className={`mt-1 text-lg font-black sm:text-xl ${c.cor}`}>{c.valor}</div>
+              <p className="mt-0.5 text-[9px] text-muted-foreground">{c.detalhe}</p>
+            </CardContent>
+          )
+          return clicavel ? (
+            <button
+              key={c.titulo}
+              type="button"
+              onClick={(c as any).acao}
+              className="text-left"
+              title="Ver as ordens no painel"
+            >
+              <Card className={`border ${c.bg} transition hover:shadow-md`}>{conteudo}</Card>
+            </button>
+          ) : (
             <Card key={c.titulo} className={`border ${c.bg}`}>
-              <CardContent className="p-3">
-                <div className="flex items-center justify-between">
-                  <span className={`text-[10px] font-bold uppercase ${c.cor}`}>{c.titulo}</span>
-                  <Icone className={`h-3.5 w-3.5 ${c.cor}`} />
-                </div>
-                <div className={`mt-1 text-lg font-black sm:text-xl ${c.cor}`}>{c.valor}</div>
-                <p className="mt-0.5 text-[9px] text-muted-foreground">{c.detalhe}</p>
-              </CardContent>
+              {conteudo}
             </Card>
           )
         })}
@@ -205,8 +249,58 @@ export default function Painel() {
               </Link>
             </Button>
           </div>
+
+          {/*
+            Chips de status clicáveis.
+            Filtram a lista AQUI, sem trocar de tela — o Felipe continua no
+            painel. Clicar de novo no mesmo chip volta a mostrar tudo em aberto.
+          */}
+          <div className="mb-2 flex flex-wrap gap-1">
+            {(
+              [
+                [null, 'Em aberto', emAberto.length, 'bg-slate-900 text-white'],
+                ['ABERTA', 'Abertas', contagemStatus.ABERTA, 'bg-slate-600 text-white'],
+                ['AGENDADA', 'Agendadas', contagemStatus.AGENDADA, 'bg-blue-600 text-white'],
+                [
+                  'EM ANDAMENTO',
+                  'Em andamento',
+                  contagemStatus['EM ANDAMENTO'],
+                  'bg-orange-600 text-white',
+                ],
+                [
+                  'AGUARDANDO MATERIAL',
+                  'Aguard. material',
+                  contagemStatus['AGUARDANDO MATERIAL'],
+                  'bg-amber-600 text-white',
+                ],
+                [
+                  'FINALIZADA',
+                  'Finalizadas',
+                  contagemStatus.FINALIZADA,
+                  'bg-emerald-700 text-white',
+                ],
+              ] as [string | null, string, number, string][]
+            ).map(([valor, rotulo, qtd, cor]) => {
+              const ativo = filtroStatus === valor
+              return (
+                <button
+                  key={rotulo}
+                  type="button"
+                  onClick={() => setFiltroStatus(ativo ? null : valor)}
+                  className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold transition ${
+                    ativo
+                      ? `${cor} border-transparent`
+                      : 'bg-white text-muted-foreground hover:border-[#0B3D91]/50'
+                  }`}
+                >
+                  {rotulo} ({qtd})
+                </button>
+              )
+            })}
+          </div>
+
           <div className="space-y-1.5">
-            {emAberto.slice(0, 6).map((o) => (
+            {osVisiveis.slice(0, 12).map((o) => (
               <Link
                 key={o.id}
                 to={`/ordens/${o.id}`}
@@ -223,9 +317,19 @@ export default function Painel() {
                 </Badge>
               </Link>
             ))}
-            {emAberto.length === 0 && (
+            {osVisiveis.length === 0 && (
               <p className="py-6 text-center text-xs text-muted-foreground">
-                Nenhuma OS em aberto.
+                {filtroStatus
+                  ? `Nenhuma OS com status "${filtroStatus}".`
+                  : 'Nenhuma OS em aberto.'}
+              </p>
+            )}
+            {osVisiveis.length > 12 && (
+              <p className="pt-1 text-center text-[9px] text-muted-foreground">
+                Mostrando 12 de {osVisiveis.length} —{' '}
+                <Link to="/ordens" className="text-[#0B3D91] underline">
+                  ver todas
+                </Link>
               </p>
             )}
           </div>
