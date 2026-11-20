@@ -212,13 +212,20 @@ export default function ContatosPage() {
       const buf = await arquivo.arrayBuffer()
       const wb = XLSX.read(buf, { type: 'array' })
       const ws = wb.Sheets[wb.SheetNames[0]]
-      const bruto = XLSX.utils.sheet_to_json<Record<string, any>>(ws, { defval: '' })
+      /**
+       * Lido SEM `defval`.
+       *
+       * Com `defval: ''` o SheetJS cria uma chave para cada coluna vazia do
+       * intervalo — e o objeto vinha com nomes em branco, o que quebrava a
+       * procura das colunas por nome.
+       */
+      const bruto = XLSX.utils.sheet_to_json<Record<string, any>>(ws, { raw: false })
       if (bruto.length === 0) {
         toast.error('A planilha está vazia.')
         return
       }
 
-      const chaves = Object.keys(bruto[0])
+      const chaves = Object.keys(bruto[0] || {})
       const achar = (palavras: string[]) =>
         chaves.find((k) => palavras.some((p) => norm(k).includes(p))) || ''
 
@@ -233,13 +240,18 @@ export default function ContatosPage() {
         return
       }
 
+      /**
+       * As linhas são aceitas quando têm contato E uma forma de identificar o
+       * cliente. Números de telefone em célula numérica chegam como number —
+       * `String(...)` cobre os dois casos.
+       */
       const lidas = bruto
-        .map((l) => ({
-          nome: String(l[cNome] || '').trim(),
-          documento: String(l[cDoc] || '').trim(),
-          telefone: String(l[cTel] || '').trim(),
-          email: String(l[cMail] || '').trim(),
-          contato: String(l[cContato] || '').trim(),
+        .map((l: Record<string, any>) => ({
+          nome: String(l[cNome] ?? '').trim(),
+          documento: String(l[cDoc] ?? '').trim(),
+          telefone: String(l[cTel] ?? '').trim(),
+          email: String(l[cMail] ?? '').trim(),
+          contato: String(l[cContato] ?? '').trim(),
         }))
         .filter((l) => (l.telefone || l.email) && (l.nome || l.documento))
 
