@@ -97,6 +97,9 @@ export default function PedidoPage() {
   const [tecnicos, setTecnicos] = useState<any[]>([])
   const [assinouCliente, setAssinouCliente] = useState(false)
   const [assinouEntregador, setAssinouEntregador] = useState(false)
+  /** desenho capturado, para ESTAMPAR no talão (não só marcar "assinado") */
+  const [sigCliente, setSigCliente] = useState('')
+  const [sigEntregador, setSigEntregador] = useState('')
   const [fotos, setFotos] = useState<File[]>([])
   const [salvoId, setSalvoId] = useState<string>('')
 
@@ -172,11 +175,36 @@ export default function PedidoPage() {
       .toUpperCase()
       .trim()
 
-  const resultados = useMemo(() => {
-    const t = semAcento(busca)
-    if (!t) return []
-    return materiais.filter((m) => semAcento(m.name).includes(t)).slice(0, 8)
+  /**
+   * BUSCA DE PRODUTO com relevância e contagem.
+   *
+   * Antes: corte seco em 8 resultados. Digitar "cabo" mostrava 8 de 83 e nada
+   * avisava que existiam 75 escondidos — parecia que o produto não existia.
+   *
+   * Agora: aceita várias palavras em qualquer ordem ("cabo cat5" e "cat5 cabo"
+   * dão no mesmo), ordena quem COMEÇA com o termo primeiro e informa quantos
+   * ficaram de fora.
+   */
+  const resultadosProduto = useMemo(() => {
+    const termos = semAcento(busca).split(/\s+/).filter(Boolean)
+    if (termos.length === 0) return { lista: [] as Material[], total: 0 }
+    const achados = materiais.filter((m) => {
+      const n = semAcento(m.name)
+      return termos.every((t) => n.includes(t))
+    })
+    const primeiro = termos[0]
+    const lista = [...achados].sort((a, b) => {
+      const na = semAcento(a.name)
+      const nb = semAcento(b.name)
+      const ca = na.startsWith(primeiro) ? 0 : 1
+      const cb = nb.startsWith(primeiro) ? 0 : 1
+      if (ca !== cb) return ca - cb
+      return na.localeCompare(nb)
+    })
+    return { lista: lista.slice(0, 30), total: achados.length }
   }, [busca, materiais])
+
+  const resultados = resultadosProduto.lista
 
   /**
    * Clientes filtrados por qualquer trecho do nome ou do apelido.
@@ -339,6 +367,9 @@ export default function PedidoPage() {
 
       const sigCliente = lerAssinatura(canvasClienteRef.current)
       const sigEntregador = lerAssinatura(canvasEntregadorRef.current)
+      // guarda no estado para ESTAMPAR no talão impresso
+      if (sigCliente) setSigCliente(sigCliente)
+      if (sigEntregador) setSigEntregador(sigEntregador)
       if (sigCliente) {
         const f = base64ParaArquivo(sigCliente, 'assinatura-cliente.png')
         if (f) fd.append('signature_client', f)
@@ -555,7 +586,7 @@ export default function PedidoPage() {
               />
             </div>
             {busca && !produtoSel && resultados.length > 0 && (
-              <div className="max-h-32 overflow-y-auto rounded border bg-white">
+              <div className="max-h-40 overflow-y-auto rounded border bg-white">
                 {resultados.map((m) => (
                   <button
                     key={m.id}
@@ -572,6 +603,11 @@ export default function PedidoPage() {
                     )}
                   </button>
                 ))}
+                {resultadosProduto.total > resultados.length && (
+                  <p className="border-t bg-slate-50 px-2 py-1 text-[9px] text-muted-foreground">
+                    {resultados.length} de {resultadosProduto.total} — refine a busca
+                  </p>
+                )}
               </div>
             )}
             <div
@@ -955,15 +991,33 @@ export default function PedidoPage() {
               </p>
             )}
 
-            {/* assinaturas */}
-            <div className="mt-5 grid grid-cols-2 gap-6">
+            {/*
+              ASSINATURAS ESTAMPADAS no documento.
+              Antes o talão mostrava só a linha em branco e a assinatura
+              capturada na tela ficava sem uso no PDF. Agora a rubrica do
+              entregador (ou o desenho dele) e a assinatura do cliente
+              aparecem impressas acima da linha, como num documento assinado.
+            */}
+            <div className="mt-4 grid grid-cols-2 gap-6">
               <div className="text-center">
+                <div className="flex h-14 items-end justify-center">
+                  {sigEntregador ? (
+                    <img src={sigEntregador} alt="" className="max-h-14 object-contain" />
+                  ) : rubricaEntregador ? (
+                    <img src={rubricaEntregador} alt="" className="max-h-14 object-contain" />
+                  ) : null}
+                </div>
                 <div className="border-t border-slate-500 pt-1">
                   <p className="text-[9px] font-bold">{entregador || 'QUEM ENTREGOU'}</p>
                   <p className="text-[7px] text-slate-500">Entregador</p>
                 </div>
               </div>
               <div className="text-center">
+                <div className="flex h-14 items-end justify-center">
+                  {sigCliente ? (
+                    <img src={sigCliente} alt="" className="max-h-14 object-contain" />
+                  ) : null}
+                </div>
                 <div className="border-t border-slate-500 pt-1">
                   <p className="text-[9px] font-bold">{cliente?.name}</p>
                   <p className="text-[7px] text-slate-500">Recebi o material acima</p>
