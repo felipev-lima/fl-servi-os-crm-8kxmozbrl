@@ -39,6 +39,7 @@ import {
   PackageOpen,
   CheckCircle2,
   CalendarClock,
+  CalendarDays,
   ChevronDown,
   ChevronUp,
 } from 'lucide-react'
@@ -132,6 +133,15 @@ export default function Painel() {
   /** Status selecionado. `null` = mostra todos os que estão em aberto. */
   const [statusSel, setStatusSel] = useState<StatusKey | null>(null)
 
+  /**
+   * Botão "Hoje".
+   *
+   * Quando ligado, a lista mostra as OS com data de hoje — e ele não precisa
+   * procurar na agenda. Ligar o status desliga o "Hoje" e vice-versa: são dois
+   * filtros que respondem perguntas diferentes e não devem competir.
+   */
+  const [filtroHoje, setFiltroHoje] = useState(false)
+
   useEffect(() => {
     ;(async () => {
       try {
@@ -203,14 +213,21 @@ export default function Painel() {
    * agendadas misturadas.
    */
   const osVisiveis = useMemo(() => {
-    const base = statusSel ? os.filter((o) => o.status === statusSel) : emAberto
+    let base = statusSel ? os.filter((o) => o.status === statusSel) : emAberto
+    if (filtroHoje) {
+      base = base.filter(
+        (o) =>
+          (o.scheduled_date || '').slice(0, 10) === hojeStr ||
+          (o.opened_at || '').slice(0, 10) === hojeStr,
+      )
+    }
     return [...base].sort((a, b) => {
       const da = (a.scheduled_date || a.created || '').slice(0, 10)
       const db = (b.scheduled_date || b.created || '').slice(0, 10)
       if (da !== db) return db.localeCompare(da)
       return Number(b.order_number) - Number(a.order_number)
     })
-  }, [os, statusSel, emAberto])
+  }, [os, statusSel, emAberto, filtroHoje, hojeStr])
 
   // ---- financeiro (só admin) ----
   const aReceber = resumos.reduce((s, r) => s + (r.saldo > 0 ? r.saldo : 0), 0)
@@ -262,6 +279,48 @@ export default function Painel() {
         </div>
       </div>
 
+      {/*
+        BOTÃO HOJE — o Felipe pediu de volta.
+        Fica acima dos status porque é a pergunta do começo do dia: o que é
+        meu, agora? Clicar filtra as OS agendadas ou abertas de HOJE.
+      */}
+      <button type="button" onClick={() => setFiltroHoje((v) => !v)} className="w-full text-left">
+        <Card
+          className={`border-l-4 transition-all ${
+            filtroHoje
+              ? 'border-l-[#0B3D91] bg-[#0B3D91]/5 ring-2 ring-[#0B3D91] shadow-md'
+              : 'border-l-[#0B3D91] hover:shadow-md'
+          }`}
+        >
+          <CardContent className="flex items-center justify-between gap-2 p-3">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#0B3D91] text-white">
+                <CalendarDays className="h-5 w-5" />
+              </div>
+              <div>
+                <span className="block text-[11px] font-bold uppercase text-[#0B3D91]">
+                  Hoje — minhas tarefas
+                </span>
+                <span className="block text-[10px] text-muted-foreground">
+                  {new Date().toLocaleDateString('pt-BR', {
+                    weekday: 'long',
+                    day: '2-digit',
+                    month: 'long',
+                  })}
+                  {filtroHoje ? ' · filtrando' : ''}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-black leading-none text-[#0B3D91]">
+                {osHoje.length}
+              </span>
+              <ArrowRight className="h-4 w-4 text-[#0B3D91]" />
+            </div>
+          </CardContent>
+        </Card>
+      </button>
+
       {/* ---- CARTÕES DE STATUS: o centro do painel ---- */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
         {STATUS.map((s) => {
@@ -272,7 +331,10 @@ export default function Painel() {
             <button
               key={s.chave}
               type="button"
-              onClick={() => setStatusSel(ativo ? null : s.chave)}
+              onClick={() => {
+                setFiltroHoje(false) // status e Hoje não competem
+                setStatusSel(ativo ? null : s.chave)
+              }}
               className="text-left"
               aria-pressed={ativo}
             >
@@ -309,14 +371,19 @@ export default function Painel() {
             <div className="min-w-0">
               <h2 className="flex items-center gap-1.5 text-sm font-bold">
                 <CalendarClock className="h-4 w-4 text-[#0B3D91]" />
-                {statusSel
-                  ? `${STATUS.find((s) => s.chave === statusSel)?.curto} — ${osVisiveis.length}`
-                  : `Em aberto — ${osVisiveis.length}`}
+                {filtroHoje
+                  ? `Hoje — ${osVisiveis.length}`
+                  : statusSel
+                    ? `${STATUS.find((s) => s.chave === statusSel)?.curto} — ${osVisiveis.length}`
+                    : `Em aberto — ${osVisiveis.length}`}
               </h2>
-              {statusSel && (
+              {(statusSel || filtroHoje) && (
                 <button
                   type="button"
-                  onClick={() => setStatusSel(null)}
+                  onClick={() => {
+                    setStatusSel(null)
+                    setFiltroHoje(false)
+                  }}
                   className="mt-0.5 text-[10px] font-semibold text-[#0B3D91] underline"
                 >
                   limpar filtro
@@ -372,9 +439,11 @@ export default function Painel() {
 
             {osVisiveis.length === 0 && (
               <p className="py-8 text-center text-xs text-muted-foreground">
-                {statusSel
-                  ? `Nenhuma OS ${STATUS.find((s) => s.chave === statusSel)?.curto.toLowerCase()}.`
-                  : 'Nenhuma OS em aberto. Tudo concluído.'}
+                {filtroHoje
+                  ? 'Nenhuma tarefa para hoje. Nada agendado.'
+                  : statusSel
+                    ? `Nenhuma OS ${STATUS.find((s) => s.chave === statusSel)?.curto.toLowerCase()}.`
+                    : 'Nenhuma OS em aberto. Tudo concluído.'}
               </p>
             )}
           </div>
