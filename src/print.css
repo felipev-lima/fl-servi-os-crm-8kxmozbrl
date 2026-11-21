@@ -149,9 +149,16 @@
     page-break-after: avoid !important;
   }
 
-  /* ---- grade de fotos: 3 por linha, altura previsível ---- */
-  .grid {
-    display: grid !important;
+  /* ---- GRADE DE FOTOS DA OS: 4 por linha no papel ----
+   * O `print:grid-cols-4` do Tailwind não vence a classe da tela porque as
+   * duas têm a mesma especificidade e a ordem no arquivo gerado varia. Aqui,
+   * com `!important`, é garantido: 4 colunas reduzem o bloco de evidências
+   * de 142 mm para ~85 mm, e é isso que faz a OS caber em UMA folha.
+   * A foto continua inteira (aspect 4:3 + object-contain). */
+  .grid.fotos-os,
+  #relatorio-os-pdf .grid.fotos-os {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 1mm !important;
   }
 
   /* ---- assinaturas ficam juntas e não se partem ---- */

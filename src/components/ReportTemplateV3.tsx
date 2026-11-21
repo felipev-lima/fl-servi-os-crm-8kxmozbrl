@@ -561,7 +561,7 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
               No papel vão 4 por linha: a foto continua inteira (4:3 +
               object-contain) e o bloco cai para ~85 mm.
             */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 print:grid-cols-4 gap-1.5 print:gap-1">
+            <div className="grid fotos-os grid-cols-2 sm:grid-cols-3 print:grid-cols-4 gap-1.5 print:gap-1">
               {photos.map((p, i) => {
                 const url = getFileUrl('order_photos', p.id, p.image)
                 return (
