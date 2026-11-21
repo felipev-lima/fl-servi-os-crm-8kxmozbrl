@@ -524,18 +524,9 @@ export default function Painel() {
                 <Link
                   key={o.id}
                   to={`/ordens/${o.id}`}
-                  {/*
-                    O CORPO DO CARTÃO É A COR DA SITUAÇÃO (pedido do Felipe,
-                    21/11/2026). Antes tudo era rosado, e uma OS aberta parecia
-                    atrasada. Agora:
-                      aberta      → cinza
-                      agendada    → azul
-                      em andamento→ âmbar
-                      finalizada  → verde
-                      lançada     → azul escuro
-                    ATRASADA vence todas: fundo rosa forte, para ninguém deixar
-                    passar uma OS vencida confundida com uma recém-aberta.
-                  */}
+                  // CORPO DO CARTÃO = COR DA SITUAÇÃO (pedido 21/11/2026):
+                  // aberta cinza, agendada azul, andamento âmbar, finalizada
+                  // verde, lançada azul escuro. ATRASADA vence todas (rosa).
                   className={`flex items-center justify-between gap-2 rounded-lg border-l-4 p-2.5 transition hover:shadow-md ${
                     idsPendentes.has(o.id)
                       ? 'border-rose-300 border-l-rose-500 bg-rose-100'
