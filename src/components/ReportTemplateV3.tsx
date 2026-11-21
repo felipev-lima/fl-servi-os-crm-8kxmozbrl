@@ -310,7 +310,13 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
       {/* Folha A4 do Relatório */}
       <div
         id="relatorio-os-pdf"
-        className="w-full max-w-[210mm] bg-white shadow-xl rounded-none border border-slate-300 print:border-none print:shadow-none p-4 sm:p-6 lg:p-7 font-sans text-slate-800 text-[12px] leading-snug"
+        /*
+         * IMPRESSÃO: caber mais em cada folha (22/11/2026).
+         * O padding de 28px em volta virava margem dupla (somada à do @page),
+         * e o texto a 12px com leading-snug esticava o documento. No papel usa
+         * o espaço que a folha tem; na tela continua confortável.
+         */
+        className="w-full max-w-[210mm] bg-white shadow-xl rounded-none border border-slate-300 print:border-none print:shadow-none print:p-0 print:max-w-none print:text-[10.5px] print:leading-[1.3] p-4 sm:p-6 lg:p-7 font-sans text-slate-800 text-[12px] leading-snug"
       >
         {/* CABEÇALHO COM IDENTIDADE VISUAL */}
         <div className="border-b-4 border-[#0F6A3A] pb-2 mb-2.5">

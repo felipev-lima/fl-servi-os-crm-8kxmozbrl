@@ -1329,7 +1329,8 @@ export default function PedidoPage() {
               </div>
             )}
 
-            <p className="mt-3 border-t pt-1 text-center text-[7px] text-slate-500">
+            {/* no papel o rodapé encosta: 3mm bastam para separar do corte */}
+            <p className="mt-1.5 border-t pt-0.5 text-center text-[7px] leading-tight text-slate-500">
               {empresa?.endereco} · {empresa?.telefone} · {empresa?.email}
             </p>
           </div>

@@ -1,3 +1,5 @@
+import './print.css'
+
 import { ICONE_FL } from './lib/icone'
 
 /**

@@ -1,0 +1,173 @@
+/**
+ * REGRAS DE IMPRESSÃO — aproveitar a folha A4 inteira, sem cortar nada.
+ *
+ * O problema (pedido do Felipe, 22/11/2026): o PDF da OS e o do pedido saíam
+ * com margem grande do navegador e, como o conteúdo era espaçado demais, um
+ * documento com 3 fotos e pouca informação ia para 2 ou 3 folhas.
+ *
+ * O que estas regras fazem:
+ *
+ * 1. `@page` define papel A4, margem pequena e SEM cabeçalho/rodapé do
+ *    navegador (aqueles "data, título, página 1 de 3" que roubavam 12 mm de
+ *    cada folha).
+ * 2. `@page { size: A4 }` em RETRATO — as fotos e a ficha foram desenhadas
+ *    para retrato; paisagem cortaria a tabela de materiais.
+ * 3. Esconde tudo que não é o documento: menu, rodapé do site, botões.
+ * 4. Compacta espaçamentos (line-height, margens) — é isto que faz o
+ *    documento de 1 folha caber em 1 folha.
+ * 5. Impede que o navegador QUEBRE a foto no meio da página
+ *    (`break-inside: avoid`) — era daí que vinha a foto cortada ao meio.
+ *
+ * `-webkit-print-color-adjust: exact` mantém as cores de fundo (as faixas
+ * coloridas de status, o verde do total) em vez de sumirem no papel.
+ */
+
+/* ---------------- PAPEL ---------------- */
+@page {
+  size: A4 portrait;
+  /* 8 mm: encosta nas bordas o quanto a impressora doméstica permite.
+     Abaixo disso a Epson do Felipe começa a cortar as laterais. */
+  margin: 8mm 8mm 10mm 8mm;
+}
+
+/* margem menor quando o próprio documento pede (par de páginas) */
+@page :first {
+  margin-top: 6mm;
+}
+
+@media print {
+  /* ---- cores fiéis ---- */
+  *,
+  *::before,
+  *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  html,
+  body {
+    /* o @page já cuida da margem: nada de padding extra */
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    /* 10.5pt é o ponto doce: legível no papel e economiza altura */
+    font-size: 10.5pt;
+  }
+
+  /* ---- esconde a casca do app ---- */
+  header,
+  footer,
+  nav,
+  aside,
+  [role='dialog'],
+  .print\:hidden,
+  button:not(.print-mostrar) {
+    display: none !important;
+  }
+
+  /* ---- o documento ocupa tudo ---- */
+  main,
+  main > div,
+  #root {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+    box-shadow: none !important;
+  }
+
+  /* sombras e arredondados gastam tinta e não aparecem bem no papel */
+  * {
+    box-shadow: none !important;
+  }
+
+  /* ---- compacta o que gasta altura ---- */
+  h1,
+  h2,
+  h3,
+  p,
+  td,
+  th,
+  li {
+    line-height: 1.25 !important;
+  }
+
+  h1 {
+    font-size: 14pt !important;
+    margin: 0 0 2mm 0 !important;
+  }
+  h2 {
+    font-size: 11pt !important;
+    margin: 0 0 1.5mm 0 !important;
+  }
+  h3 {
+    font-size: 10pt !important;
+    margin: 0 0 1mm 0 !important;
+  }
+  p {
+    margin: 0 0 1mm 0 !important;
+  }
+
+  table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+  td,
+  th {
+    padding: 1mm 1.5mm !important;
+  }
+
+  /* espaço entre blocos do documento */
+  .space-y-4 > * + *,
+  .space-y-3 > * + *,
+  .space-y-2 > * + * {
+    margin-top: 2mm !important;
+  }
+  .space-y-6 > * + *,
+  .space-y-5 > * + * {
+    margin-top: 3mm !important;
+  }
+
+  /* ---- nada cortado ao meio ---- */
+  img {
+    max-width: 100% !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  tr,
+  .break-inside-avoid {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* um bloco com foto nunca começa no pé da folha */
+  h1,
+  h2,
+  h3 {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
+
+  /* ---- grade de fotos: 3 por linha, altura previsível ---- */
+  .grid {
+    display: grid !important;
+  }
+
+  /* ---- assinaturas ficam juntas e não se partem ---- */
+  .assinaturas,
+  .bloco-assinatura {
+    break-inside: avoid !important;
+  }
+}
+
+/* ---------------- PDF GERADO NO APARELHO ----------------
+ * O html2pdf (usado no Chrome do iPhone, onde window.print não funciona)
+ * rasteriza a página: o que estiver com margem grande vira espaço branco no
+ * arquivo. Estas regras valem também na geração por html2pdf. */
+.pdf-pagina {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 8mm;
+  background: #fff;
+}
