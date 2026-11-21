@@ -44,7 +44,7 @@ import {
   ClipboardList,
   Clock,
   PlayCircle,
-  PackageOpen,
+  Send,
   CheckCircle2,
   CalendarClock,
   CalendarDays,
@@ -53,9 +53,10 @@ import {
   ShoppingCart,
   AlertTriangle,
   Navigation,
+  ClipboardList,
 } from 'lucide-react'
 
-type StatusKey = 'ABERTA' | 'AGENDADA' | 'EM ANDAMENTO' | 'AGUARDANDO MATERIAL' | 'FINALIZADA'
+type StatusKey = 'ABERTA' | 'AGENDADA' | 'EM ANDAMENTO' | 'FINALIZADA' | 'LANCADA'
 
 /**
  * Os cinco status, na ordem do trabalho.
@@ -104,16 +105,6 @@ const STATUS: {
     ajuda: 'Atendimento ativo',
   },
   {
-    chave: 'AGUARDANDO MATERIAL',
-    rotulo: 'Aguard. material',
-    curto: 'Aguardando material',
-    icone: PackageOpen,
-    borda: 'border-l-amber-500',
-    bg: 'bg-amber-50',
-    texto: 'text-amber-800',
-    ajuda: 'Peça pendente',
-  },
-  {
     chave: 'FINALIZADA',
     rotulo: 'Finalizadas',
     curto: 'Finalizada',
@@ -122,6 +113,16 @@ const STATUS: {
     bg: 'bg-emerald-50',
     texto: 'text-emerald-800',
     ajuda: 'Serviço concluído',
+  },
+  {
+    chave: 'LANCADA',
+    rotulo: 'Lançadas',
+    curto: 'Lançada',
+    icone: Send,
+    borda: 'border-l-blue-600',
+    bg: 'bg-blue-50',
+    texto: 'text-blue-800',
+    ajuda: 'Já lançada no financeiro',
   },
 ]
 
@@ -223,7 +224,7 @@ export default function Painel() {
       ABERTA: 0,
       AGENDADA: 0,
       'EM ANDAMENTO': 0,
-      'AGUARDANDO MATERIAL': 0,
+
       FINALIZADA: 0,
     }
     for (const o of os) {
@@ -339,6 +340,53 @@ export default function Painel() {
       </div>
 
       {/*
+        DOIS ATALHOS no topo (pedido do Felipe, 20/11/2026).
+
+        O painel virou uma página longa e ele tinha de rolar tudo para chegar
+        aos pedidos. Agora há um par de botões grandes: OS e PEDIDOS. Cada um
+        leva para a lista já com os atalhos de status coloridos.
+      */}
+      <div className="grid grid-cols-2 gap-2">
+        <Link
+          to="/ordens"
+          className="flex items-center gap-2 rounded-xl border-l-4 border-l-[#0B3D91] bg-[#0B3D91]/5 p-3 transition hover:shadow-md"
+        >
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#0B3D91] text-white">
+            <ClipboardList className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <span className="block text-[11px] font-bold uppercase text-[#0B3D91]">
+              Ordens de Serviço
+            </span>
+            <span className="block text-[10px] text-muted-foreground">
+              {
+                os.filter(
+                  (o) =>
+                    o.status !== 'FINALIZADA' && o.status !== 'LANCADA' && o.status !== 'CANCELADA',
+                ).length
+              }{' '}
+              em aberto
+            </span>
+          </div>
+        </Link>
+
+        <Link
+          to="/pedidos"
+          className="flex items-center gap-2 rounded-xl border-l-4 border-l-amber-500 bg-amber-50 p-3 transition hover:shadow-md"
+        >
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500 text-white">
+            <ShoppingCart className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <span className="block text-[11px] font-bold uppercase text-amber-800">Pedidos</span>
+            <span className="block text-[10px] text-muted-foreground">
+              {pedidos.length} no total
+            </span>
+          </div>
+        </Link>
+      </div>
+
+      {/*
         TILES DE STATUS — compactos, quadradinhos, todos na mesma linha.
 
         São sete: HOJE e PENDENTE entram no MESMO formato dos cinco status,
@@ -348,7 +396,7 @@ export default function Painel() {
         PENDENTE em vermelho: data já passou e ninguém movimentou a OS. Antes
         essas sumiam no meio da lista sem chamar atenção.
       */}
-      <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-7">
+      <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-6">
         {/* HOJE */}
         <button
           type="button"

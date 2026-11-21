@@ -975,12 +975,13 @@ export default function PedidoPage() {
                   {fotos.map((f, i) => (
                     <div
                       key={`${f.name}-${i}`}
-                      className="relative overflow-hidden rounded-md border"
+                      className="relative aspect-square overflow-hidden rounded-md border bg-white"
                     >
+                      {/* quadradinho 1:1, mas a foto aparece INTEIRA (sem corte) */}
                       <img
                         src={URL.createObjectURL(f)}
                         alt={f.name}
-                        className="h-20 w-full object-cover"
+                        className="h-full w-full object-contain"
                       />
                       <button
                         type="button"
@@ -1254,24 +1255,40 @@ export default function PedidoPage() {
                 <p className="mb-1 text-[8px] font-bold uppercase text-slate-500">
                   Fotos da entrega
                 </p>
-                <div className="grid grid-cols-3 gap-1">
+                {/*
+                  FOTOS SEM DISTORÇÃO (reclamação do Felipe, 20/11/2026).
+
+                  Estava `object-cover` numa caixa de altura fixa: a imagem era
+                  CORTADA e esticada para preencher, e saía distorcida no papel.
+                  Com `aspect-[4/3]` + `object-contain`, a foto mantém a
+                  proporção original e aparece inteira, como na OS.
+                */}
+                <div className="grid grid-cols-2 gap-1">
                   {/* já salvas no servidor */}
                   {fotosSalvas.map((nome, i) => (
-                    <img
+                    <div
                       key={`s${i}`}
-                      src={getFileUrl('quotes', salvoId, nome)}
-                      alt=""
-                      className="h-24 w-full rounded border object-cover"
-                    />
+                      className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded border bg-white"
+                    >
+                      <img
+                        src={getFileUrl('quotes', salvoId, nome)}
+                        alt=""
+                        className="h-full w-full object-contain"
+                      />
+                    </div>
                   ))}
                   {/* recém-escolhidas, ainda no aparelho */}
                   {fotos.map((f, i) => (
-                    <img
+                    <div
                       key={`n${i}`}
-                      src={URL.createObjectURL(f)}
-                      alt=""
-                      className="h-24 w-full rounded border object-cover"
-                    />
+                      className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded border bg-white"
+                    >
+                      <img
+                        src={URL.createObjectURL(f)}
+                        alt=""
+                        className="h-full w-full object-contain"
+                      />
+                    </div>
                   ))}
                 </div>
               </div>
