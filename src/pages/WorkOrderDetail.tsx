@@ -1545,13 +1545,26 @@ ${
               <Clock className="w-3.5 h-3.5 text-[#0F6A3A]" /> Alterar Status do Atendimento:
             </span>
             <div className="flex flex-wrap gap-1.5">
-              {(
+              {/*
+               * ESTA LISTA JÁ QUEBROU O HISTÓRICO (21/11/2026).
+               *
+               * Ela continuava oferecendo AGUARDANDO MATERIAL depois que a
+               * migration 0060 removeu esse status do banco. Clicar nele
+               * mandava um valor inválido, o PocketBase recusava a gravação e
+               * o histórico não era criado — a OS parecia "não registrar
+               * nada". Toda mudança de status falhava em silêncio, porque o
+               * erro só aparecia no console.
+               *
+               * A lista abaixo tem de espelhar EXATAMENTE os valores do
+               * select `status` da coleção work_orders.
+               */
+              (
                 [
                   'ABERTA',
                   'AGENDADA',
                   'EM ANDAMENTO',
-                  'AGUARDANDO MATERIAL',
                   'FINALIZADA',
+                  'LANCADA',
                   'CANCELADA',
                 ] as OrderStatus[]
               ).map((st) => (
@@ -1760,12 +1773,13 @@ ${
                       <SelectValue placeholder="Status" />
                     </SelectTrigger>
                     <SelectContent>
+                      {/* espelha o select do banco: sem AGUARDANDO MATERIAL */}
                       {[
                         'ABERTA',
                         'AGENDADA',
                         'EM ANDAMENTO',
-                        'AGUARDANDO MATERIAL',
                         'FINALIZADA',
+                        'LANCADA',
                         'CANCELADA',
                       ].map((st) => (
                         <SelectItem key={st} value={st} className="text-xs">

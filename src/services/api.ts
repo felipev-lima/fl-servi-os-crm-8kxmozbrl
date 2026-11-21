@@ -169,6 +169,19 @@ export async function createWorkOrder(
   return record
 }
 
+/**
+ * Normaliza um status antigo para um valor que o banco aceita.
+ *
+ * AGUARDANDO MATERIAL saiu do select na migration 0060. Se algo ainda mandar
+ * esse valor (aba antiga aberta, atalho velho), gravamos EM ANDAMENTO em vez
+ * de deixar a gravação falhar e o histórico se perder.
+ */
+function statusValido(s?: string): OrderStatus | undefined {
+  if (!s) return undefined
+  if (s === 'AGUARDANDO MATERIAL') return 'EM ANDAMENTO' as OrderStatus
+  return s as OrderStatus
+}
+
 export async function updateWorkOrder(
   id: string,
   data: FormData | Partial<WorkOrder>,
@@ -177,6 +190,14 @@ export async function updateWorkOrder(
   newStatus?: OrderStatus,
   statusNotes?: string,
 ): Promise<WorkOrder> {
+  // sanidade: nunca mandar um status que o banco não conhece
+  if (newStatus) newStatus = statusValido(newStatus)
+  oldStatus = statusValido(oldStatus)
+  if (data instanceof FormData && data.has('status')) {
+    data.set('status', String(statusValido(String(data.get('status')))))
+  } else if (!(data instanceof FormData) && (data as any).status) {
+    ;(data as any).status = statusValido((data as any).status)
+  }
   // Se estiver finalizando, preencher completed_at se não enviado
   if (
     newStatus === 'FINALIZADA' &&
@@ -203,7 +224,10 @@ export async function updateWorkOrder(
         notes: statusNotes || `Status alterado de ${oldStatus} para ${newStatus}`,
       })
     } catch (err) {
+      // A mudança de status JÁ foi gravada; o histórico é o complemento.
+      // Antes isso morria no console e o Felipe não sabia de nada.
       console.error('Falha ao registrar histórico', err)
+      throw new Error('A OS foi salva, mas o histórico não pôde ser registrado. Avise o suporte.')
     }
   } else if (statusNotes) {
     try {
