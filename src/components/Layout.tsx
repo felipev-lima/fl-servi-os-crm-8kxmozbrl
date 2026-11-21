@@ -126,15 +126,28 @@ export default function Layout() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link to="/" className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-inner overflow-hidden">
-                {logoUrl ? (
-                  <img src={logoUrl} alt="FL" className="w-9 h-9 object-contain p-0.5" />
-                ) : (
+              {/*
+                MOLDURA DA LOGOMARCA (ajuste 22/11/2026).
+                Era um quadrado de 40×40. A arte nova é HORIZONTAL (1536×864,
+                quase 16:9) e dentro de um quadrado ela encolhia até o texto
+                ficar ilegível. A caixa agora acompanha a proporção da arte —
+                nada na imagem é cortado, ela só tem o espaço que precisa.
+              */}
+              {logoUrl ? (
+                <div className="flex h-11 w-28 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white px-1.5 py-1 shadow-inner">
+                  <img
+                    src={logoUrl}
+                    alt="F. L. SERVIÇOS"
+                    className="max-h-full max-w-full object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-inner">
                   <span className="text-[#0B3D91] font-black text-lg">FL</span>
-                )}
-              </div>
+                </div>
+              )}
               <div>
-                <span className="font-black text-lg tracking-tight uppercase block leading-none">
+                <span className="font-black text-base tracking-tight uppercase block leading-none">
                   FL SERVIÇOS
                 </span>
                 <span className="text-[10px] text-white/80 font-medium tracking-wider uppercase block">
