@@ -66,6 +66,7 @@ import {
   Navigation,
   Images,
   X,
+  ArrowLeft,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
