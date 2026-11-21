@@ -554,13 +554,20 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
             {/* Fotos: caixa 4:3 com object-contain — mostra a foto INTEIRA, sem
                 cortar nem esticar. Antes era object-cover numa caixa baixa, e a
                 imagem saía comprida e estreita no papel. */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+            {/*
+              4 COLUNAS NO PAPEL (ajuste 22/11/2026).
+              Com 2 colunas a foto ficava grande e o bloco de evidências
+              ocupava 142 mm — sozinho, empurrava a OS para uma segunda folha.
+              No papel vão 4 por linha: a foto continua inteira (4:3 +
+              object-contain) e o bloco cai para ~85 mm.
+            */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 print:grid-cols-4 gap-1.5 print:gap-1">
               {photos.map((p, i) => {
                 const url = getFileUrl('order_photos', p.id, p.image)
                 return (
                   <div
                     key={p.id}
-                    className="border border-slate-200 rounded p-0.5 bg-slate-50 flex flex-col items-center"
+                    className="border border-slate-200 rounded p-0.5 bg-slate-50 flex flex-col items-center break-inside-avoid"
                   >
                     <div className="w-full aspect-[4/3] bg-white rounded overflow-hidden flex items-center justify-center">
                       {url ? (
