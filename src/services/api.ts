@@ -212,17 +212,35 @@ export async function updateWorkOrder(
 
   const record = (await pb.collection('work_orders').update(id, data)) as unknown as WorkOrder
 
-  // Registrar histórico se houve mudança de status ou edição
+  /**
+   * O HISTÓRICO AGORA É DO SERVIDOR (hook `historicoOS.pb.js`).
+   *
+   * Antes era criado aqui, e bastava essa segunda chamada falhar — status
+   * inválido, rede ruim, aba velha — para a mudança de status ficar sem
+   * histórico, sem aviso. Foi o que aconteceu em 21/11: o histórico parou em
+   * 20/11 23:37 porque a tela ainda mandava AGUARDANDO MATERIAL.
+   *
+   * Agora o registro nasce dentro do próprio salvamento, no backend. Aqui só
+   * gravamos a NOTA, quando o usuário escreveu um motivo — e mesmo assim com
+   * proteção contra duplicar a linha que o servidor já criou.
+   */
   if (oldStatus && newStatus && oldStatus !== newStatus) {
     try {
-      await pb.collection('order_history').create({
-        work_order: id,
-        status_from: oldStatus,
-        status_to: newStatus,
-        user_name: currentUserName || 'Sistema',
-        user_id: pb.authStore.record?.id || '',
-        notes: statusNotes || `Status alterado de ${oldStatus} para ${newStatus}`,
+      const jaTem = await pb.collection('order_history').getList(1, 1, {
+        filter: `work_order = "${id}" && status_from = "${oldStatus}" && status_to = "${newStatus}"`,
+        sort: '-created',
       })
+      const recente = jaTem.items[0]
+      const agora = Date.now()
+      const criadoEm = recente ? new Date(String(recente.created).replace(' ', 'T')).getTime() : 0
+      const ehDoServidor =
+        recente &&
+        agora - criadoEm < 15000 &&
+        !String(recente.notes || '').startsWith('Status alterado')
+      // se o servidor já registrou esta transição agora há pouco, só completa a nota
+      if (ehDoServidor && statusNotes) {
+        await pb.collection('order_history').update(recente.id, { notes: statusNotes })
+      }
     } catch (err) {
       // A mudança de status JÁ foi gravada; o histórico é o complemento.
       // Antes isso morria no console e o Felipe não sabia de nada.
