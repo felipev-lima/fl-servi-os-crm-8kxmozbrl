@@ -53,7 +53,6 @@ import {
   ShoppingCart,
   AlertTriangle,
   Navigation,
-  ClipboardList,
 } from 'lucide-react'
 
 type StatusKey = 'ABERTA' | 'AGENDADA' | 'EM ANDAMENTO' | 'FINALIZADA' | 'LANCADA'
