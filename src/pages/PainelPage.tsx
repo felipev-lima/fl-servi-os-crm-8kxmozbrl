@@ -72,36 +72,48 @@ const STATUS: {
   bg: string
   texto: string
   ajuda: string
+  /** fundo + borda do CARTÃO de OS na lista (corpo inteiro) */
+  cor: string
+  /** faixa lateral esquerda do cartão */
+  faixa: string
 }[] = [
   {
+    // cinza um tom mais escuro: o Felipe pediu para destacar do fundo branco
     chave: 'ABERTA',
     rotulo: 'Abertas',
     curto: 'Aberta',
     icone: ClipboardList,
-    borda: 'border-l-slate-500',
-    bg: 'bg-slate-50',
-    texto: 'text-slate-800',
+    borda: 'border-l-slate-600',
+    bg: 'bg-slate-200',
+    texto: 'text-slate-900',
     ajuda: 'Aguardando início',
+    cor: 'border-slate-300 bg-slate-200',
+    faixa: 'border-l-slate-600',
   },
   {
+    // azul, como ele pediu: agendada não é alerta, é compromisso marcado
     chave: 'AGENDADA',
     rotulo: 'Agendadas',
     curto: 'Agendada',
     icone: Clock,
-    borda: 'border-l-blue-600',
-    bg: 'bg-blue-50',
-    texto: 'text-blue-800',
+    borda: 'border-l-blue-500',
+    bg: 'bg-blue-100',
+    texto: 'text-blue-900',
     ajuda: 'Com data definida',
+    cor: 'border-blue-300 bg-blue-100',
+    faixa: 'border-l-blue-500',
   },
   {
     chave: 'EM ANDAMENTO',
     rotulo: 'Em andamento',
     curto: 'Em andamento',
     icone: PlayCircle,
-    borda: 'border-l-orange-500',
-    bg: 'bg-orange-50',
-    texto: 'text-orange-800',
+    borda: 'border-l-amber-500',
+    bg: 'bg-amber-100',
+    texto: 'text-amber-900',
     ajuda: 'Atendimento ativo',
+    cor: 'border-amber-300 bg-amber-100',
+    faixa: 'border-l-amber-500',
   },
   {
     chave: 'FINALIZADA',
@@ -110,18 +122,22 @@ const STATUS: {
     icone: CheckCircle2,
     borda: 'border-l-emerald-600',
     bg: 'bg-emerald-50',
-    texto: 'text-emerald-800',
+    texto: 'text-emerald-900',
     ajuda: 'Serviço concluído',
+    cor: 'border-emerald-300 bg-emerald-100',
+    faixa: 'border-l-emerald-600',
   },
   {
     chave: 'LANCADA',
     rotulo: 'Lançadas',
     curto: 'Lançada',
     icone: Send,
-    borda: 'border-l-blue-600',
-    bg: 'bg-blue-50',
-    texto: 'text-blue-800',
+    borda: 'border-l-indigo-600',
+    bg: 'bg-indigo-100',
+    texto: 'text-indigo-900',
     ajuda: 'Já lançada no financeiro',
+    cor: 'border-indigo-300 bg-indigo-100',
+    faixa: 'border-l-indigo-600',
   },
 ]
 
@@ -350,45 +366,29 @@ export default function Painel() {
         aos pedidos. Agora há um par de botões grandes: OS e PEDIDOS. Cada um
         leva para a lista já com os atalhos de status coloridos.
       */}
-      <div className="grid grid-cols-2 gap-2">
-        <Link
-          to="/ordens"
-          className="flex items-center gap-2 rounded-xl border-l-4 border-l-[#0B3D91] bg-[#0B3D91]/5 p-3 transition hover:shadow-md"
-        >
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#0B3D91] text-white">
-            <ClipboardList className="h-5 w-5" />
-          </div>
-          <div className="min-w-0">
-            <span className="block text-[11px] font-bold uppercase text-[#0B3D91]">
-              Ordens de Serviço
-            </span>
-            <span className="block text-[10px] text-muted-foreground">
-              {
-                os.filter(
-                  (o) =>
-                    o.status !== 'FINALIZADA' && o.status !== 'LANCADA' && o.status !== 'CANCELADA',
-                ).length
-              }{' '}
-              em aberto
-            </span>
-          </div>
-        </Link>
+      {/*
+        SÓ O ATALHO DE PEDIDOS (ajuste do Felipe, 21/11/2026).
 
-        <Link
-          to="/pedidos"
-          className="flex items-center gap-2 rounded-xl border-l-4 border-l-amber-500 bg-amber-50 p-3 transition hover:shadow-md"
-        >
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500 text-white">
-            <ShoppingCart className="h-5 w-5" />
-          </div>
-          <div className="min-w-0">
-            <span className="block text-[11px] font-bold uppercase text-amber-800">Pedidos</span>
-            <span className="block text-[10px] text-muted-foreground">
-              {pedidos.length} no total
-            </span>
-          </div>
-        </Link>
-      </div>
+        Havia dois botões aqui: Ordens de Serviço e Pedidos. O de OS era
+        REDUNDANTE — esta tela já É a lista de OS, e o "Painel" no menu traz
+        para cá. Dois toques para a mesma coisa. Ficou só o de Pedidos, que era
+        o que estava longe, lá embaixo.
+      */}
+      <Link
+        to="/pedidos"
+        className="flex items-center gap-2 rounded-xl border-l-4 border-l-amber-500 bg-amber-50 p-2.5 transition hover:shadow-md"
+      >
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500 text-white">
+          <ShoppingCart className="h-4 w-4" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <span className="block text-[11px] font-bold uppercase text-amber-800">Pedidos</span>
+          <span className="block text-[10px] text-muted-foreground">
+            {pedidos.length} no total · toque para gerenciar
+          </span>
+        </div>
+        <ArrowRight className="h-4 w-4 shrink-0 text-amber-700" />
+      </Link>
 
       {/*
         TILES DE STATUS — compactos, quadradinhos, todos na mesma linha.
@@ -524,10 +524,24 @@ export default function Painel() {
                 <Link
                   key={o.id}
                   to={`/ordens/${o.id}`}
-                  className={`flex items-center justify-between gap-2 rounded-lg border p-2.5 transition hover:border-rose-400 ${
+                  {/*
+                    O CORPO DO CARTÃO É A COR DA SITUAÇÃO (pedido do Felipe,
+                    21/11/2026). Antes tudo era rosado, e uma OS aberta parecia
+                    atrasada. Agora:
+                      aberta      → cinza
+                      agendada    → azul
+                      em andamento→ âmbar
+                      finalizada  → verde
+                      lançada     → azul escuro
+                    ATRASADA vence todas: fundo rosa forte, para ninguém deixar
+                    passar uma OS vencida confundida com uma recém-aberta.
+                  */}
+                  className={`flex items-center justify-between gap-2 rounded-lg border-l-4 p-2.5 transition hover:shadow-md ${
                     idsPendentes.has(o.id)
-                      ? 'border-rose-400 bg-rose-100'
-                      : 'border-rose-200 bg-rose-50/70'
+                      ? 'border-rose-300 border-l-rose-500 bg-rose-100'
+                      : cfg
+                        ? `${cfg.cor} ${cfg.faixa}`
+                        : 'border-slate-300 border-l-slate-400 bg-slate-100'
                   }`}
                 >
                   <div className="min-w-0 flex-1">
