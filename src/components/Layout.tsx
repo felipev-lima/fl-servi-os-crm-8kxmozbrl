@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
@@ -36,6 +36,22 @@ export default function Layout() {
   const { user, isAuthenticated, logout, isAdmin } = useAuth()
   const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  /** dropdown "Mais" do menu do computador (ajuste 22/11/2026) */
+  const [maisAberto, setMaisAberto] = useState(false)
+  const maisRef = useRef<HTMLDivElement | null>(null)
+
+  // fecha o "Mais" ao clicar fora ou ao trocar de tela
+  useEffect(() => {
+    if (!maisAberto) return
+    const fora = (e: MouseEvent) => {
+      if (maisRef.current && !maisRef.current.contains(e.target as Node)) setMaisAberto(false)
+    }
+    document.addEventListener('mousedown', fora)
+    return () => document.removeEventListener('mousedown', fora)
+  }, [maisAberto])
+  useEffect(() => {
+    setMaisAberto(false)
+  }, [location.pathname])
 
   /**
    * Logomarca vem das Configurações, não do código.
@@ -157,35 +173,99 @@ export default function Layout() {
             </Link>
           </div>
 
-          {/* Navegação Desktop */}
-          <nav className="hidden lg:flex items-center gap-1">
-            {navigation.map((item) => {
+          {/*
+            NAVEGAÇÃO DO COMPUTADOR — cabe sem rolar de lado (22/11/2026).
+
+            Antes os 28 itens ficavam numa fila só e, em tela de notebook, os
+            últimos (Relatórios, Contas a pagar, Faturamento, Sair) ficavam fora
+            da área visível: o Felipe precisava arrastar a barra para o lado.
+
+            Agora os 6 primeiros ficam à vista e o resto entra num "Mais ▾" com
+            painel em duas colunas. O botão de usuário/Sair saiu da fila e está
+            sempre visível à direita.
+          */}
+          <nav className="hidden lg:flex items-center gap-0.5 flex-1 justify-center min-w-0">
+            {navigation.slice(0, 6).map((item) => {
               const Icon = item.icon
               const active = isActive(item.href)
               return (
                 <Link
                   key={item.name}
                   to={item.href}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                  title={item.name}
+                  className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition ${
                     active
-                      ? 'bg-white/20 text-white shadow-sm'
-                      : 'text-white/80 hover:bg-white/10 hover:text-white'
+                      ? 'bg-white/25 text-white shadow-sm'
+                      : 'text-white/85 hover:bg-white/10 hover:text-white'
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
-                  {item.name}
+                  <Icon className="w-4 h-4 shrink-0" />
+                  <span className="hidden xl:inline">{item.name}</span>
                 </Link>
               )
             })}
+
+            {navigation.length > 6 && (
+              <div className="relative" ref={maisRef}>
+                <button
+                  type="button"
+                  onClick={() => setMaisAberto((v) => !v)}
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold whitespace-nowrap transition ${
+                    maisAberto ? 'bg-white/25 text-white' : 'text-white/90 hover:bg-white/10'
+                  }`}
+                  aria-expanded={maisAberto}
+                  aria-haspopup="true"
+                >
+                  <Menu className="w-4 h-4" />
+                  Mais
+                  <span className="text-[9px] opacity-70">▾</span>
+                </button>
+
+                {maisAberto && (
+                  <div className="absolute right-0 top-full z-50 mt-2 w-[430px] rounded-xl border border-slate-200 bg-white p-2 shadow-2xl">
+                    <p className="px-2 pb-1 pt-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                      Gestão
+                    </p>
+                    <div className="grid grid-cols-2 gap-0.5">
+                      {navigation.slice(6).map((item) => {
+                        const Icon = item.icon
+                        const active = isActive(item.href)
+                        return (
+                          <Link
+                            key={item.name}
+                            to={item.href}
+                            onClick={() => setMaisAberto(false)}
+                            className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-[11px] font-semibold transition ${
+                              active
+                                ? 'bg-[#0B3D91] text-white'
+                                : 'text-slate-700 hover:bg-slate-100'
+                            }`}
+                          >
+                            <Icon className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate">{item.name}</span>
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </nav>
 
-          {/* Usuário / Login */}
-          <div className="flex items-center gap-2">
+          {/*
+            USUÁRIO E SAIR SEMPRE À VISTA.
+            Ficavam no fim da fila do menu e saíam da tela junto com os últimos
+            itens. Agora este bloco é fixo à direita, com nome e perfil.
+          */}
+          <div className="flex items-center gap-1.5 shrink-0">
             {isAuthenticated && user ? (
-              <div className="flex items-center gap-2">
-                <div className="hidden sm:flex flex-col items-end text-xs">
-                  <span className="font-bold text-white leading-tight">{user.name}</span>
-                  <span className="text-[10px] text-emerald-200 uppercase font-semibold">
+              <div className="flex items-center gap-1.5">
+                <div className="hidden md:flex flex-col items-end text-xs leading-none">
+                  <span className="font-bold text-white leading-tight max-w-[110px] truncate">
+                    {user.name}
+                  </span>
+                  <span className="text-[9px] text-emerald-200 uppercase font-semibold">
                     {user.role}
                   </span>
                 </div>
