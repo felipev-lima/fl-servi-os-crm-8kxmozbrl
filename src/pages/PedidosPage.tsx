@@ -55,6 +55,9 @@ export default function PedidosPage() {
       .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
 
+  /** ordenação dentro de cada grupo (pedido do Felipe, 21/11/2026) */
+  const [ordem, setOrdem] = useState<'PRIORIDADE' | 'NUMERO' | 'CLIENTE'>('PRIORIDADE')
+
   const lista = useMemo(() => {
     const t = norm(busca)
     return pedidos.filter((p) => {
@@ -70,6 +73,36 @@ export default function PedidosPage() {
       return nome.includes(t) || apel.includes(t)
     })
   }, [pedidos, busca, filtro])
+
+  /**
+   * MESMA LÓGICA DA OS, aplicada ao pedido.
+   *
+   * A esteira já tem ordem de prioridade: orçamento (esperando o cliente
+   * aprovar) → pedido (aprovado, comprar) → aguardando material (encomendado)
+   * → entregue → lançado. A lista segue essa ordem, agrupada, para ele ver de
+   * cima o que trava o negócio.
+   */
+  const compararPedido = (a: Quote, b: Quote) => {
+    if (ordem === 'NUMERO') return Number(a.number || 0) - Number(b.number || 0)
+    if (ordem === 'CLIENTE') {
+      const na = (a.expand?.client?.name || '').toUpperCase()
+      const nb = (b.expand?.client?.name || '').toUpperCase()
+      return na.localeCompare(nb, 'pt-BR')
+    }
+    // prioridade: o mais recente primeiro dentro do grupo
+    return Number(b.number || 0) - Number(a.number || 0)
+  }
+
+  const gruposPedido = STATUS_PEDIDO.map((s) => ({
+    ...s,
+    itens: lista
+      .filter(
+        (p) =>
+          (p.status || 'ORCAMENTO') === s.chave ||
+          (s.chave === 'LANCADO' && p.status === 'FATURADO'),
+      )
+      .sort(compararPedido),
+  })).filter((g) => g.itens.length > 0)
 
   if (carregando) {
     return (
@@ -165,53 +198,84 @@ export default function PedidosPage() {
         })}
       </div>
 
-      <div className="space-y-1.5">
-        {lista.map((p) => {
-          const itens = p.items || []
-          const total = totalDoDocumento(itens)
-          const cfg = configStatus(p.status)
-          return (
-            <Link key={p.id} to={`/pedido/${p.id}`} className="block">
-              {/* a cor do cartão é a do status: bate o olho e já sabe a etapa */}
-              <Card className={`border-l-4 ${cfg.cor}`}>
-                <CardContent className="flex items-center gap-2 p-2.5">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <Badge variant="outline" className={`px-1.5 py-0 text-[8px] ${cfg.texto}`}>
-                        {cfg.rotulo}
-                      </Badge>
-                      {p.number ? (
-                        <span className="font-mono text-[10px] font-bold text-[#0B3D91]">
-                          nº {p.number}
-                        </span>
-                      ) : null}
-                      <span className="text-[9px] text-muted-foreground">{dataBR(p.date)}</span>
-                      <span className="text-[9px] text-muted-foreground">
-                        · {itens.length} item(ns)
-                      </span>
-                    </div>
-                    <p className="mt-0.5 text-[11px] font-semibold leading-tight">
-                      {p.expand?.client?.name || '—'}
-                    </p>
-                    {p.delivered_by_name && (
-                      <p className="truncate text-[9px] text-muted-foreground">
-                        Entregue por {p.delivered_by_name}
-                      </p>
-                    )}
-                  </div>
-                  <div className="shrink-0 text-right">
-                    {isAdmin && (
-                      <span className="block font-mono text-xs font-bold text-[#0B3D91]">
-                        {brl(total)}
-                      </span>
-                    )}
-                    <ArrowRight className="mt-0.5 ml-auto h-3.5 w-3.5 text-muted-foreground" />
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          )
-        })}
+      {/* ordenação dentro dos grupos */}
+      <div className="flex items-center gap-1.5">
+        <span className="text-[10px] font-semibold text-muted-foreground">Ordenar:</span>
+        <select
+          value={ordem}
+          onChange={(e) => setOrdem(e.target.value as any)}
+          className="h-8 rounded-md border border-input bg-background px-1.5 text-[11px] font-semibold shadow-sm"
+          aria-label="Ordenar pedidos"
+        >
+          <option value="PRIORIDADE">Prioridade</option>
+          <option value="NUMERO">Nº do pedido</option>
+          <option value="CLIENTE">Nome do cliente</option>
+        </select>
+      </div>
+
+      <div className="space-y-4">
+        {gruposPedido.map((g) => (
+          <div key={g.chave} className="space-y-1.5">
+            {/* cabeçalho do grupo, com a cor da etapa */}
+            <div
+              className={`flex items-center justify-between rounded-lg border-l-4 px-3 py-1.5 ${g.cor}`}
+            >
+              <h2 className={`text-[11px] font-black uppercase tracking-wide ${g.texto}`}>
+                {g.rotulo} <span className="font-bold opacity-70">({g.itens.length})</span>
+              </h2>
+            </div>
+
+            {g.itens.map((p) => {
+              const itens = p.items || []
+              const total = totalDoDocumento(itens)
+              const cfg = configStatus(p.status)
+              return (
+                <Link key={p.id} to={`/pedido/${p.id}`} className="block">
+                  {/* a cor do cartão é a do status: bate o olho e já sabe a etapa */}
+                  <Card className={`border-l-4 ${cfg.cor}`}>
+                    <CardContent className="flex items-center gap-2 p-2.5">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Badge
+                            variant="outline"
+                            className={`px-1.5 py-0 text-[8px] ${cfg.texto}`}
+                          >
+                            {cfg.rotulo}
+                          </Badge>
+                          {p.number ? (
+                            <span className="font-mono text-[10px] font-bold text-[#0B3D91]">
+                              nº {p.number}
+                            </span>
+                          ) : null}
+                          <span className="text-[9px] text-muted-foreground">{dataBR(p.date)}</span>
+                          <span className="text-[9px] text-muted-foreground">
+                            · {itens.length} item(ns)
+                          </span>
+                        </div>
+                        <p className="mt-0.5 text-[11px] font-semibold leading-tight">
+                          {p.expand?.client?.name || '—'}
+                        </p>
+                        {p.delivered_by_name && (
+                          <p className="truncate text-[9px] text-muted-foreground">
+                            Entregue por {p.delivered_by_name}
+                          </p>
+                        )}
+                      </div>
+                      <div className="shrink-0 text-right">
+                        {isAdmin && (
+                          <span className="block font-mono text-xs font-bold text-[#0B3D91]">
+                            {brl(total)}
+                          </span>
+                        )}
+                        <ArrowRight className="mt-0.5 ml-auto h-3.5 w-3.5 text-muted-foreground" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              )
+            })}
+          </div>
+        ))}
 
         {lista.length === 0 && (
           <div className="rounded-xl border-2 border-dashed p-10 text-center">
