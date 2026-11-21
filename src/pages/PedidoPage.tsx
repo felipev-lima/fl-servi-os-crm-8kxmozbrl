@@ -496,11 +496,19 @@ export default function PedidoPage() {
       const html2pdf = (await import('html2pdf.js')).default
       await html2pdf()
         .set({
-          margin: [8, 8, 8, 8],
+          /*
+           * MARGEM 5mm e escala 3: o talão mede 1049px de altura e a folha A4
+           * útil tem ~1047 — faltavam DOIS PIXELS para caber em uma folha, e
+           * um talão com 2 fotos ia para a segunda página por causa disso.
+           * Com 5mm de margem sobram ~1050px e ele fecha em 1 folha.
+           * `avoid-all` impede a foto de ser cortada no meio.
+           */
+          margin: [5, 5, 5, 5],
           filename: `PEDIDO-${cliente?.name?.slice(0, 20) || 'CLIENTE'}-${data}.pdf`,
-          image: { type: 'jpeg', quality: 0.95 },
-          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 3, useCORS: true, backgroundColor: '#ffffff' },
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: ['css', 'legacy'], avoid: ['img', 'tr', '.break-inside-avoid'] },
         } as any)
         .from(alvo)
         .save()
