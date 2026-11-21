@@ -223,17 +223,23 @@ export default function Painel() {
       ABERTA: 0,
       AGENDADA: 0,
       'EM ANDAMENTO': 0,
-
       FINALIZADA: 0,
+      LANCADA: 0,
     }
     for (const o of os) {
-      if (o.status in c) c[o.status as StatusKey] += 1
+      // OS antiga gravada como AGUARDANDO MATERIAL conta como em andamento
+      const chave =
+        o.status === 'AGUARDANDO MATERIAL' ? 'EM ANDAMENTO' : (o.status as StatusKey)
+      if (chave in c) c[chave] += 1
     }
     return c
   }, [os])
 
-  const emAberto = os.filter((o) => o.status !== 'FINALIZADA' && o.status !== 'CANCELADA')
-  const osHoje = os.filter((o) => (o.scheduled_date || '').slice(0, 10) === hojeStr)
+  /** em aberto = ainda dá trabalho (não finalizada, não lançada, não cancelada) */
+  const emAberto = os.filter(
+    (o) =>
+      o.status !== 'FINALIZADA' && o.status !== 'LANCADA' && o.status !== 'CANCELADA',
+  )  const osHoje = os.filter((o) => (o.scheduled_date || '').slice(0, 10) === hojeStr)
 
   /**
    * PENDENTES = atrasadas de verdade.
