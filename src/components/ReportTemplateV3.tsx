@@ -328,7 +328,7 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
         className="w-full max-w-[210mm] bg-white shadow-xl rounded-none border border-slate-300 print:border-none print:shadow-none print:p-0 print:max-w-none print:text-[10.5px] print:leading-[1.3] p-4 sm:p-6 lg:p-7 font-sans text-slate-800 text-[12px] leading-snug"
       >
         {/* CABEÇALHO COM IDENTIDADE VISUAL */}
-        <div className="border-b-4 border-[#0F6A3A] pb-2 mb-2.5">
+        <div className="border-b-4 border-[#0F6A3A] pb-1.5 mb-1.5">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-4">
             <div className="flex items-center gap-2.5">
               <div className="w-11 h-11 bg-gradient-to-br from-[#0F6A3A] to-[#2E8B57] text-white flex items-center justify-center font-black text-base rounded shadow shrink-0">
@@ -368,8 +368,14 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
           </div>
         </div>
 
-        {/* DADOS DO CLIENTE E INFORMAÇÕES TÉCNICAS */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 mb-2.5">
+        {/*
+          DUAS COLUNAS SEMPRE (ajuste 22/11/2026).
+          No celular ficava UMA coluna, e os dois quadros empilhados somavam
+          69 mm — a OS passava de uma folha (297 mm contra 287 úteis). Como o
+          documento é sempre A4 retrato, duas colunas cabem em qualquer tela e
+          o documento fecha em UMA folha também no telefone.
+        */}
+        <div className="grid grid-cols-2 gap-1.5 mb-1.5">
           <div className="border border-slate-200 rounded p-2 bg-slate-50/50">
             <h2 className="text-[11px] font-bold text-[#0F6A3A] uppercase border-b border-[#0F6A3A]/20 pb-1 mb-1.5 flex items-center gap-1.5">
               <User className="w-3.5 h-3.5" /> Dados do Cliente
