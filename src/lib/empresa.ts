@@ -35,7 +35,9 @@ export interface Empresa {
  */
 export const EMPRESA = {
   razao_social: 'FL THOMAZ SERVIÇOS E DISTRIBUIÇÃO',
-  nome_fantasia: 'LM SERVIÇOS',
+  // era 'LM SERVIÇOS' — resquício da primeira versão do projeto. O app é da
+  // FL e todos os documentos (PDF, planilha, ficha) levam esta marca.
+  nome_fantasia: 'FL SERVIÇOS',
   cnpj: '44.288.125/0001-34',
   ie: '12.290.12-8',
   endereco: 'VILA UNIÃO, 92 - LAGOMAR - MACAÉ/RJ - CEP 27.966-507',
