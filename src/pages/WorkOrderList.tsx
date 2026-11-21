@@ -86,42 +86,53 @@ export default function WorkOrderList() {
    * como "Em Andamento", porque serviço parado por peça continua em execução.
    * LANCADA entrou no fim: conferida e enviada ao financeiro.
    */
+  /*
+   * A MESMA paleta do PAINEL, cor por cor (ajuste do Felipe, 21/11/2026).
+   * Antes aqui era tudo pastel claro e o painel usava tons mais firmes — a
+   * mesma OS saía de cores diferentes nas duas telas. Agora é uma paleta só:
+   *   aberta       cinza
+   *   agendada     azul
+   *   em andamento âmbar
+   *   finalizada   verde
+   *   lançada      índigo
+   *   cancelada    cinza-forte
+   */
   const PALETA: Record<string, { label: string; cor: string; texto: string; faixa: string }> = {
     ABERTA: {
       label: 'Aberta',
-      cor: 'border-sky-300 bg-sky-50',
-      texto: 'text-sky-800',
-      faixa: 'border-l-sky-500',
+      cor: 'border-slate-300 bg-slate-200',
+      texto: 'text-slate-900',
+      faixa: 'border-l-slate-600',
     },
     AGENDADA: {
       label: 'Agendada',
-      cor: 'border-violet-300 bg-violet-50',
-      texto: 'text-violet-800',
-      faixa: 'border-l-violet-500',
+      cor: 'border-blue-300 bg-blue-100',
+      texto: 'text-blue-900',
+      faixa: 'border-l-blue-500',
     },
     'EM ANDAMENTO': {
       label: 'Em Andamento',
-      cor: 'border-amber-300 bg-amber-50',
-      texto: 'text-amber-800',
+      cor: 'border-amber-300 bg-amber-100',
+      texto: 'text-amber-900',
       faixa: 'border-l-amber-500',
     },
     FINALIZADA: {
       label: 'Finalizada',
-      cor: 'border-emerald-300 bg-emerald-50',
-      texto: 'text-emerald-800',
-      faixa: 'border-l-emerald-500',
+      cor: 'border-emerald-300 bg-emerald-100',
+      texto: 'text-emerald-900',
+      faixa: 'border-l-emerald-600',
     },
     LANCADA: {
       label: 'Lançada',
-      cor: 'border-blue-300 bg-blue-50',
-      texto: 'text-blue-800',
-      faixa: 'border-l-blue-500',
+      cor: 'border-indigo-300 bg-indigo-100',
+      texto: 'text-indigo-900',
+      faixa: 'border-l-indigo-600',
     },
     CANCELADA: {
       label: 'Cancelada',
-      cor: 'border-slate-300 bg-slate-100',
-      texto: 'text-slate-600',
-      faixa: 'border-l-slate-400',
+      cor: 'border-slate-400 bg-slate-300',
+      texto: 'text-slate-700',
+      faixa: 'border-l-slate-500',
     },
   }
   const statusConfig = PALETA as any
@@ -266,79 +277,86 @@ export default function WorkOrderList() {
       {/* Lista de Ordens de Serviço */}
       <div className="space-y-3">
         {filteredOrders.map((order) => {
-          const status = statusConfig[order.status] || {
+          // status antigo (AGUARDANDO MATERIAL) cai na paleta de EM ANDAMENTO
+          const status = statusConfig[statusDe(order.status)] || {
             label: order.status,
-            color: 'bg-slate-100 text-slate-800',
+            cor: 'border-slate-300 bg-slate-100',
+            texto: 'text-slate-700',
+            faixa: 'border-l-slate-400',
           }
 
           return (
-            <Card
-              key={order.id}
-              className="hover:border-[#0F6A3A]/50 hover:shadow-md transition-all border border-border/80"
-            >
-              <CardContent className="p-4 sm:p-5">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <div className="space-y-1.5 flex-1">
-                    <div className="flex items-center gap-2.5 flex-wrap">
-                      <span className="font-mono text-base font-black text-[#0F6A3A] bg-[#0F6A3A]/10 px-2 py-0.5 rounded">
-                        #{order.order_number}
-                      </span>
-                      <h3 className="font-bold text-sm sm:text-base text-foreground">
-                        {order.expand?.client?.name || 'Cliente Avulso'}
-                      </h3>
-                      <Badge className={`text-[11px] font-bold border ${status.color}`}>
-                        {status.label}
-                      </Badge>
+            /**
+             * O CARTÃO INTEIRO ABRE A OS (pedido do Felipe, 21/11/2026).
+             *
+             * Havia um botão "Abrir OS" à direita, o que obrigava acertar o
+             * alvo. Agora tocar em qualquer ponto do cartão — nome do cliente,
+             * número, descrição — abre a OS. O botão saiu.
+             *
+             * A cor do cartão segue a paleta do PAINEL, para ele reconhecer a
+             * situação pelo fundo, sem ler: cinza, azul, âmbar, verde, azul
+             * escuro.
+             */
+            <Link key={order.id} to={`/ordens/${order.id}`} className="block">
+              <Card
+                className={`border-l-4 transition-all hover:shadow-md ${status.cor} ${status.faixa}`}
+              >
+                <CardContent className="p-4 sm:p-5">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div className="space-y-1.5 flex-1">
+                      <div className="flex items-center gap-2.5 flex-wrap">
+                        <span className="font-mono text-base font-black text-[#0F6A3A] bg-white/70 px-2 py-0.5 rounded">
+                          #{order.order_number}
+                        </span>
+                        <h3 className="font-bold text-sm sm:text-base text-foreground">
+                          {order.expand?.client?.name || 'Cliente Avulso'}
+                        </h3>
+                        <Badge
+                          variant="outline"
+                          className={`text-[11px] font-bold ${status.texto}`}
+                        >
+                          {status.label}
+                        </Badge>
+                      </div>
+
+                      <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                        {order.description}
+                      </p>
+
+                      <div className="flex flex-wrap items-center gap-y-1 gap-x-4 pt-1 text-xs text-muted-foreground">
+                        <span className="font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
+                          {order.service_type}
+                        </span>
+
+                        {order.expand?.technician && (
+                          <span className="flex items-center gap-1">
+                            <User className="w-3.5 h-3.5 text-[#0F6A3A]" />
+                            {order.expand.technician.name}
+                          </span>
+                        )}
+
+                        {order.scheduled_date && (
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                            Prev: {new Date(order.scheduled_date).toLocaleDateString('pt-BR')}
+                          </span>
+                        )}
+
+                        {order.location_address && (
+                          <span className="flex items-center gap-1 line-clamp-1 max-w-[200px]">
+                            <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            Macaé/RJ
+                          </span>
+                        )}
+                      </div>
                     </div>
 
-                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                      {order.description}
-                    </p>
-
-                    <div className="flex flex-wrap items-center gap-y-1 gap-x-4 pt-1 text-xs text-muted-foreground">
-                      <span className="font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
-                        {order.service_type}
-                      </span>
-
-                      {order.expand?.technician && (
-                        <span className="flex items-center gap-1">
-                          <User className="w-3.5 h-3.5 text-[#0F6A3A]" />
-                          {order.expand.technician.name}
-                        </span>
-                      )}
-
-                      {order.scheduled_date && (
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-3.5 h-3.5 text-blue-600" />
-                          Prev: {new Date(order.scheduled_date).toLocaleDateString('pt-BR')}
-                        </span>
-                      )}
-
-                      {order.location_address && (
-                        <span className="flex items-center gap-1 line-clamp-1 max-w-[200px]">
-                          <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                          Macaé/RJ
-                        </span>
-                      )}
-                    </div>
+                    {/* o botão "Abrir OS" saiu: o cartão inteiro é o link */}
+                    <ArrowRight className="hidden sm:block w-4 h-4 shrink-0 text-muted-foreground" />
                   </div>
-
-                  <div className="flex items-center gap-2 w-full sm:w-auto justify-end border-t sm:border-t-0 pt-2 sm:pt-0">
-                    <Button
-                      asChild
-                      variant="outline"
-                      size="sm"
-                      className="text-xs font-semibold gap-1.5 border-[#0F6A3A]/30 text-[#0F6A3A] hover:bg-[#0F6A3A]/10 w-full sm:w-auto"
-                    >
-                      <Link to={`/ordens/${order.id}`}>
-                        Abrir OS
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </Link>
           )
         })}
 
