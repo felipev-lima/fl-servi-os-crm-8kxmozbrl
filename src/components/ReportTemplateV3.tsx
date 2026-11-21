@@ -17,6 +17,7 @@ import {
   Loader2,
 } from 'lucide-react'
 import { getFileUrl } from '@/services/api'
+import { getEmpresa, type Empresa } from '@/lib/empresa'
 
 interface ReportTemplateV3Props {
   order: WorkOrder
@@ -39,6 +40,14 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
   // admin — e ele quem fecha o valor e manda a proposta ao cliente.
   const [adminRubrica, setAdminRubrica] = React.useState('')
   const [adminNome, setAdminNome] = React.useState('')
+  /** dados da empresa: o rodapé lê daqui, não de texto fixo no componente */
+  const [empresa, setEmpresa] = React.useState<Empresa>({})
+
+  React.useEffect(() => {
+    getEmpresa()
+      .then(setEmpresa)
+      .catch(() => setEmpresa({}))
+  }, [])
 
   React.useEffect(() => {
     if (!isAdmin) return
@@ -686,13 +695,33 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
         </div>
 
         {/* RODAPÉ FISCAL */}
+        {/*
+          RODAPÉ IGUAL AO DO PEDIDO (pedido do Felipe, 22/11/2026).
+
+          Antes os dados estavam ESCRITOS À MÃO aqui: trocar o telefone no
+          cadastro não mudava o PDF, e a OS saía sem telefone nem e-mail. Agora
+          lê de Configurações, como o talão do pedido — um cadastro, os dois
+          documentos. Se o campo estiver vazio, a linha simplesmente não sai.
+        */}
         <div className="border-t border-slate-200 pt-1.5 mt-2 text-[8px] text-slate-500">
           <div className="flex justify-between items-start gap-3">
             <span className="leading-tight">
-              <strong className="text-slate-600">FL THOMAZ SERVIÇOS E DISTRIBUIÇÃO</strong> • CNPJ
-              44.288.125/0001-34 • IE 12.290.12-8
+              <strong className="text-slate-600">
+                {empresa.razao_social || 'FL THOMAZ SERVIÇOS E DISTRIBUIÇÃO'}
+              </strong>
+              {' • CNPJ '}
+              {empresa.cnpj || '44.288.125/0001-34'}
+              {empresa.ie ? ` • IE ${empresa.ie}` : ''}
               <br />
-              VILA UNIÃO, 92 — LAGOMAR — MACAÉ/RJ — CEP 27.966-507
+              {empresa.endereco || 'VILA UNIÃO, 92 — LAGOMAR — MACAÉ/RJ — CEP 27.966-507'}
+              {(empresa.telefone || empresa.email) && (
+                <>
+                  <br />
+                  {empresa.telefone}
+                  {empresa.telefone && empresa.email ? ' • ' : ''}
+                  {empresa.email}
+                </>
+              )}
             </span>
             <span className="text-right leading-tight shrink-0">
               {new Date().toLocaleDateString('pt-BR')}
