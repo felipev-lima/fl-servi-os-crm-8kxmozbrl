@@ -173,12 +173,20 @@ export default function PedidoPage() {
           // FOTOS JÁ SALVAS: reabre o pedido e elas continuam lá, para
           // reimprimir o PDF e mandar ao cliente dias depois.
           setFotosSalvas((q.photos || []) as string[])
-          // assinaturas gravadas voltam para o talão
+          /**
+           * ASSINATURA DO CLIENTE NUNCA VOLTA (regra do Felipe, 21/11/2026).
+           *
+           * Só a rubrica de quem ENTREGA (técnico/admin) fica gravada — ela é
+           * do funcionário e se repete. A do cliente é o ACEITE dele: tem de
+           * estar em branco até ele assinar no recebimento. Carregar a antiga
+           * fazia o documento nascer já "assinado" por alguém que não assinou
+           * desta vez.
+           */
           const urlSig = (campo?: string) => (campo ? getFileUrl('quotes', q.id, campo) : '')
-          const sc = urlSig((q as any).signature_client)
           const se = urlSig((q as any).signature_deliverer)
-          if (sc) setSigCliente(sc)
           if (se) setSigEntregador(se)
+          setSigCliente('')
+          setAssinouCliente(false)
           setItens(
             (q.items || []).map((i) => ({
               ...i,
@@ -265,10 +273,29 @@ export default function PedidoPage() {
    * montamos a URL do arquivo — nada de pedir para assinar de novo.
    */
   const rubricaEntregador = useMemo(() => {
-    const t = tecnicos.find((x) => x.id === entregadorId)
+    /**
+     * Procura o técnico pelo ID e, se ele não veio, PELO NOME.
+     *
+     * Ao abrir um pedido salvo, o registro guarda apenas `delivered_by_name` —
+     * o vínculo com o técnico não é gravado. Então `entregadorId` vinha vazio,
+     * a rubrica não era encontrada e o app pedia para o Felipe DESENHAR a
+     * assinatura de novo, mesmo tendo a rubrica dele cadastrada.
+     */
+    const porId = tecnicos.find((x) => x.id === entregadorId)
+    const porNome = entregador
+      ? tecnicos.find(
+          (x) =>
+            (x.name || '').trim().toUpperCase() === (entregador || '').trim().toUpperCase() ||
+            (x.name || '')
+              .trim()
+              .toUpperCase()
+              .startsWith((entregador || '').trim().toUpperCase() + ' '),
+        )
+      : undefined
+    const t = porId || porNome
     if (!t?.signature) return ''
     return getFileUrl('technicians', t.id, t.signature)
-  }, [entregadorId, tecnicos])
+  }, [entregadorId, entregador, tecnicos])
 
   /**
    * Preço sempre com DUAS casas.
@@ -494,6 +521,72 @@ export default function PedidoPage() {
 
   return (
     <div className="space-y-3">
+      {/*
+        BOTÃO VOLTAR (pedido do Felipe, 21/11/2026).
+        Sem ele, sair do pedido exigia ir ao menu > Painel > Pedidos de novo.
+        Volta um passo no histórico; se veio de link direto, cai na lista.
+      */}
+      <button
+        type="button"
+        onClick={() => {
+          if (window.history.length > 1) navigate(-1)
+          else navigate('/pedidos')
+        }}
+        className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#0B3D91] hover:underline"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" /> Voltar
+      </button>
+
+      {/*
+        MOVIMENTAÇÃO NO TOPO (pedido do Felipe, 21/11/2026).
+        Ficava lá embaixo, depois de tudo; ele queria abrir o pedido e já poder
+        mover de etapa sem rolar a tela.
+      */}
+      {!ehNovo && (
+        <div className="space-y-1.5 rounded-xl border border-[#0B3D91]/30 bg-[#0B3D91]/5 p-2">
+          <Label className="text-[10px] font-semibold text-[#0B3D91]">Movimentar pedido</Label>
+          <div className="grid grid-cols-5 gap-1">
+            {FLUXO_PEDIDO.map((st) => {
+              const cfg = configStatus(st)
+              const ativo = statusAtual === st
+              return (
+                <button
+                  key={st}
+                  type="button"
+                  onClick={async () => {
+                    if (st === statusAtual) return
+                    const anterior = statusAtual
+                    setStatusAtual(st)
+                    const r = await updateQuote(salvoId, { status: st } as any)
+                    if (r) {
+                      await registrarHistoricoPedido(
+                        salvoId,
+                        anterior,
+                        st,
+                        entregador || 'Sistema',
+                        `Status alterado de ${anterior} para ${st}`,
+                      )
+                      toast.success(`Pedido marcado como ${cfg.rotulo}.`)
+                    }
+                  }}
+                  title={cfg.ajuda}
+                  className={`flex flex-col items-center justify-center rounded-lg border px-0.5 py-1.5 transition-all ${cfg.cor} ${
+                    ativo ? 'ring-2 ring-slate-700 shadow-sm' : 'opacity-70 hover:opacity-100'
+                  }`}
+                >
+                  <span className={`text-[8px] font-bold uppercase leading-tight ${cfg.texto}`}>
+                    {cfg.rotulo}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+          <p className={`text-center text-[9px] font-bold ${configStatus(statusAtual).texto}`}>
+            {configStatus(statusAtual).rotulo} — {configStatus(statusAtual).ajuda}
+          </p>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h1 className="text-xl font-black tracking-tight sm:text-2xl">
@@ -502,7 +595,7 @@ export default function PedidoPage() {
           <p className="text-[11px] text-muted-foreground">
             {ehNovo
               ? 'Venda de produto com confirmação de entrega'
-              : `Status: ${statusAtual} · venda com confirmação de entrega`}
+              : `Status: ${configStatus(statusAtual).rotulo} · venda com confirmação de entrega`}
           </p>
         </div>
         <div className="flex gap-1.5">
@@ -1006,13 +1099,8 @@ export default function PedidoPage() {
             )}
           </div>
 
-          {/*
-            MOVIMENTAÇÃO DO PEDIDO — igual à OS.
-            PEDIDO (gerado) → ENCOMENDADO (aguardando material) → ENTREGUE →
-            FATURADO. Cada troca grava uma linha no histórico, com quem mudou
-            e quando, para o Felipe acompanhar o que está faltando entregar.
-          */}
-          {!ehNovo && (
+          {/* movimentação subiu para o topo do pedido (21/11/2026) */}
+          {false && (
             <div className="space-y-1.5 rounded-lg border border-[#0B3D91]/30 bg-[#0B3D91]/5 p-2">
               <Label className="text-[10px] font-semibold text-[#0B3D91]">Movimentar pedido</Label>
               {/*

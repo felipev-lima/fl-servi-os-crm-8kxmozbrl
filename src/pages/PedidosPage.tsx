@@ -24,6 +24,7 @@ import {
   Search,
   ShoppingCart,
   ArrowRight,
+  ArrowLeft,
   CheckCircle2,
   Clock,
   FileText,
@@ -80,6 +81,17 @@ export default function PedidosPage() {
 
   return (
     <div className="space-y-3">
+      {/* voltar para o painel sem passar pelo menu */}
+      <button
+        type="button"
+        onClick={() =>
+          window.history.length > 1 ? window.history.back() : (window.location.href = '/')
+        }
+        className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#0B3D91] hover:underline"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" /> Voltar
+      </button>
+
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h1 className="text-xl font-black tracking-tight sm:text-2xl">Pedidos</h1>
