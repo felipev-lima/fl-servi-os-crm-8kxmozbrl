@@ -1545,42 +1545,44 @@ ${
               <Clock className="w-3.5 h-3.5 text-[#0F6A3A]" /> Alterar Status do Atendimento:
             </span>
             <div className="flex flex-wrap gap-1.5">
-              {/*
-               * ESTA LISTA JÁ QUEBROU O HISTÓRICO (21/11/2026).
-               *
-               * Ela continuava oferecendo AGUARDANDO MATERIAL depois que a
-               * migration 0060 removeu esse status do banco. Clicar nele
-               * mandava um valor inválido, o PocketBase recusava a gravação e
-               * o histórico não era criado — a OS parecia "não registrar
-               * nada". Toda mudança de status falhava em silêncio, porque o
-               * erro só aparecia no console.
-               *
-               * A lista abaixo tem de espelhar EXATAMENTE os valores do
-               * select `status` da coleção work_orders.
-               */
-              (
-                [
-                  'ABERTA',
-                  'AGENDADA',
-                  'EM ANDAMENTO',
-                  'FINALIZADA',
-                  'LANCADA',
-                  'CANCELADA',
-                ] as OrderStatus[]
-              ).map((st) => (
-                <Button
-                  key={st}
-                  type="button"
-                  variant={order.status === st ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => handleStatusChange(st)}
-                  className={`h-7 text-[11px] ${
-                    order.status === st ? 'bg-[#0F6A3A] text-white' : ''
-                  }`}
-                >
-                  {st}
-                </Button>
-              ))}
+              {
+                /*
+                 * ESTA LISTA JÁ QUEBROU O HISTÓRICO (21/11/2026).
+                 *
+                 * Ela continuava oferecendo AGUARDANDO MATERIAL depois que a
+                 * migration 0060 removeu esse status do banco. Clicar nele
+                 * mandava um valor inválido, o PocketBase recusava a gravação e
+                 * o histórico não era criado — a OS parecia "não registrar
+                 * nada". Toda mudança de status falhava em silêncio, porque o
+                 * erro só aparecia no console.
+                 *
+                 * A lista abaixo tem de espelhar EXATAMENTE os valores do
+                 * select `status` da coleção work_orders.
+                 */
+                (
+                  [
+                    'ABERTA',
+                    'AGENDADA',
+                    'EM ANDAMENTO',
+                    'FINALIZADA',
+                    'LANCADA',
+                    'CANCELADA',
+                  ] as OrderStatus[]
+                ).map((st) => (
+                  <Button
+                    key={st}
+                    type="button"
+                    variant={order.status === st ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handleStatusChange(st)}
+                    className={`h-7 text-[11px] ${
+                      order.status === st ? 'bg-[#0F6A3A] text-white' : ''
+                    }`}
+                  >
+                    {st}
+                  </Button>
+                ))
+              }
             </div>
           </CardContent>
         </Card>
