@@ -228,8 +228,7 @@ export default function Painel() {
     }
     for (const o of os) {
       // OS antiga gravada como AGUARDANDO MATERIAL conta como em andamento
-      const chave =
-        o.status === 'AGUARDANDO MATERIAL' ? 'EM ANDAMENTO' : (o.status as StatusKey)
+      const chave = o.status === 'AGUARDANDO MATERIAL' ? 'EM ANDAMENTO' : (o.status as StatusKey)
       if (chave in c) c[chave] += 1
     }
     return c
@@ -237,9 +236,9 @@ export default function Painel() {
 
   /** em aberto = ainda dá trabalho (não finalizada, não lançada, não cancelada) */
   const emAberto = os.filter(
-    (o) =>
-      o.status !== 'FINALIZADA' && o.status !== 'LANCADA' && o.status !== 'CANCELADA',
-  )  const osHoje = os.filter((o) => (o.scheduled_date || '').slice(0, 10) === hojeStr)
+    (o) => o.status !== 'FINALIZADA' && o.status !== 'LANCADA' && o.status !== 'CANCELADA',
+  )
+  const osHoje = os.filter((o) => (o.scheduled_date || '').slice(0, 10) === hojeStr)
 
   /**
    * PENDENTES = atrasadas de verdade.
