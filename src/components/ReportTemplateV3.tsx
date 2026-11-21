@@ -616,15 +616,17 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
         )}
 
         {/* TERMO E ASSINATURAS */}
-        <div className="border border-slate-200 rounded p-2 bg-slate-50/40 break-inside-avoid">
-          <p className="text-[9px] text-slate-600 text-justify mb-1.5 leading-snug">
+        <div className="border border-slate-200 rounded p-1.5 bg-slate-50/40 break-inside-avoid">
+          <p className="text-[9px] text-slate-600 text-justify mb-1 leading-[1.25]">
             Declaro para os devidos fins que os serviços acima descritos foram executados a contento
             e os materiais discriminados foram devidamente conferidos e instalados nas dependências
             indicadas.
           </p>
 
           <div
-            className={`grid gap-6 items-end pt-1 break-inside-avoid ${
+            /* gap menor no papel: 24px de vão entre assinaturas era altura
+               desperdiçada que empurrava a OS para a 2ª folha */
+            className={`grid gap-3 items-end pt-0.5 break-inside-avoid ${
               isAdmin ? 'grid-cols-3' : 'grid-cols-2'
             }`}
             style={{ pageBreakInside: 'avoid' }}
