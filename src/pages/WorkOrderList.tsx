@@ -78,22 +78,69 @@ export default function WorkOrderList() {
       .catch(() => setMeuTecnicoId(''))
   }, [soProprias, user?.id])
 
-  const statusConfig: Record<OrderStatus, { label: string; color: string }> = {
-    ABERTA: { label: 'Aberta', color: 'bg-slate-100 text-slate-800 border-slate-300' },
-    AGENDADA: { label: 'Agendada', color: 'bg-blue-100 text-blue-800 border-blue-300' },
+  /**
+   * Situação de cada OS — a mesma paleta do painel.
+   *
+   * AGUARDANDO MATERIAL saiu (pedido do Felipe, 20/11/2026): ninguém
+   * movimentava e travava OS. Quem ainda tiver esse valor gravado aparece
+   * como "Em Andamento", porque serviço parado por peça continua em execução.
+   * LANCADA entrou no fim: conferida e enviada ao financeiro.
+   */
+  const PALETA: Record<string, { label: string; cor: string; texto: string; faixa: string }> = {
+    ABERTA: {
+      label: 'Aberta',
+      cor: 'border-sky-300 bg-sky-50',
+      texto: 'text-sky-800',
+      faixa: 'border-l-sky-500',
+    },
+    AGENDADA: {
+      label: 'Agendada',
+      cor: 'border-violet-300 bg-violet-50',
+      texto: 'text-violet-800',
+      faixa: 'border-l-violet-500',
+    },
     'EM ANDAMENTO': {
       label: 'Em Andamento',
-      color: 'bg-orange-100 text-orange-800 border-orange-300',
-    },
-    'AGUARDANDO MATERIAL': {
-      label: 'Aguardando Material',
-      color: 'bg-amber-100 text-amber-800 border-amber-300',
+      cor: 'border-amber-300 bg-amber-50',
+      texto: 'text-amber-800',
+      faixa: 'border-l-amber-500',
     },
     FINALIZADA: {
       label: 'Finalizada',
-      color: 'bg-red-100 text-red-800 border-red-300',
+      cor: 'border-emerald-300 bg-emerald-50',
+      texto: 'text-emerald-800',
+      faixa: 'border-l-emerald-500',
     },
-    CANCELADA: { label: 'Cancelada', color: 'bg-slate-200 text-slate-700 border-slate-400' },
+    LANCADA: {
+      label: 'Lançada',
+      cor: 'border-blue-300 bg-blue-50',
+      texto: 'text-blue-800',
+      faixa: 'border-l-blue-500',
+    },
+    CANCELADA: {
+      label: 'Cancelada',
+      cor: 'border-slate-300 bg-slate-100',
+      texto: 'text-slate-600',
+      faixa: 'border-l-slate-400',
+    },
+  }
+  const statusConfig = PALETA as any
+  /** normaliza o status antigo para o novo */
+  const statusDe = (s: string) => (s === 'AGUARDANDO MATERIAL' ? 'EM ANDAMENTO' : s)
+
+  /**
+   * Filtro que casa com o status antigo gravado.
+   *
+   * Quem escolher "Em Andamento" precisa ver também as OS que ainda estão
+   * gravadas como AGUARDANDO MATERIAL: a migration as move, mas uma OS salva
+   * por um app aberto antes disso continuaria escondida.
+   */
+  const passaNoFiltro = (statusOS: string, filtro: string) => {
+    if (filtro === 'ALL') return true
+    if (filtro === 'EM ANDAMENTO') {
+      return statusOS === 'EM ANDAMENTO' || statusOS === 'AGUARDANDO MATERIAL'
+    }
+    return statusOS === filtro
   }
 
   const filteredOrders = orders.filter((o) => {
@@ -111,7 +158,8 @@ export default function WorkOrderList() {
       (o.scheduled_date || '').slice(0, 10) === hojeStr ||
       (o.opened_at || '').slice(0, 10) === hojeStr
     const matchesStatus =
-      statusFilter === 'ALL' || (statusFilter === 'HOJE' ? ehHoje : o.status === statusFilter)
+      statusFilter === 'ALL' ||
+      (statusFilter === 'HOJE' ? ehHoje : passaNoFiltro(o.status, statusFilter))
     // Técnico comum: só a própria OS (vínculo technicians.user). Admin e
     // Consulta usam o dropdown; sem filtro, veem tudo.
     const matchesTech = soProprias
@@ -193,17 +241,20 @@ export default function WorkOrderList() {
             Todas ({orders.length})
           </Button>
 
-          {Object.entries(statusConfig).map(([statusKey, conf]) => {
-            const count = orders.filter((o) => o.status === statusKey).length
+          {Object.entries(PALETA).map(([statusKey, conf]) => {
+            const count = orders.filter((o) => statusDe(o.status) === statusKey).length
+            if (statusKey === 'CANCELADA' && count === 0) return null
             const isSelected = statusFilter === statusKey
             return (
               <Button
                 key={statusKey}
                 type="button"
-                variant={isSelected ? 'default' : 'outline'}
+                variant="outline"
                 size="sm"
                 onClick={() => setStatusFilter(statusKey)}
-                className={`h-7 text-[11px] ${isSelected ? 'bg-slate-900 text-white' : ''}`}
+                className={`h-7 text-[11px] border ${conf.cor} ${conf.texto} ${
+                  isSelected ? 'ring-2 ring-slate-700 font-bold' : ''
+                }`}
               >
                 {conf.label} ({count})
               </Button>
