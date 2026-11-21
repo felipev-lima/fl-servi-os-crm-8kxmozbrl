@@ -58,9 +58,26 @@ export default function Layout() {
   // Menu em dois grupos: OPERAÇÃO (o dia a dia, o que já existia na FL) e
   // GESTÃO (o CRM: financeiro, orçamentos, relatórios). O técnico vê só
   // operação; o financeiro é do dono.
+  /**
+   * MENU ENXUTO (ajuste do Felipe, 21/11/2026).
+   *
+   * "Meus serviços" saiu para o ADMIN: ele já vê tudo no Painel, e a tela era
+   * um segundo caminho para a mesma lista. Para o TÉCNICO ela continua, porque
+   * é a tela de trabalho dele na rua — hoje/em aberto, sem financeiro.
+   *
+   * "Ordens de Serviço" FICA: é o único lugar com BUSCA (por número, cliente,
+   * serviço, técnico ou descrição). O Painel lista por status, não procura —
+   * sem esta tela, achar uma OS antiga exigiria rolar tudo.
+   */
   const operacao = [
     { name: 'Painel', href: '/', icon: LayoutDashboard, adminOnly: false },
-    { name: 'Meus serviços', href: '/tecnico', icon: ClipboardList, adminOnly: false },
+    {
+      name: 'Meus serviços',
+      href: '/tecnico',
+      icon: ClipboardList,
+      adminOnly: false,
+      esconderDoAdmin: true,
+    },
     { name: 'Ordens de Serviço', href: '/ordens', icon: ClipboardList, adminOnly: false },
     { name: 'Agenda', href: '/agenda', icon: CalendarDays, adminOnly: false },
     { name: 'Clientes', href: '/clientes', icon: Building2, adminOnly: false },
@@ -90,7 +107,12 @@ export default function Layout() {
     { name: 'Configurações', href: '/configuracoes', icon: Settings, adminOnly: true },
     { name: 'Usuários', href: '/usuarios', icon: UsersRound, adminOnly: true },
   ]
-  const navigation = [...operacao, ...gestao].filter((item) => !item.adminOnly || isAdmin)
+  const navigation = [...operacao, ...gestao].filter((item) => {
+    if (item.adminOnly && !isAdmin) return false
+    // itens marcados escondem-se do admin (o técnico continua vendo)
+    if ((item as any).esconderDoAdmin && isAdmin) return false
+    return true
+  })
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/'
