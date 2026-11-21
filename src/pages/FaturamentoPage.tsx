@@ -107,7 +107,22 @@ export default function FaturamentoPage() {
         ? `${ano}-12-31`
         : new Date(ano, mes, 0).toISOString().slice(0, 10)
 
-  const rotuloPeriodo =
+  /**
+   * BUG CORRIGIDO (22/11/2026) — a tela do Faturamento ficava VERDE/VAZIA.
+   *
+   * Esta variável se chamava `rotuloPeriodo`, o MESMO nome da função
+   * `rotuloPeriodo()` importada de `@/lib/aliquotas`. Em JavaScript, a
+   * declaração de dentro da função "esconde" o import — então as chamadas
+   * `rotuloPeriodo(periodoAliquota)` lá embaixo passavam a chamar uma STRING,
+   * e o React caía com "rotuloPeriodo is not a function".
+   *
+   * Como o erro acontecia durante a renderização, o React desmontava a árvore
+   * inteira: `#root` ficava vazio e sobrava só o fundo verde da página. Nada
+   * aparecia no console de forma óbvia e o build passava normalmente.
+   *
+   * Agora o texto tem nome próprio e a função importada continua acessível.
+   */
+  const rotuloPeriodoAtual =
     modo === 'TUDO'
       ? 'Tudo (acumulado)'
       : modo === 'ANO'
@@ -514,7 +529,7 @@ export default function FaturamentoPage() {
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <div className="text-center">
-            <span className="block text-sm font-black capitalize">{rotuloPeriodo}</span>
+            <span className="block text-sm font-black capitalize">{rotuloPeriodoAtual}</span>
             <span className="block text-[9px] text-muted-foreground">
               {lancamentos.length} lançamento(s)
             </span>
