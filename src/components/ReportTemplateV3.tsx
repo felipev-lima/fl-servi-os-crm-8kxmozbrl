@@ -561,7 +561,15 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
               No papel vão 4 por linha: a foto continua inteira (4:3 +
               object-contain) e o bloco cai para ~85 mm.
             */}
-            <div className="grid fotos-os grid-cols-2 sm:grid-cols-3 print:grid-cols-4 gap-1.5 print:gap-1">
+            {/*
+              4 COLUNAS JÁ NA TELA (22/11/2026).
+              Era 2 no celular / 3 no computador, e o bloco de evidências
+              ocupava 142 mm — sozinho empurrava a OS para uma segunda folha.
+              Agora são 4 por linha em qualquer largura, exatamente como sai no
+              papel: o que o Felipe vê na prévia é o que ele imprime. A foto
+              continua inteira (aspect 4:3 + object-contain).
+            */}
+            <div className="grid fotos-os grid-cols-4 gap-1.5">
               {photos.map((p, i) => {
                 const url = getFileUrl('order_photos', p.id, p.image)
                 return (
