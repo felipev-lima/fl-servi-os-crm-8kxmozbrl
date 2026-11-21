@@ -147,6 +147,9 @@ export default function Painel() {
   const [os, setOs] = useState<WorkOrder[]>([])
   const [pedidos, setPedidos] = useState<Quote[]>([])
   const [carregando, setCarregando] = useState(true)
+  /** mesmo seletor "Ordenar" das telas de lista (22/11/2026) */
+  const [ordem, setOrdem] = useState<'PRIORIDADE' | 'NUMERO' | 'CLIENTE' | 'DATA'>('PRIORIDADE')
+  const [ordemPedido, setOrdemPedido] = useState<'PRIORIDADE' | 'NUMERO' | 'CLIENTE'>('PRIORIDADE')
 
   // financeiro — só carrega para administrador
   const [resumos, setResumos] = useState<ClientSummary[]>([])
@@ -295,13 +298,69 @@ export default function Painel() {
           (o.opened_at || '').slice(0, 10) === hojeStr,
       )
     }
+    /**
+     * ORDENAÇÃO PADRONIZADA com a lista de OS (pedido do Felipe, 22/11/2026).
+     * O mesmo seletor "Ordenar" da tela de Ordens de Serviço vale aqui.
+     */
     return [...base].sort((a, b) => {
+      if (ordem === 'NUMERO') return Number(a.order_number) - Number(b.order_number)
+      if (ordem === 'CLIENTE') {
+        const na = (a.expand?.client?.name || '').toUpperCase()
+        const nb = (b.expand?.client?.name || '').toUpperCase()
+        return na.localeCompare(nb, 'pt-BR')
+      }
+      if (ordem === 'DATA') {
+        const da = (a.scheduled_date || '9999').slice(0, 10)
+        const db = (b.scheduled_date || '9999').slice(0, 10)
+        return da.localeCompare(db)
+      }
+      // PRIORIDADE: situação primeiro, depois o mais recente
+      const peso = (o: any) => {
+        const s = o.status === 'AGUARDANDO MATERIAL' ? 'EM ANDAMENTO' : o.status
+        const ehHoje = (o.scheduled_date || '').slice(0, 10) === hojeStr
+        if (ehHoje && s !== 'FINALIZADA' && s !== 'LANCADA') return 0
+        return (
+          { 'EM ANDAMENTO': 1, AGENDADA: 2, ABERTA: 3, FINALIZADA: 4, LANCADA: 5 }[s as string] ?? 6
+        )
+      }
+      const pa = peso(a)
+      const pb = peso(b)
+      if (pa !== pb) return pa - pb
       const da = (a.scheduled_date || a.created || '').slice(0, 10)
       const db = (b.scheduled_date || b.created || '').slice(0, 10)
       if (da !== db) return db.localeCompare(da)
       return Number(b.order_number) - Number(a.order_number)
     })
-  }, [os, statusSel, emAberto, filtroHoje, hojeStr, soPendentes, pendentes])
+  }, [os, statusSel, emAberto, filtroHoje, hojeStr, soPendentes, pendentes, ordem])
+
+  /**
+   * PEDIDOS DO PAINEL — mesma ordenação da tela de Pedidos.
+   *
+   * Prioridade segue a esteira: orçamento (esperando aprovação) primeiro,
+   * depois pedido, aguardando material, entregue e lançado por último.
+   */
+  const pedidosOrdenados = useMemo(() => {
+    const peso: Record<string, number> = {
+      ORCAMENTO: 1,
+      PEDIDO: 2,
+      'AGUARDANDO MATERIAL': 3,
+      ENTREGUE: 4,
+      LANCADO: 5,
+      FATURADO: 5,
+    }
+    return [...pedidos].sort((a, b) => {
+      if (ordemPedido === 'NUMERO') return Number(a.number || 0) - Number(b.number || 0)
+      if (ordemPedido === 'CLIENTE') {
+        const na = (a.expand?.client?.name || '').toUpperCase()
+        const nb = (b.expand?.client?.name || '').toUpperCase()
+        return na.localeCompare(nb, 'pt-BR')
+      }
+      const pa = peso[a.status || 'ORCAMENTO'] ?? 9
+      const pb = peso[b.status || 'ORCAMENTO'] ?? 9
+      if (pa !== pb) return pa - pb
+      return Number(b.number || 0) - Number(a.number || 0)
+    })
+  }, [pedidos, ordemPedido])
 
   // ---- financeiro (só admin) ----
   const aReceber = resumos.reduce((s, r) => s + (r.saldo > 0 ? r.saldo : 0), 0)
@@ -507,11 +566,24 @@ export default function Painel() {
                 </button>
               )}
             </div>
-            <Button variant="outline" size="sm" asChild className="h-7 shrink-0 gap-1 text-[10px]">
-              <Link to="/ordens">
-                Ver todas <ArrowRight className="h-3 w-3" />
-              </Link>
-            </Button>
+            <div className="flex shrink-0 items-center gap-1">
+              <select
+                value={ordem}
+                onChange={(e) => setOrdem(e.target.value as any)}
+                className="h-7 rounded border border-input bg-background px-1 text-[10px] font-semibold"
+                aria-label="Ordenar ordens de serviço"
+              >
+                <option value="PRIORIDADE">Prioridade</option>
+                <option value="NUMERO">Nº da OS</option>
+                <option value="CLIENTE">Cliente</option>
+                <option value="DATA">Data</option>
+              </select>
+              <Button variant="outline" size="sm" asChild className="h-7 gap-1 text-[10px]">
+                <Link to="/ordens">
+                  Ver todas <ArrowRight className="h-3 w-3" />
+                </Link>
+              </Button>
+            </div>
           </div>
 
           <div className="space-y-1.5">
@@ -665,6 +737,19 @@ export default function Painel() {
                 </Link>
               ))}
             </div>
+            <div className="mb-1.5 flex items-center justify-end gap-1">
+              <span className="text-[9px] font-semibold text-muted-foreground">Ordenar:</span>
+              <select
+                value={ordemPedido}
+                onChange={(e) => setOrdemPedido(e.target.value as any)}
+                className="h-6 rounded border border-input bg-background px-1 text-[10px] font-semibold"
+                aria-label="Ordenar pedidos"
+              >
+                <option value="PRIORIDADE">Prioridade</option>
+                <option value="NUMERO">Nº do pedido</option>
+                <option value="CLIENTE">Nome do cliente</option>
+              </select>
+            </div>
             <div className="space-y-1">
               {pedidos.length === 0 && (
                 <p className="rounded-lg border border-dashed p-3 text-center text-[10px] text-muted-foreground">
@@ -672,7 +757,7 @@ export default function Painel() {
                   aqui em cima.
                 </p>
               )}
-              {pedidos.slice(0, 4).map((p) => (
+              {pedidosOrdenados.slice(0, 4).map((p) => (
                 <Link
                   key={p.id}
                   to={`/pedido/${p.id}`}
