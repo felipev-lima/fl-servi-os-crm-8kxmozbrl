@@ -524,15 +524,15 @@ export default function Painel() {
                 <Link
                   key={o.id}
                   to={`/ordens/${o.id}`}
-                  // CORPO DO CARTÃO = COR DA SITUAÇÃO (pedido 21/11/2026):
-                  // aberta cinza, agendada azul, andamento âmbar, finalizada
-                  // verde, lançada azul escuro. ATRASADA vence todas (rosa).
+                  // CORPO DO CARTÃO = COR DO STATUS, sempre (ajuste 21/11/2026).
+                  // Antes a OS atrasada ficava rosa e uma OS ABERTA atrasada
+                  // parecia alerta vermelho, escondendo a situação real. Agora o
+                  // corpo é SEMPRE a cor do status e o atraso vira um selo
+                  // vermelho ao lado do número — as duas informações convivem.
                   className={`flex items-center justify-between gap-2 rounded-lg border-l-4 p-2.5 transition hover:shadow-md ${
-                    idsPendentes.has(o.id)
-                      ? 'border-rose-300 border-l-rose-500 bg-rose-100'
-                      : cfg
-                        ? `${cfg.cor} ${cfg.faixa}`
-                        : 'border-slate-300 border-l-slate-400 bg-slate-100'
+                    cfg
+                      ? `${cfg.cor} ${cfg.faixa}`
+                      : 'border-slate-300 border-l-slate-400 bg-slate-100'
                   }`}
                 >
                   <div className="min-w-0 flex-1">
@@ -543,6 +543,12 @@ export default function Painel() {
                       {cfg && (
                         <Badge variant="outline" className={`px-1 py-0 text-[8px] ${cfg.texto}`}>
                           {cfg.curto}
+                        </Badge>
+                      )}
+                      {/* atraso é informação SEPARADA da situação */}
+                      {idsPendentes.has(o.id) && (
+                        <Badge className="border-rose-400 bg-rose-500 px-1 py-0 text-[8px] font-bold text-white">
+                          atrasada
                         </Badge>
                       )}
                       {o.scheduled_date && (
