@@ -38,7 +38,7 @@ type Catalogo = {
   icon: React.ReactNode
 }
 
-// Só os conectores que fazem sentido para a operação da F. L. SERVIÇOS.
+// Só os conectores que fazem sentido para a operação da LM SERVIÇOS.
 // O `id` é o nome que a plataforma usa no toolkit.
 const CATALOGO: Catalogo[] = [
   {

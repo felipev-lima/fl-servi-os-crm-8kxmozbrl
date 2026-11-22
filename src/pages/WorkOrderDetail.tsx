@@ -453,7 +453,7 @@ export default function WorkOrderDetail() {
 
     setSaving(true)
     try {
-      const currentUserName = user?.name || 'Técnico FL'
+      const currentUserName = user?.name || 'Técnico LM'
 
       if (isNew) {
         const created = await createWorkOrder(order, currentUserName)
@@ -574,7 +574,7 @@ export default function WorkOrderDetail() {
       const updated = await updateWorkOrder(
         id,
         { status: newStatus },
-        user?.name || 'Técnico FL',
+        user?.name || 'Técnico LM',
         oldStatus,
         newStatus,
         note,

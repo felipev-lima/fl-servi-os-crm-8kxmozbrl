@@ -124,7 +124,7 @@ export default function ClientsPage() {
 
     setSubmitting(true)
     try {
-      // PADRAO FL: nome, endereco, bairro, cidade, documento e telefone em
+      // PADRAO LM: nome, endereco, bairro, cidade, documento e telefone em
       // MAIUSCULA, mesmo que tenham sido digitados em minuscula. E-mail fica
       // como veio (endereco de e-mail nao tem caixa alta).
       const dados: Partial<Client> = {

@@ -1153,7 +1153,7 @@ export default function PedidoPage() {
                 )}
                 <div>
                   <p className="text-base font-black uppercase text-[#0B3D91]">
-                    {empresa?.nome_fantasia || 'FL SERVIÇOS'}
+                    {empresa?.nome_fantasia || 'LM SERVIÇOS'}
                   </p>
                   <p className="text-[8px] leading-tight text-slate-600">{empresa?.razao_social}</p>
                   <p className="text-[8px] leading-tight text-slate-600">

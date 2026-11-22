@@ -70,7 +70,7 @@ export default function ConfiguracoesPage() {
    *
    * Depender do evento de fim de traço fazia a assinatura se perder quando a
    * pessoa tocava em "Salvar" logo depois de desenhar — o mesmo defeito que
-   * apareceu na FL.
+   * apareceu no sistema antigo.
    */
   const salvarAssinatura = async () => {
     let dataUrl = ''

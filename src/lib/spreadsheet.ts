@@ -298,7 +298,7 @@ export async function parseClientSpreadsheet(file: File): Promise<ParsedSpreadsh
       mutable[field] = cleanCell(raw[Number(colIdxStr)])
     }
 
-    // Padrão do cadastro FL SERVIÇOS: nome, endereço, bairro e cidade em MAIÚSCULAS
+    // Padrão do cadastro LM SERVIÇOS: nome, endereço, bairro e cidade em MAIÚSCULAS
     for (const campo of ['name', 'address', 'neighborhood', 'city']) {
       if (mutable[campo]) mutable[campo] = mutable[campo].toUpperCase()
     }

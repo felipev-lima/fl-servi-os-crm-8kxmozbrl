@@ -71,7 +71,7 @@ export default function Layout() {
       .then((e: Empresa) => setLogoUrl(urlArquivo(e, 'logo')))
       .catch(() => setLogoUrl(''))
   }, [])
-  // Menu em dois grupos: OPERAÇÃO (o dia a dia, o que já existia na FL) e
+  // Menu em dois grupos: OPERAÇÃO (o dia a dia do sistema) e
   // GESTÃO (o CRM: financeiro, orçamentos, relatórios). O técnico vê só
   // operação; o financeiro é do dono.
   /**

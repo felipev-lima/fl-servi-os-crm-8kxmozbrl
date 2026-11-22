@@ -121,7 +121,7 @@
      embaixo dos ícones do sistema e não dá para tocar.
      env() vale 0 nos aparelhos que não têm notch, então não atrapalha. */
   html {
-    background-color: #0f6a3a;
+    background-color: #0b3d91;
   }
 
   /* Com o modal aberto, o fundo não rola junto — no celular isso fazia a tela

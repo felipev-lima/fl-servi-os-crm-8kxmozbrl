@@ -44,7 +44,7 @@ function dosDateTime(d: Date): { time: number; date: number } {
 
 /**
  * Deixa o nome seguro para arquivo/pasta: sem acento, sem caractere proibido.
- * Mantém maiúsculas — o padrão da FL SERVIÇOS.
+ * Mantém maiúsculas — o padrão da LM SERVIÇOS.
  */
 export function safeName(input: string, fallback = 'ARQUIVO'): string {
   const limpo = (input || '')

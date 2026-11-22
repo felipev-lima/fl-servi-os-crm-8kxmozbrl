@@ -415,7 +415,7 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
               </div>
               <div>
                 <strong className="text-slate-700">Técnico:</strong>{' '}
-                {technician?.name || 'Equipe Técnica FL'}
+                {technician?.name || 'Equipe Técnica LM'}
               </div>
               <div>
                 <strong className="text-slate-700">Abertura:</strong>{' '}
