@@ -6,7 +6,7 @@ import { iconLMDataUri } from './lib/icone'
  * ÍCONE DO ATALHO — AZUL DA LM.
  *
  * O ícone do app na tela do celular/computador usa a ARTE AZUL da
- * LM SERVIÇOS ("LM" branco sobre o azul #0B3D91, mesma arte do
+ * FL SERVIÇOS ("FL" branco sobre o azul #0B3D91, mesma arte do
  * /icon.svg). Se as Configurações tiverem uma logomarca enviada,
  * ela é usada no lugar — para a arte do atalho nunca ficar
  * diferente da arte do app/PDF.

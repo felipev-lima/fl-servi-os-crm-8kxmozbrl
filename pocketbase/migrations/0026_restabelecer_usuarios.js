@@ -1,5 +1,5 @@
 /**
- * 0026 — Restabelece os usuários na cópia da LM SERVIÇOS CRM.
+ * 0026 — Restabelece os usuários na cópia do CRM da FL SERVIÇOS.
  *
  * Sintoma: depois de duplicar o projeto da FL, o login falhou para todas as
  * contas. O banco foi copiado (coleções e registros presentes), mas o hash da

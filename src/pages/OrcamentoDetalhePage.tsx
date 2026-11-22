@@ -536,12 +536,12 @@ export default function OrcamentoDetalhePage() {
             <img src={urlLogo} alt="Logomarca" className="h-16 w-auto object-contain" />
           ) : (
             <div className="flex h-16 w-16 items-center justify-center rounded bg-[#0B3D91] text-xl font-black text-white">
-              LM
+              FL
             </div>
           )}
           <div className="min-w-0 flex-1">
             <p className="text-sm font-black leading-tight text-[#0B3D91]">
-              {empresa.nome_fantasia || 'LM SERVIÇOS'}
+              {empresa.nome_fantasia || 'FL SERVIÇOS'}
             </p>
             <p className="text-[8px] leading-tight text-slate-600">{empresa.razao_social}</p>
             <p className="text-[8px] leading-tight text-slate-600">

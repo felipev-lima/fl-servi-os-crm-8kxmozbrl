@@ -2,7 +2,7 @@
 /// Cadastro e atualização de usuário pelo administrador — rota única.
 ///
 /// Por que existe: a API padrão do PocketBase recusa/obscurece três casos
-/// comuns no uso real da LM SERVIÇOS:
+/// comuns no uso real do CRM:
 ///   1. trocar o e-mail de outra conta (exige a senha antiga da pessoa);
 ///   2. alterar um usuário cujo papel é diferente de 'admin' → a regra da
 ///      coleção devolve um 400 genérico ("Failed to update record"), sem

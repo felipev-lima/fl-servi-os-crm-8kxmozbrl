@@ -1,5 +1,5 @@
 /**
- * Texto em caixa alta — padrão da LM SERVIÇOS.
+ * Texto em caixa alta — padrão da FL SERVIÇOS.
  *
  * Todo cadastro entra em MAIÚSCULA, independente de como foi digitado (o
  * teclado do celular pode estar em minúscula ou com corretor). Aqui ficam as

@@ -1,7 +1,7 @@
 {
-  "name": "LM SERVIÇOS — Ordens de Serviço",
-  "short_name": "LM SERVIÇOS",
-  "description": "Gestão de ordens de serviço, clientes e materiais da LM SERVIÇOS — Macaé/RJ",
+  "name": "FL SERVIÇOS CRM — Ordens de Serviço",
+  "short_name": "FL SERVIÇOS",
+  "description": "Gestão de ordens de serviço, clientes e materiais da FL SERVIÇOS — Macaé/RJ",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

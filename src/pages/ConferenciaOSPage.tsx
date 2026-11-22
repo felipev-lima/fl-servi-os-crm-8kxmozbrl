@@ -1,5 +1,5 @@
 /**
- * Conferência das OS herdadas na migração para a LM.
+ * Conferência das OS herdadas na migração da FL para a LM.
  *
  * As 16 OS vieram junto com a cópia, e parte delas já foi passada para a
  * planilha do Felipe — parte não. Sem esta tela ele não tem como saber, meses

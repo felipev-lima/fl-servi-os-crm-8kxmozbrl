@@ -228,7 +228,7 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
     try {
       await navigator.share({
         title: `OS ${order.order_number} — ${order.expand?.client?.name || 'Cliente'}`,
-        text: `Relatório da Ordem de Serviço nº ${order.order_number} — LM SERVIÇOS`,
+        text: `Relatório da Ordem de Serviço nº ${order.order_number} — FL SERVIÇOS`,
         url: window.location.href,
       })
     } catch (_) {
@@ -332,11 +332,11 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-4">
             <div className="flex items-center gap-2.5">
               <div className="w-11 h-11 bg-gradient-to-br from-[#0B3D91] to-[#1E6FD9] text-white flex items-center justify-center font-black text-base rounded shadow shrink-0">
-                LM
+                FL
               </div>
               <div>
                 <h1 className="text-base sm:text-xl font-black tracking-tight text-[#0B3D91] uppercase leading-none">
-                  LM SERVIÇOS
+                  FL SERVIÇOS
                 </h1>
                 <p className="text-[10px] sm:text-[11px] text-slate-600 leading-tight mt-1">
                   CFTV • Alarme • Rede • Automação • Manutenção
@@ -415,7 +415,7 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
               </div>
               <div>
                 <strong className="text-slate-700">Técnico:</strong>{' '}
-                {technician?.name || 'Equipe Técnica LM'}
+                {technician?.name || 'Equipe Técnica FL'}
               </div>
               <div>
                 <strong className="text-slate-700">Abertura:</strong>{' '}
@@ -447,7 +447,7 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
             Laudo Técnico / Execução
           </h2>
           <p className="text-slate-700 text-[11px] whitespace-pre-wrap leading-snug">
-            {order.technical_report || 'Serviço executado conforme normas técnicas da LM SERVIÇOS.'}
+            {order.technical_report || 'Serviço executado conforme normas técnicas da FL SERVIÇOS.'}
           </p>
         </div>
 
@@ -648,7 +648,7 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
                 </p>
               </div>
               <p className="text-[8px] text-slate-500 leading-tight">Técnico Responsável</p>
-              <p className="text-[8px] text-slate-600 font-semibold mt-0.5">LM SERVIÇOS</p>
+              <p className="text-[8px] text-slate-600 font-semibold mt-0.5">FL SERVIÇOS</p>
             </div>
 
             {/* Administrador (só quando o admin emite) */}
@@ -670,7 +670,7 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
                   </p>
                 </div>
                 <p className="text-[8px] text-slate-500 leading-tight">Administrador</p>
-                <p className="text-[8px] text-slate-600 font-semibold mt-0.5">LM SERVIÇOS</p>
+                <p className="text-[8px] text-slate-600 font-semibold mt-0.5">FL SERVIÇOS</p>
               </div>
             )}
 
@@ -714,7 +714,7 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
           <div className="flex justify-between items-start gap-3">
             <span className="leading-tight">
               <strong className="text-slate-600">
-                {empresa.razao_social || 'LM SERVIÇOS E DISTRIBUIÇÃO'}
+                {empresa.razao_social || 'FL THOMAZ SERVIÇOS E DISTRIBUIÇÃO'}
               </strong>
               {' • CNPJ '}
               {empresa.cnpj || '44.288.125/0001-34'}

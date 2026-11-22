@@ -89,12 +89,12 @@ export default function Login() {
       <div className="w-full max-w-md mb-4 text-center">
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white border border-slate-200 shadow-lg mb-3 overflow-hidden p-1.5">
           {logoLogin ? (
-            <img src={logoLogin} alt="LM SERVIÇOS" className="w-full h-full object-contain" />
+            <img src={logoLogin} alt="FL SERVIÇOS" className="w-full h-full object-contain" />
           ) : (
-            <span className="text-[#0B3D91] font-black text-lg">LM</span>
+            <span className="text-[#0B3D91] font-black text-lg">FL</span>
           )}
         </div>
-        <h1 className="text-2xl font-black text-[#0B3D91] tracking-tight uppercase">LM SERVIÇOS</h1>
+        <h1 className="text-2xl font-black text-[#0B3D91] tracking-tight uppercase">FL SERVIÇOS</h1>
         <p className="text-xs text-muted-foreground font-medium">
           CRM • OS, vendas e faturamento — Macaé/RJ
         </p>

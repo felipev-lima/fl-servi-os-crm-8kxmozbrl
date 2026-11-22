@@ -1,5 +1,5 @@
 /**
- * Tipos do CRM da LM SERVIÇOS.
+ * Tipos do CRM da FL SERVIÇOS.
  *
  * O modelo espelha a planilha que o Felipe usa há anos, com as quatro divisões
  * (CAPITAL / CONSUMO / SERVIÇO / DINHEIRO). A OS continua sendo o centro do

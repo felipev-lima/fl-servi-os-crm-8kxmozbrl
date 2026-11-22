@@ -137,7 +137,7 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
-      {/* Cabeçalho: identidade LM SERVIÇOS CRM, azul #0B3D91 */}
+      {/* Cabeçalho: identidade FL SERVIÇOS CRM, azul #0B3D91 */}
       <header className="sticky top-0 z-40 bg-gradient-to-r from-[#0B3D91] to-[#1E6FD9] text-white shadow-md print:hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -153,18 +153,18 @@ export default function Layout() {
                 <div className="flex h-11 w-28 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white px-1.5 py-1 shadow-inner">
                   <img
                     src={logoUrl}
-                    alt="LM SERVIÇOS"
+                    alt="FL SERVIÇOS"
                     className="max-h-full max-w-full object-contain"
                   />
                 </div>
               ) : (
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-inner">
-                  <span className="text-[#0B3D91] font-black text-lg">LM</span>
+                  <span className="text-[#0B3D91] font-black text-lg">FL</span>
                 </div>
               )}
               <div>
                 <span className="font-black text-base tracking-tight uppercase block leading-none">
-                  LM SERVIÇOS
+                  FL SERVIÇOS
                 </span>
                 <span className="text-[10px] text-white/80 font-medium tracking-wider uppercase block">
                   CRM · Macaé / RJ
@@ -338,7 +338,7 @@ export default function Layout() {
       <footer className="bg-white border-t border-slate-200 py-4 text-center text-xs text-muted-foreground print:hidden">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
           <span>
-            <strong>LM SERVIÇOS</strong> • Gestão de OS, vendas e faturamento — Macaé / RJ
+            <strong>FL SERVIÇOS</strong> • Gestão de OS, vendas e faturamento — Macaé / RJ
           </span>
           <span className="text-[11px]">CRM • Orçamentos, pedidos e financeiro</span>
         </div>

@@ -124,7 +124,7 @@ export default function ClientsPage() {
 
     setSubmitting(true)
     try {
-      // PADRAO LM: nome, endereco, bairro, cidade, documento e telefone em
+      // PADRAO FL: nome, endereco, bairro, cidade, documento e telefone em
       // MAIUSCULA, mesmo que tenham sido digitados em minuscula. E-mail fica
       // como veio (endereco de e-mail nao tem caixa alta).
       const dados: Partial<Client> = {
@@ -319,7 +319,7 @@ export default function ClientsPage() {
         <div>
           <h1 className="text-2xl font-black text-foreground tracking-tight">Clientes</h1>
           <p className="text-xs text-muted-foreground">
-            Cadastro de empresas e clientes atendidos pela LM SERVIÇOS em Macaé e região.
+            Cadastro de empresas e clientes atendidos pela FL SERVIÇOS em Macaé e região.
           </p>
         </div>
 

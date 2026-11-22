@@ -453,7 +453,7 @@ export default function WorkOrderDetail() {
 
     setSaving(true)
     try {
-      const currentUserName = user?.name || 'Técnico LM'
+      const currentUserName = user?.name || 'Técnico FL'
 
       if (isNew) {
         const created = await createWorkOrder(order, currentUserName)
@@ -574,7 +574,7 @@ export default function WorkOrderDetail() {
       const updated = await updateWorkOrder(
         id,
         { status: newStatus },
-        user?.name || 'Técnico LM',
+        user?.name || 'Técnico FL',
         oldStatus,
         newStatus,
         note,
@@ -1205,12 +1205,12 @@ export default function WorkOrderDetail() {
   th,td{border:1px solid #ddd;padding:4px 6px;text-align:left}
   th{background:#f4f4f4}
   .rot{font-weight:bold}
-  /* a tabela do cabeçalho (logo LM) não leva as bordas das tabelas de dados */
+  /* a tabela do cabeçalho (logo FL) não leva as bordas das tabelas de dados */
   .cabecalho, .cabecalho td {border:none !important}
   .cabecalho h1{color:#0B3D91;font-size:20px;margin:0}
   @media print{body{margin:0}}
 </style></head><body>
-<!-- Cabeçalho com a logo LM. Usa TABELA (nao flexbox) porque o arquivo abre
+<!-- Cabeçalho com a logo FL. Usa TABELA (nao flexbox) porque o arquivo abre
      no navegador do celular e em clientes de e-mail, que ignoram flex. -->
 <table class="cabecalho" style="width:100%;border-collapse:collapse;border:none;
               border-bottom:3px solid #0B3D91;margin-bottom:14px">
@@ -1218,10 +1218,10 @@ export default function WorkOrderDetail() {
     <td style="width:52px;border:none;padding:0 10px 10px 0;vertical-align:middle">
       <div style="width:44px;height:44px;background:linear-gradient(135deg,#0B3D91,#1E6FD9);color:#fff;border-radius:8px;
                   text-align:center;line-height:44px;font-family:Arial,Helvetica,sans-serif;
-                  font-weight:bold;font-size:19px;letter-spacing:0.5px">LM</div>
+                  font-weight:bold;font-size:19px;letter-spacing:0.5px">FL</div>
     </td>
     <td style="border:none;padding:0 0 10px 0;vertical-align:middle">
-      <h1 style="margin:0">LM SERVIÇOS</h1>
+      <h1 style="margin:0">FL SERVIÇOS</h1>
       <div style="color:#666;font-size:11px">CFTV • Alarme • Rede • Automação • Manutenção</div>
     </td>
   </tr>
@@ -1266,7 +1266,7 @@ ${
 <h2>Fotos</h2>
 <p>${orderPhotos.length} foto(s) na pasta <strong>fotos</strong> deste arquivo.</p>
 <div style="margin-top:18px;padding-top:8px;border-top:1px solid #ddd;color:#888;font-size:9px">
-  LM SERVIÇOS E DISTRIBUIÇÃO • CNPJ 44.288.125/0001-34 • IE 12.290.12-8<br>
+  FL THOMAZ SERVIÇOS E DISTRIBUIÇÃO • CNPJ 44.288.125/0001-34 • IE 12.290.12-8<br>
   VILA UNIÃO, 92 — LAGOMAR — MACAÉ/RJ — CEP 27.966-507
 </div>
 </body></html>`
@@ -1532,7 +1532,7 @@ ${
             <p className="text-xs text-muted-foreground">
               {isNew
                 ? 'Preencha os dados abaixo para registrar o chamado'
-                : 'Atendimento técnico LM SERVIÇOS • Macaé/RJ'}
+                : 'Atendimento técnico FL SERVIÇOS • Macaé/RJ'}
             </p>
           </div>
         </div>
@@ -1885,7 +1885,7 @@ ${
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold">Observações Internas</Label>
                 <Input
-                  placeholder="Anotações para a equipe LM SERVIÇOS..."
+                  placeholder="Anotações para a equipe FL SERVIÇOS..."
                   value={order.notes || ''}
                   onChange={(e) => setOrder((prev) => ({ ...prev, notes: e.target.value }))}
                   disabled={!canEdit}

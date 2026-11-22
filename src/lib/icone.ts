@@ -1,7 +1,7 @@
-// Ícone do atalho (apple-touch-icon) da LM SERVIÇOS — azul da marca.
+// Ícone do atalho (apple-touch-icon) da FL SERVIÇOS — azul da LM.
 //
 // O iPhone exige PNG no atalho (não aceita SVG). O quadradinho desenha
-// "LM" branco sobre o azul da LM (#0B3D91) com o traço branco embaixo,
+// "FL" branco sobre o azul da LM (#0B3D91) com o traço branco embaixo,
 // mesma arte do /icon.svg. É desenhado num <canvas> e convertido para
 // PNG 180x180 na hora do carregamento — nenhum arquivo verde antigo
 // sobra no app.
@@ -9,7 +9,7 @@ export const AZUL_LM = '#0B3D91'
 
 const TAMANHO = 180
 
-/** Desenha o ícone LM (azul + "LM" branco) e devolve um data-URI PNG. */
+/** Desenha o ícone FL (azul + "FL" branco) e devolve um data-URI PNG. */
 export function iconLMDataUri(): string {
   const canvas = document.createElement('canvas')
   canvas.width = TAMANHO
@@ -21,12 +21,12 @@ export function iconLMDataUri(): string {
   ctx.fillStyle = AZUL_LM
   ctx.fillRect(0, 0, TAMANHO, TAMANHO)
 
-  // "LM" branco, centralizado
+  // "FL" branco, centralizado
   ctx.fillStyle = '#FFFFFF'
   ctx.font = `bold ${Math.round(TAMANHO * 0.42)}px Helvetica, Arial, sans-serif`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillText('LM', TAMANHO / 2, TAMANHO / 2 - TAMANHO * 0.04)
+  ctx.fillText('FL', TAMANHO / 2, TAMANHO / 2 - TAMANHO * 0.04)
 
   // traço branco embaixo, como no icon.svg
   const barraH = Math.max(2, Math.round(TAMANHO * 0.033))
