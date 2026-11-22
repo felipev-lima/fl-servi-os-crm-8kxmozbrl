@@ -33,6 +33,7 @@ import {
   assinarDocumentoPublico,
   type DocumentoPublico,
 } from '@/lib/linkCliente'
+import pb from '@/lib/pocketbase/client'
 import { baixarFotosZip, type FotoParaZip as FotoZip } from '@/lib/fotosZip'
 
 export default function PaginaPublicaCliente() {
@@ -60,6 +61,15 @@ export default function PaginaPublicaCliente() {
     }
     try {
       const d = await lerDocumentoPublico(tipo as 'os' | 'pedido', id, token)
+      // as URLs de arquivo do hook podem vir relativas: o prefixo do
+      // PocketBase é conhecido aqui no cliente (pb.baseURL)
+      const pbBase = pb.baseURL.replace(/\/$/, '')
+      for (const f of d.fotos) {
+        if (f.url && f.url.charAt(0) === '/') f.url = pbBase + f.url
+      }
+      if (d.assinatura_url && d.assinatura_url.charAt(0) === '/') {
+        d.assinatura_url = pbBase + d.assinatura_url
+      }
       setDoc(d)
       setErro('')
       if (d.assinado_em) setSalvo(true)

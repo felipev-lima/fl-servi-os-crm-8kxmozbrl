@@ -28,6 +28,8 @@
  *    cada callback, nada de funções/constantes de nível superior;
  *  - sem middleware extra (o `null` de middleware derruba a rota para 404 estático);
  *  - e.requestInfo() é MÉTODO, e o corpo só chega nele com `e.next()` antes;
+ *  - query params SÓ por e.requestInfo().query — e.request.url().rawQuery()
+ *    lança na JSVM e, engolido pelo try/catch, devolve token vazio (404);
  *  - o sort de findRecordsByFilter usa só colunas nativas (quotes não tem `created`);
  *  - findRecordsByFilter recebe o filtro pronto (sem binds `{:id}`);
  *  - o horário gravado é o do servidor (UTC).
@@ -41,14 +43,11 @@ routerAdd('GET', '/backend/v1/cliente/{tipo}/{id}', (e) => {
   const tipo = e.request.pathValue('tipo')
   const id = e.request.pathValue('id')
 
-  // ?t=TOKEN — lido da query crua para não depender de tipos Go na JSVM
+  // ?t=TOKEN — pela requestInfo: rawQuery() lança na JSVM e o try/catch engole,
+  // virando token vazio (era a causa do 404 mesmo com token correto)
   let token = ''
   try {
-    const crua = String(e.request.url().rawQuery() || '')
-    for (const parte of crua.split('&')) {
-      const kv = parte.split('=')
-      if (kv[0] === 't') token = decodeURIComponent(kv[1] || '')
-    }
+    token = String((e.requestInfo().query || {}).t || '')
   } catch (_) {}
 
   if (tipo !== 'os' && tipo !== 'pedido') {
@@ -67,12 +66,12 @@ routerAdd('GET', '/backend/v1/cliente/{tipo}/{id}', (e) => {
     return e.json(404, { error: 'Documento não encontrado.' })
   }
 
-  // base para as URLs de arquivo (mesmo PocketBase do app)
+  // base para as URLs de arquivo (mesmo PocketBase do app):
+  // host via header — e.request.host()/url() falham na JSVM
   let base = ''
   try {
-    const host = String(e.request.host() || '')
-    const proto = String(e.request.url().scheme() || '')
-    if (host) base = (proto === 'http' ? 'http://' : 'https://') + host
+    const host = String(e.requestInfo().headers['host'] || '')
+    if (host) base = 'https://' + host
   } catch (_) {}
 
   // cliente: RAZÃO SOCIAL (name) — o nickname/apelido nunca sai por este link
