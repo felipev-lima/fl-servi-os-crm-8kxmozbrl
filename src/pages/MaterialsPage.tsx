@@ -264,6 +264,7 @@ export default function MaterialsPage() {
       {modo !== 'cartoes' ? (
         <ListagemModos
           modo={modo}
+          densa
           itens={filtered}
           chaveItem={(m) => m.id}
           cartoes={() => null}

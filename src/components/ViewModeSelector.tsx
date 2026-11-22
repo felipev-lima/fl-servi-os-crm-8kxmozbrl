@@ -127,6 +127,7 @@ export function ListagemModos<T>({
   cartoes,
   linhaDe,
   vazio,
+  densa,
 }: {
   modo: ViewMode
   itens: T[]
@@ -134,6 +135,12 @@ export function ListagemModos<T>({
   cartoes: (item: T) => ReactNode
   linhaDe: (item: T) => LinhaVisao
   vazio?: ReactNode
+  /**
+   * Compacta ainda mais densa (pedido do Felipe para o catálogo de materiais
+   * no celular): linhas de ~30px, sem espaçamento extra. Só surte efeito no
+   * modo COMPACTA — os modos LISTA e CARTÕES ficam como sempre foram.
+   */
+  densa?: boolean
 }) {
   if (itens.length === 0) return <>{vazio ?? null}</>
   if (modo === 'cartoes') {
@@ -161,6 +168,11 @@ export function ListagemModos<T>({
       </span>
     ) : null
 
+  /** padding vertical das linhas compactas: o dobro de apertado quando `densa` */
+  const pyCompacta = densa ? 'py-0.5' : 'py-1.5'
+  /** leading do título compacto: mais justo quando `densa` */
+  const leadingCompacto = densa ? 'leading-[1.1]' : 'leading-tight'
+
   const valor = (l: LinhaVisao) =>
     l.valor ? (
       <span
@@ -179,11 +191,11 @@ export function ListagemModos<T>({
       {itens.map((item, i) => {
         const l = linhaDe(item)
         const conteudo = compacta ? (
-          <div className="flex items-center gap-2 px-2.5 py-1.5">
+          <div className={`flex items-center gap-2 px-2.5 ${pyCompacta}`}>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[11px] font-bold leading-tight">{l.titulo}</p>
+              <p className={`truncate text-[11px] font-bold ${leadingCompacto}`}>{l.titulo}</p>
               {l.subtitulo && (
-                <p className="truncate text-[9px] leading-tight text-muted-foreground">
+                <p className={`truncate text-[9px] ${leadingCompacto} text-muted-foreground`}>
                   {l.subtitulo}
                 </p>
               )}
