@@ -58,6 +58,20 @@ export default function WorkOrderList() {
   const [totalPaginas, setTotalPaginas] = useState(1)
   const PER_PAGE = 30
 
+  /**
+   * ORDEM DAS DECLARAÇÕES IMPORTA (bug de 22/11/2026).
+   *
+   * `soProprias` e `meuTecnicoId` eram declarados MAIS ABAIXO, mas usados aqui
+   * dentro do `useCallback` — e no JavaScript `const` não existe antes da linha
+   * onde é declarado (TDZ). O efeito disparava na montagem e derrubava a tela
+   * inteira: `#root` vazio, só o fundo. O build passava, porque é erro de
+   * execução, não de compilação.
+   *
+   * Agora as duas referências vêm ANTES de quem as usa.
+   */
+  const soProprias = isTechnician && !isAdmin
+  const [meuTecnicoId, setMeuTecnicoId] = useState('')
+
   const loadOrders = React.useCallback(async () => {
     setLoading(true)
     try {
@@ -108,11 +122,9 @@ export default function WorkOrderList() {
   }, [podeFiltrarPorTecnico])
 
   // Técnico comum: localiza o PRÓPRIO registro em `technicians` (o vínculo
-  // technicians.user = conta logada, criado pela migration 0022) para filtrar
-  // a lista no cliente também. O servidor já restringe pela regra da coleção —
-  // aqui é espelho, para a UI nunca mostrar OS de outro.
-  const soProprias = isTechnician && !isAdmin
-  const [meuTecnicoId, setMeuTecnicoId] = useState('')
+  // technicians.user = conta logada, criado pela migration 0022) para a lista
+  // pedir ao servidor só as OS dele. As duas variáveis são declaradas ACIMA,
+  // antes do `loadOrders` que as usa.
   useEffect(() => {
     if (!soProprias || !user?.id) return
     pb.collection('technicians')
