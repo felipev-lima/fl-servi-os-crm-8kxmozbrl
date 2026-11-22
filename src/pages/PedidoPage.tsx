@@ -72,6 +72,12 @@ import {
 import { migrarPedidoParaOS, importarFotosOSParaPedido } from '@/services/migracao'
 import { baixarFotosZip, compartilharFotosZip, type FotoParaZip } from '@/lib/fotosZip'
 import { toast } from 'sonner'
+import {
+  urlDoLinkCliente,
+  mensagemWhatsapp,
+  abrirWhatsapp,
+  tokenDoLinkCliente,
+} from '@/lib/linkCliente'
 
 interface ItemLocal extends QuoteItem {
   nome: string
@@ -120,6 +126,8 @@ export default function PedidoPage() {
   const [sigEntregador, setSigEntregador] = useState('')
   const [fotos, setFotos] = useState<File[]>([])
   const [salvoId, setSalvoId] = useState<string>('')
+  /** registro do pedido tal como carregado do banco (tem o client_link_token) */
+  const [quoteAtual, setQuoteAtual] = useState<any>(null)
   const [numero, setNumero] = useState<string>('')
   const [statusAtual, setStatusAtual] = useState<string>('PEDIDO')
   /** nomes dos arquivos já gravados no servidor (pedido reaberto) */
@@ -127,6 +135,41 @@ export default function PedidoPage() {
   const [importandoFotos, setImportandoFotos] = useState(false)
   const [baixandoZip, setBaixandoZip] = useState(false)
   const [compartilhandoZip, setCompartilhandoZip] = useState(false)
+  /**
+   * LINK DO CLIENTE (sem login) — copia o link e abre o WhatsApp com a
+   * mensagem pronta, usando o telefone do cadastro. O token vem do campo
+   * client_link_token gravado no próprio pedido (hook no servidor).
+   */
+  const [copiandoLink, setCopiandoLink] = useState(false)
+  const linkDoCliente = salvoId
+    ? urlDoLinkCliente('pedido', salvoId, tokenDoLinkCliente(quoteAtual))
+    : ''
+
+  /** Copia o link e abre o WhatsApp com a mensagem pronta (telefone do cadastro). */
+  const enviarLinkCliente = async () => {
+    if (!linkDoCliente) {
+      toast.error('Salve o pedido antes de enviar o link ao cliente.')
+      return
+    }
+    setCopiandoLink(true)
+    try {
+      await navigator.clipboard.writeText(linkDoCliente)
+      toast.success('Link copiado! Abrindo o WhatsApp...', { duration: 4000 })
+      abrirWhatsapp({
+        telefone: cliente?.phone,
+        mensagem: mensagemWhatsapp({
+          tipo: 'pedido',
+          numero: numero || salvoId.slice(-6).toUpperCase(),
+          cliente: cliente?.name,
+          url: linkDoCliente,
+        }),
+      })
+    } catch {
+      toast.error('Não foi possível copiar o link.', { duration: 6000 })
+    } finally {
+      setCopiandoLink(false)
+    }
+  }
 
   /** lista de fotos do pedido pronta para o zip/compartilhar (src/lib/fotosZip) */
   const fotosParaZip: FotoParaZip[] = fotosSalvas.map((nome) => ({
@@ -219,6 +262,7 @@ export default function PedidoPage() {
         if (!ehNovo && id) {
           const q = await getQuote(id)
           setSalvoId(q.id)
+          setQuoteAtual(q)
           setClienteId(q.client || '')
           setData((q.date || '').slice(0, 10) || new Date().toISOString().slice(0, 10))
           setObs(q.notes || '')
@@ -510,6 +554,7 @@ export default function PedidoPage() {
       const r = salvoId ? await updateQuote(salvoId, fd as any) : await createQuote(fd as any)
 
       setSalvoId((r as any).id)
+      setQuoteAtual(r as any)
       toast.success(salvoId ? 'Pedido atualizado.' : 'Pedido criado.')
       return (r as any).id
     } catch (e: any) {
@@ -742,6 +787,24 @@ export default function PedidoPage() {
           <Button variant="outline" size="sm" onClick={imprimir} className="h-9 gap-1.5 text-xs">
             <Printer className="h-4 w-4" /> PDF
           </Button>
+          {!ehNovo && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={enviarLinkCliente}
+              disabled={copiandoLink || salvando}
+              className="h-9 gap-1.5 text-xs border-[#0B3D91]/40 text-[#0B3D91] hover:bg-[#0B3D91]/10 font-medium"
+              title="Copia o link exclusivo deste pedido e abre o WhatsApp com a mensagem pronta para o cliente (sem login, sem valores)"
+            >
+              {copiandoLink ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Link2 className="h-4 w-4" />
+              )}
+              <span className="hidden sm:inline">Link do cliente</span>
+              <span className="sm:hidden">Link</span>
+            </Button>
+          )}
           {!ehNovo && fotosSalvas.length > 0 && (
             <Button
               variant="outline"

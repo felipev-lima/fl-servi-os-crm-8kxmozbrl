@@ -38,6 +38,7 @@ import LucroPage from './pages/LucroPage'
 import FaturamentoPage from './pages/FaturamentoPage'
 import AliquotasPage from './pages/AliquotasPage'
 import TecnicoPage from './pages/TecnicoPage'
+import PaginaPublicaCliente from './pages/ClienteLinkPage'
 import NotFound from './pages/NotFound'
 
 const App = () => (
@@ -90,6 +91,8 @@ const App = () => (
             <Route path="/aliquotas" element={<AliquotasPage />} />
             <Route path="/tecnico" element={<TecnicoPage />} />
           </Route>
+          {/* Página pública do cliente — FORA do Layout, sem login */}
+          <Route path="/cliente/:tipo/:id" element={<PaginaPublicaCliente />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </TooltipProvider>
