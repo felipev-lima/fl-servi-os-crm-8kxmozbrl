@@ -60,6 +60,7 @@ import { SearchCombobox } from '@/components/SearchCombobox'
 import { ProdutoRapidoDialog } from '@/components/ProdutoRapidoDialog'
 import { ClienteRapidoDialog } from '@/components/ClienteRapidoDialog'
 import { createZip, baixarBlob, safeName, type ZipEntry } from '@/lib/zip'
+import { migrarOSParaPedido } from '@/services/migracao'
 import { avisarSincronizacao } from '@/lib/onedriveSync'
 import { gravarGpsNaFoto, pegarPosicao } from '@/lib/gpsFoto'
 import { prepararFoto } from '@/lib/imagem'
@@ -85,6 +86,7 @@ import {
   X,
   Layers,
   Navigation,
+  ArrowRightLeft,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -151,6 +153,7 @@ export default function WorkOrderDetail() {
   // Cadastro rápido em campo: produto novo e cliente novo sem sair da OS
   const [novoProdutoAberto, setNovoProdutoAberto] = useState(false)
   const [novoClienteAberto, setNovoClienteAberto] = useState(false)
+  const [migrando, setMigrando] = useState(false)
 
   const [photoDescription, setPhotoDescription] = useState('')
   const [pendingPhotos, setPendingPhotos] = useState<
@@ -180,6 +183,37 @@ export default function WorkOrderDetail() {
   // lança o que falta fazer, marca como concluído e salva junto com a OS.
   const [novoItemChecklist, setNovoItemChecklist] = useState('')
   const itensChecklist: ChecklistItem[] = Array.isArray(order.checklist) ? order.checklist : []
+
+  /**
+   * MIGRAR PARA PEDIDO (pedido do Felipe, 22/11/2026).
+   *
+   * Para o documento lançado no lugar errado — caso real da OS #1006, que era
+   * uma entrega de produto. Copia cliente, itens e descrição para um PEDIDO
+   * novo, deixa esta OS como CANCELADA com nota apontando para o pedido e
+   * registra tudo no histórico dos dois. NADA é apagado.
+   */
+  const migrarParaPedido = async () => {
+    if (!id || isNew) return
+    const ok = confirm(
+      `Migrar a OS #${order.order_number} para PEDIDO?\n\n` +
+        '• Cria um pedido novo com o mesmo cliente, materiais (quantidade, preço e tipo) e descrição\n' +
+        '• Esta OS fica CANCELADA, com nota apontando para o pedido novo\n' +
+        '• Nada é apagado e o financeiro não é tocado',
+    )
+    if (!ok) return
+    setMigrando(true)
+    try {
+      const r = await migrarOSParaPedido(id, user?.name || 'Sistema')
+      toast.success(`Pedido nº ${r.destinoNumero} criado. OS #${order.order_number} cancelada.`, {
+        duration: 8000,
+      })
+      navigate(`/pedido/${r.destinoId}`)
+    } catch (e: any) {
+      toast.error(e?.message || 'Não foi possível migrar a OS para pedido.', { duration: 8000 })
+    } finally {
+      setMigrando(false)
+    }
+  }
 
   const adicionarItemChecklist = () => {
     const texto = novoItemChecklist.trim()
@@ -1567,6 +1601,25 @@ ${
               )}
               <span className="hidden sm:inline">Baixar OS completa (zip)</span>
               <span className="sm:hidden">Zip</span>
+            </Button>
+          )}
+
+          {!isNew && isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={migrarParaPedido}
+              disabled={migrando}
+              className="flex-1 sm:flex-none gap-1.5 text-xs border-[#0B3D91]/40 text-[#0B3D91] hover:bg-[#0B3D91]/10 font-medium"
+              title="Cria um pedido com os mesmos itens e cancela esta OS (nada é apagado)"
+            >
+              {migrando ? (
+                <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
+              ) : (
+                <ArrowRightLeft className="w-4 h-4 shrink-0" />
+              )}
+              <span className="hidden sm:inline">Migrar para Pedido</span>
+              <span className="sm:hidden">Migrar</span>
             </Button>
           )}
 

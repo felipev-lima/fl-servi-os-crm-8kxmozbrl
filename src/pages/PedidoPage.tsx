@@ -67,7 +67,9 @@ import {
   Images,
   X,
   ArrowLeft,
+  ArrowRightLeft,
 } from 'lucide-react'
+import { migrarPedidoParaOS } from '@/services/migracao'
 import { toast } from 'sonner'
 
 interface ItemLocal extends QuoteItem {
@@ -93,11 +95,12 @@ export default function PedidoPage() {
    * `podeVerValores` governa a TELA; o talão impresso é montado depois e
    * respeita a mesma flag.
    */
-  const { isAdmin } = useAuth()
+  const { user, isAdmin } = useAuth()
   const podeVerValores = isAdmin
 
   const [empresa, setEmpresa] = useState<Empresa | null>(null)
   const [clientes, setClientes] = useState<Client[]>([])
+  const [migrando, setMigrando] = useState(false)
   const [materiais, setMateriais] = useState<Material[]>([])
   const [carregando, setCarregando] = useState(true)
   const [salvando, setSalvando] = useState(false)
@@ -521,6 +524,43 @@ export default function PedidoPage() {
     }
   }
 
+  /**
+   * MIGRAR PARA OS (pedido do Felipe, 22/11/2026).
+   *
+   * Caminho inverso do botão da OS: copia cliente, itens e descrição do pedido
+   * para uma ORDEM DE SERVIÇO nova, deixa este pedido CANCELADO com nota
+   * apontando para a OS e registra tudo no histórico dos dois. NADA é apagado
+   * e o financeiro não é tocado.
+   */
+  const migrarParaOS = async () => {
+    if (!salvoId) {
+      toast.error('Salve o pedido antes de migrar.')
+      return
+    }
+    const ok = confirm(
+      `Migrar o pedido ${numero ? `nº ${numero}` : ''} para ORDEM DE SERVIÇO?\n\n` +
+        '• Cria uma OS nova com o mesmo cliente, itens (quantidade, preço e tipo) e descrição\n' +
+        '• Este pedido fica CANCELADO, com nota apontando para a OS nova\n' +
+        '• Nada é apagado e o financeiro não é tocado',
+    )
+    if (!ok) return
+    setMigrando(true)
+    try {
+      const r = await migrarPedidoParaOS(salvoId, user?.name || 'Sistema')
+      toast.success(
+        `OS #${r.destinoNumero} criada. Pedido ${numero ? `nº ${numero}` : ''} cancelado.`,
+        {
+          duration: 8000,
+        },
+      )
+      navigate(`/ordens/${r.destinoId}`)
+    } catch (e: any) {
+      toast.error(e?.message || 'Não foi possível migrar o pedido para OS.', { duration: 8000 })
+    } finally {
+      setMigrando(false)
+    }
+  }
+
   if (carregando) {
     return (
       <div className="flex items-center justify-center gap-2 py-20 text-sm text-muted-foreground">
@@ -614,6 +654,24 @@ export default function PedidoPage() {
           <Button variant="outline" size="sm" onClick={imprimir} className="h-9 gap-1.5 text-xs">
             <Printer className="h-4 w-4" /> PDF
           </Button>
+          {!ehNovo && isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={migrarParaOS}
+              disabled={migrando || salvando}
+              className="h-9 gap-1.5 text-xs border-[#0B3D91]/40 text-[#0B3D91] hover:bg-[#0B3D91]/10 font-medium"
+              title="Cria uma OS com os mesmos itens e cancela este pedido (nada é apagado)"
+            >
+              {migrando ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ArrowRightLeft className="h-4 w-4" />
+              )}
+              <span className="hidden sm:inline">Migrar para OS</span>
+              <span className="sm:hidden">Migrar</span>
+            </Button>
+          )}
           <Button
             onClick={salvar}
             disabled={salvando}
