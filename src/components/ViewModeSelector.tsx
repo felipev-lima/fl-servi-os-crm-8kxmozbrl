@@ -110,6 +110,8 @@ export interface LinhaVisao {
   valorVerde?: boolean
   /** link interno da tela — a linha inteira abre o registro */
   href?: string
+  /** ações da linha (editar/apagar) — ficam à direita, fora do link */
+  extras?: ReactNode
 }
 
 /**
@@ -188,6 +190,7 @@ export function ListagemModos<T>({
             </div>
             {badge(l)}
             {valor(l)}
+            {l.extras}
           </div>
         ) : (
           <div className="flex items-center gap-3 px-3 py-2.5">
@@ -202,6 +205,7 @@ export function ListagemModos<T>({
             </div>
             {badge(l)}
             {valor(l)}
+            {l.extras}
           </div>
         )
 
