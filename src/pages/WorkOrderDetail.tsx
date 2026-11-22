@@ -196,8 +196,8 @@ export default function WorkOrderDetail() {
     if (!id || isNew) return
     const ok = confirm(
       `Migrar a OS #${order.order_number} para PEDIDO?\n\n` +
-        '• Cria um pedido novo com o mesmo cliente, materiais (quantidade, preço e tipo) e descrição\n' +
-        '• Esta OS fica CANCELADA, com nota apontando para o pedido novo\n' +
+        '• Cria um pedido novo com o mesmo cliente, materiais (quantidade, preço e tipo), descrição e fotos\n' +
+        '• Esta OS fica CANCELADA, com nota apontando para o pedido novo, e MANTÉM as fotos dela\n' +
         '• Nada é apagado e o financeiro não é tocado',
     )
     if (!ok) return

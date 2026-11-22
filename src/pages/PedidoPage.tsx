@@ -539,8 +539,8 @@ export default function PedidoPage() {
     }
     const ok = confirm(
       `Migrar o pedido ${numero ? `nº ${numero}` : ''} para ORDEM DE SERVIÇO?\n\n` +
-        '• Cria uma OS nova com o mesmo cliente, itens (quantidade, preço e tipo) e descrição\n' +
-        '• Este pedido fica CANCELADO, com nota apontando para a OS nova\n' +
+        '• Cria uma OS nova com o mesmo cliente, itens (quantidade, preço e tipo), descrição e fotos\n' +
+        '• Este pedido fica CANCELADO, com nota apontando para a OS nova, e MANTÉM as fotos dele\n' +
         '• Nada é apagado e o financeiro não é tocado',
     )
     if (!ok) return
