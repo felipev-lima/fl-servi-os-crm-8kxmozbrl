@@ -24,37 +24,81 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
   const [isDrawing, setIsDrawing] = useState(false)
   const [hasDrawn, setHasDrawn] = useState(false)
 
+  /**
+   * BUG CORRIGIDO (22/11/2026) — A ASSINATURA JÁ SALVA NÃO APARECIA.
+   *
+   * O QUE ACONTECIA: as abas da OS só renderizam o conteúdo da aba ativa. O
+   * canvas da assinatura, quando monta dentro da aba "Assinatura & GPS" ainda
+   * escondida, mede 0×0 (`getBoundingClientRect()` devolve zero para elemento
+   * com `display:none`). O código então fazia `canvas.width = 0 * 2`, ou seja
+   * ZERO, e desenhava a imagem num canvas de tamanho nenhum. Quando a aba
+   * abria, o canvas ganhava tamanho na tela mas o `useEffect` não rodava de
+   * novo — a assinatura nunca era desenhada.
+   *
+   * Por isso: a assinatura existia no banco, o arquivo abria pela URL, o PDF
+   * saía certo, mas na TELA o quadro aparecia vazio.
+   *
+   * A CORREÇÃO: um `ResizeObserver` que prepara o canvas toda vez que ele
+   * ganha tamanho (ou seja, quando a aba abre) e redesenha a assinatura
+   * salva. Como o canvas é recriado ao ser redimensionado, guardamos o
+   * tamanho já aplicado para não apagar um traço que o usuário esteja fazendo.
+   */
+  const tamanhoAplicado = useRef('')
+
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     onCanvasReady?.(canvas)
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
 
-    // Ajustar resolução para retina
-    const rect = canvas.getBoundingClientRect()
-    canvas.width = rect.width * 2
-    canvas.height = rect.height * 2
-    ctx.scale(2, 2)
+    /** Prepara o canvas no tamanho atual e, se houver, desenha a assinatura salva. */
+    const preparar = () => {
+      const rect = canvas.getBoundingClientRect()
+      // ainda escondido (aba fechada): não dá para medir, tenta no próximo aviso
+      if (rect.width < 10 || rect.height < 10) return
+      const chave = `${Math.round(rect.width)}x${Math.round(rect.height)}`
+      if (tamanhoAplicado.current === chave) return // já preparado neste tamanho
 
-    ctx.lineCap = 'round'
-    ctx.lineJoin = 'round'
-    ctx.lineWidth = 2.5
-    ctx.strokeStyle = '#0F6A3A'
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
 
-    // Fundo branco
-    ctx.fillStyle = '#FFFFFF'
-    ctx.fillRect(0, 0, rect.width, rect.height)
+      // Ajustar resolução para retina
+      canvas.width = rect.width * 2
+      canvas.height = rect.height * 2
+      tamanhoAplicado.current = chave
 
-    if (initialImage) {
-      const img = new Image()
-      img.crossOrigin = 'anonymous'
-      img.onload = () => {
-        ctx.drawImage(img, 0, 0, rect.width, rect.height)
-        setHasDrawn(true)
+      ctx.setTransform(1, 0, 0, 1, 0, 0) // o resize zera o contexto
+      ctx.scale(2, 2)
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
+      ctx.lineWidth = 2.5
+      ctx.strokeStyle = '#0F6A3A'
+
+      // Fundo branco
+      ctx.fillStyle = '#FFFFFF'
+      ctx.fillRect(0, 0, rect.width, rect.height)
+
+      if (initialImage) {
+        const img = new Image()
+        img.crossOrigin = 'anonymous'
+        img.onload = () => {
+          const c = canvas.getContext('2d')
+          if (!c) return
+          c.drawImage(img, 0, 0, rect.width, rect.height)
+          setHasDrawn(true)
+        }
+        img.src = initialImage
+      } else {
+        setHasDrawn(false)
       }
-      img.src = initialImage
     }
+
+    preparar()
+
+    // A aba abre -> o canvas sai de 0x0 -> o observer avisa e preparamos de novo
+    const obs = new ResizeObserver(() => preparar())
+    obs.observe(canvas)
+
+    return () => obs.disconnect()
   }, [initialImage])
 
   const getCoordinates = (
@@ -123,6 +167,13 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
     setHasDrawn(false)
     onSave('')
   }
+
+  /**
+   * Redesenha a partir das coordenadas RELATIVAS ao canvas.
+   * `getCoordinates` já devolve o ponto dentro do elemento, mas o desenho
+   * acontece depois do `scale(2,2)` do contexto — por isso as medidas do
+   * `getBoundingClientRect` (CSS px) valem direto aqui.
+   */
 
   /**
    * Exporta a assinatura com FUNDO TRANSPARENTE.
