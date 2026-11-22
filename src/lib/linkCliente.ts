@@ -130,7 +130,7 @@ export async function assinarDocumentoPublico(opts: {
   documento?: string
   assinaturaDataUrl: string
 }): Promise<void> {
-  const url = `${basePublica()}/backend/v1/cliente/${tipo}/${id}/assinar`
+  const url = `${basePublica()}/backend/v1/cliente/${opts.tipo}/${opts.id}/assinar`
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

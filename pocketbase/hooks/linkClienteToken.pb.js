@@ -4,6 +4,9 @@
  * O campo client_link_token (migration 0063) é preenchido aqui no create e
  * também no update (cobertura para os registros antigos da copiação). Assim o
  * CRM só monta a URL: /cliente/:tipo/:id?t=TOKEN.
+ *
+ * DETALHE DA JSVM: a lógica vive DENTRO do callback — nada de nível superior
+ * é referenciado dentro dele.
  */
 onRecordCreate(
   (e) => {

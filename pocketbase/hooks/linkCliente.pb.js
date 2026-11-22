@@ -7,11 +7,11 @@
  * recebimento na tela."
  *
  * O QUE AS ROTAS FAZEM:
- *  - GET  /backend/v1/cliente/:tipo/:id?t=TOKEN   → documento "enxuto": itens,
+ *  - GET  /backend/v1/cliente/{tipo}/{id}?t=TOKEN → documento "enxuto": itens,
  *    fotos e assinatura, SEM nenhum campo de valor. É a leitura viva: chamada
  *    toda vez que o cliente abre o link, devolve sempre a versão atualizada
  *    (item/foto novo lançado no CRM já aparece no mesmo link).
- *  - POST /backend/v1/cliente/:tipo/:id/assinar   → recebe { t, nome, documento,
+ *  - POST /backend/v1/cliente/{tipo}/{id}/assinar → recebe { t, nome, documento,
  *    assinatura(dataURL png) }, grava a assinatura no documento (signature_client
  *    no quote / signature_image na work_order) e registra no histórico
  *    (quote_history / order_history). NUNCA APAGA: o restante do documento e as
@@ -22,236 +22,280 @@
  *
  * NENHUM VALOR sai por aqui: os itens são recortados campo a campo, e o JSON
  * bruto do documento nunca é devolvido.
+ *
+ * DETALHES DA JSVM (todos comprovados por hooks que já rodam em produção):
+ *  - callbacks rodam fora do escopo do módulo: TODA a lógica vive DENTRO de
+ *    cada callback, nada de funções/constantes de nível superior;
+ *  - sem middleware extra (o `null` de middleware derruba a rota para 404 estático);
+ *  - e.requestInfo() é MÉTODO, e o corpo só chega nele com `e.next()` antes;
+ *  - o sort de findRecordsByFilter usa só colunas nativas (quotes não tem `created`);
+ *  - findRecordsByFilter recebe o filtro pronto (sem binds `{:id}`);
+ *  - o horário gravado é o do servidor (UTC).
  */
 
-function baseUrl(e) {
-  const esquema = e.request.url().scheme() || 'https'
-  const host = e.request.host()
-  return `${esquema}://${host}`
-}
+// ---------------- GET: leitura pública enxuta ----------------
 
-function carregarDocumento(e, tipo, id, token) {
-  if (tipo !== 'os' && tipo !== 'pedido') return null
+routerAdd('GET', '/backend/v1/cliente/{tipo}/{id}', (e) => {
+  e.next()
+
+  const tipo = e.request.pathValue('tipo')
+  const id = e.request.pathValue('id')
+
+  // ?t=TOKEN — lido da query crua para não depender de tipos Go na JSVM
+  let token = ''
+  try {
+    const crua = String(e.request.url().rawQuery() || '')
+    for (const parte of crua.split('&')) {
+      const kv = parte.split('=')
+      if (kv[0] === 't') token = decodeURIComponent(kv[1] || '')
+    }
+  } catch (_) {}
+
+  if (tipo !== 'os' && tipo !== 'pedido') {
+    return e.json(404, { error: 'Documento não encontrado.' })
+  }
+
+  // carrega o documento e valida o token contra o próprio registro
   let doc = null
   try {
     doc = $app.findRecordById(tipo === 'os' ? 'work_orders' : 'quotes', id)
   } catch (_) {
-    return null
+    return e.json(404, { error: 'Documento não encontrado.' })
   }
-  const salvo = doc.getString('client_link_token')
-  if (!token || !salvo || token !== salvo) return null
-  return doc
-}
-
-function itensDaOS(doc) {
-  const itens = []
-  const materiais = $app.findRecordsByFilter(
-    'order_materials',
-    'work_order = {:id}',
-    'created',
-    0,
-    0,
-    { id: doc.id },
-  )
-  for (const m of materiais) {
-    let descricao = 'Material'
-    try {
-      const mat = $app.findRecordById('materials', m.getString('material'))
-      descricao = mat.getString('name')
-    } catch (_) {}
-    itens.push({
-      descricao,
-      quantidade: m.getFloat('quantity'),
-      unidade: m.getString('unit') || 'UN',
-      tipo: m.getString('kind') === 'SERVICO' ? 'SERVICO' : 'PRODUTO',
-    })
+  const salvo = String(doc.getString('client_link_token') || '')
+  if (!token || !salvo || token !== salvo) {
+    return e.json(404, { error: 'Documento não encontrado.' })
   }
-  const desc = doc.getString('description')
-  if (desc) {
-    // o texto da OS entra como a linha do serviço
-    itens.unshift({ descricao: desc, quantidade: 1, unidade: 'serviço', tipo: 'SERVICO' })
-  }
-  return itens
-}
 
-function itensDoPedido(doc) {
-  const itens = []
-  const brutos = doc.get('items') || []
-  for (const it of brutos) {
-    itens.push({
-      descricao: it.description || '',
-      quantidade: Number(it.quantity || 0),
-      unidade: it.unit || 'UN',
-      // tipo entra só como rótulo PRODUTO/SERVIÇO — sem valor nenhum
-      tipo: it.kind === 'SERVICO' ? 'SERVICO' : 'PRODUTO',
-    })
-  }
-  return itens
-}
-
-function fotosDaOS(doc, base) {
-  const fotos = []
-  const registros = $app.findRecordsByFilter(
-    'order_photos',
-    'work_order = {:id}',
-    'created',
-    0,
-    0,
-    { id: doc.id },
-  )
-  for (const f of registros) {
-    const nome = f.getString('image')
-    if (!nome) continue
-    fotos.push({
-      nome,
-      caption: f.getString('caption') || '',
-      url: `${base}/api/files/order_photos/${f.id}/${nome}`,
-    })
-  }
-  return fotos
-}
-
-function fotosDoPedido(doc, base) {
-  const fotos = []
-  const nomes = doc.get('photos') || []
-  for (const nome of nomes) {
-    if (!nome) continue
-    fotos.push({
-      nome,
-      caption: '',
-      url: `${base}/api/files/quotes/${doc.id}/${nome}`,
-    })
-  }
-  return fotos
-}
-
-function assinaturaDoDoc(doc, tipo, base) {
-  const nome = tipo === 'os' ? doc.getString('signature_image') : doc.getString('signature_client')
-  if (!nome) return ''
-  const colecao = tipo === 'os' ? 'work_orders' : 'quotes'
-  return `${base}/api/files/${colecao}/${doc.id}/${nome}`
-}
-
-// data de gravação da assinatura: vem do histórico (status_to = ASSINADO),
-// que é onde a confirmação fica registrada com data
-function dataDaAssinatura(tipo, docId) {
+  // base para as URLs de arquivo (mesmo PocketBase do app)
+  let base = ''
   try {
-    const colecao = tipo === 'os' ? 'order_history' : 'quote_history'
-    const filtro =
-      tipo === 'os'
-        ? 'work_order = {:id} && status_to = "ASSINADO"'
-        : 'quote = {:id} && status_to = "ASSINADO"'
-    const linhas = $app.findRecordsByFilter(colecao, filtro, '-created', 1, 0, { id: docId })
-    return linhas.length > 0 ? linhas[0].getString('created') : ''
-  } catch (_) {
-    return ''
+    const host = String(e.request.host() || '')
+    const proto = String(e.request.url().scheme() || '')
+    if (host) base = (proto === 'http' ? 'http://' : 'https://') + host
+  } catch (_) {}
+
+  // cliente: RAZÃO SOCIAL (name) — o nickname/apelido nunca sai por este link
+  const cliente = { name: '', document: '', phone: '' }
+  const clienteId = String(doc.getString('client') || '')
+  if (clienteId) {
+    try {
+      const c = $app.findRecordById('clients', clienteId)
+      cliente.name = c.getString('name')
+      cliente.document = c.getString('document')
+      cliente.phone = c.getString('phone')
+    } catch (_) {}
   }
-}
 
-routerAdd(
-  'GET',
-  '/backend/v1/cliente/{tipo}/{id}',
-  (e) => {
-    const tipo = e.request.pathValue('tipo')
-    const token = e.request.url().query().get('t') || ''
-    const id = e.request.pathValue('id')
-
-    const doc = carregarDocumento(e, tipo, id, token)
-    if (!doc) return e.json(404, { error: 'Documento não encontrado.' })
-
-    const base = baseUrl(e)
-
-    const cliente = { name: '', document: '', phone: '' }
-    const clienteId = doc.getString('client')
-    if (clienteId) {
+  // ---- itens SEM valor nenhum (recorte campo a campo) ----
+  const itens = []
+  if (tipo === 'os') {
+    const materiais = $app.findRecordsByFilter(
+      'order_materials',
+      "work_order = '" + doc.id + "'",
+      '',
+      0,
+      0,
+    )
+    for (const m of materiais) {
+      let descricao = 'Material'
       try {
-        const c = $app.findRecordById('clients', clienteId)
-        // RAZÃO SOCIAL (name) — o nickname/apelido nunca sai por este link
-        cliente.name = c.getString('name')
-        cliente.document = c.getString('document')
-        cliente.phone = c.getString('phone')
+        const mat = $app.findRecordById('materials', m.getString('material'))
+        descricao = mat.getString('name')
+      } catch (_) {}
+      itens.push({
+        descricao,
+        quantidade: m.getFloat('quantity'),
+        unidade: m.getString('unit') || 'UN',
+        tipo: m.getString('kind') === 'SERVICO' ? 'SERVICO' : 'PRODUTO',
+      })
+    }
+    // o texto da OS entra como a linha do serviço
+    const desc = doc.getString('description')
+    if (desc) {
+      itens.unshift({ descricao: desc, quantidade: 1, unidade: 'serviço', tipo: 'SERVICO' })
+    }
+  } else {
+    let brutos = null
+    try {
+      brutos = JSON.parse(doc.getString('items') || 'null')
+    } catch (_) {}
+    if (Array.isArray(brutos)) {
+      for (const it of brutos) {
+        if (!it || typeof it !== 'object') continue
+        itens.push({
+          descricao: String(it.description || it.name || ''),
+          quantidade: Number(it.quantity || 0),
+          unidade: String(it.unit || 'UN'),
+          // tipo entra só como rótulo PRODUTO/SERVIÇO — sem valor nenhum
+          tipo: it.kind === 'SERVICO' ? 'SERVICO' : 'PRODUTO',
+        })
+      }
+    }
+  }
+
+  // ---- fotos (URL pública de arquivo, sem expor o registro) ----
+  const fotos = []
+  if (tipo === 'os') {
+    const registros = $app.findRecordsByFilter(
+      'order_photos',
+      "work_order = '" + doc.id + "'",
+      '',
+      0,
+      0,
+    )
+    for (const f of registros) {
+      const nome = f.getString('image')
+      if (!nome) continue
+      fotos.push({
+        nome,
+        caption: f.getString('caption') || '',
+        url: `${base}/api/files/order_photos/${f.id}/${nome}`,
+      })
+    }
+  } else {
+    // multi-arquivo: getStringSlice; se a coleção não expuser, cai no JSON cru
+    let nomes = []
+    try {
+      nomes = doc.getStringSlice('photos')
+    } catch (_) {
+      try {
+        const brutos = JSON.parse(doc.getString('photos') || 'null')
+        if (Array.isArray(brutos)) nomes = brutos
       } catch (_) {}
     }
-
-    return e.json(200, {
-      tipo,
-      id: doc.id,
-      numero: tipo === 'os' ? doc.getInt('order_number') : doc.getInt('number'),
-      status: doc.getString('status'),
-      atualizado_em: doc.getString('updated'),
-      cliente,
-      itens: tipo === 'os' ? itensDaOS(doc) : itensDoPedido(doc),
-      fotos: tipo === 'os' ? fotosDaOS(doc, base) : fotosDoPedido(doc, base),
-      assinatura_url: assinaturaDoDoc(doc, tipo, base),
-      assinado_em: dataDaAssinatura(tipo, doc.id),
-      assinado_por: doc.getString('client_signer_name') || '',
-    })
-  },
-  /* sem autenticação */ null,
-)
-
-routerAdd(
-  'POST',
-  '/backend/v1/cliente/{tipo}/{id}/assinar',
-  (e) => {
-    const tipo = e.request.pathValue('tipo')
-    const id = e.request.pathValue('id')
-    const corpo = $requestInfo.body
-
-    const token = String(corpo.t || '')
-    const nome = String(corpo.nome || '')
-      .trim()
-      .slice(0, 120)
-    const documento = String(corpo.documento || '')
-      .trim()
-      .slice(0, 40)
-    const assinatura = String(corpo.assinatura || '')
-
-    if (!assinatura.startsWith('data:image/png;base64,')) {
-      return e.json(400, { error: 'Assine na tela antes de confirmar.' })
-    }
-    if (!nome) {
-      return e.json(400, { error: 'Informe quem está recebendo.' })
-    }
-
-    const doc = carregarDocumento(e, tipo, id, token)
-    if (!doc) return e.json(404, { error: 'Documento não encontrado.' })
-
-    const bytes = $security.base64Decode(assinatura.split(',')[1])
-    const arquivo = filesystem.NewFileFromBytes(bytes, 'assinatura-cliente.png')
-
-    const quando = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
-    const nota = `Cliente confirmou o recebimento pelo link em ${quando} — assinado por ${nome.toUpperCase()}${documento ? ` (doc. ${documento})` : ''}.`
-
-    // grava POR CIMA apenas o campo da assinatura — nada no documento é apagado
-    if (tipo === 'os') {
-      doc.set('signature_image', arquivo)
-      doc.set('client_signer_name', nome)
-      if (documento) doc.set('client_signer_doc', documento)
-      $app.save(doc)
-      $app.collection('order_history').create({
-        work_order: doc.id,
-        status_from: doc.getString('status'),
-        status_to: 'ASSINADO',
-        user_name: 'LINK DO CLIENTE',
-        user_id: '',
-        notes: nota,
-      })
-    } else {
-      doc.set('signature_client', arquivo)
-      doc.set('delivered_by_name', nome)
-      $app.save(doc)
-      $app.collection('quote_history').create({
-        quote: doc.id,
-        status_from: doc.getString('status'),
-        status_to: 'ASSINADO',
-        user_name: 'LINK DO CLIENTE',
-        user_id: '',
-        notes: nota,
+    for (const nome of nomes) {
+      if (!nome) continue
+      fotos.push({
+        nome,
+        caption: '',
+        url: `${base}/api/files/quotes/${doc.id}/${nome}`,
       })
     }
+  }
 
-    return e.json(200, { ok: true })
-  },
-  /* sem autenticação */ null,
-)
+  // assinatura já gravada no documento (se houver)
+  let assinaturaUrl = ''
+  if (tipo === 'os') {
+    const n = doc.getString('signature_image')
+    if (n) assinaturaUrl = `${base}/api/files/work_orders/${doc.id}/${n}`
+  } else {
+    const n = doc.getString('signature_client')
+    if (n) assinaturaUrl = `${base}/api/files/quotes/${doc.id}/${n}`
+  }
+
+  // data da assinatura: vem do histórico (status_to = ASSINADO)
+  let assinadoEm = ''
+  try {
+    const colecao = tipo === 'os' ? 'order_history' : 'quote_history'
+    const campo = tipo === 'os' ? 'work_order' : 'quote'
+    const filtro = campo + " = '" + doc.id + "' && status_to = 'ASSINADO'"
+    const linhas = $app.findRecordsByFilter(colecao, filtro, '-created', 1, 0)
+    if (linhas.length > 0) assinadoEm = linhas[0].getString('created')
+  } catch (_) {}
+
+  return e.json(200, {
+    tipo,
+    id: doc.id,
+    numero: tipo === 'os' ? doc.getInt('order_number') : doc.getInt('number'),
+    status: doc.getString('status'),
+    atualizado_em: doc.getString('updated'),
+    cliente,
+    itens,
+    fotos,
+    assinatura_url: assinaturaUrl,
+    assinado_em: assinadoEm,
+    assinado_por: doc.getString('client_signer_name') || '',
+  })
+})
+
+// ---------------- POST: assinar confirmação de recebimento ----------------
+
+routerAdd('POST', '/backend/v1/cliente/{tipo}/{id}/assinar', (e) => {
+  e.next()
+
+  const tipo = e.request.pathValue('tipo')
+  const id = e.request.pathValue('id')
+  const corpo = e.requestInfo().body || {}
+
+  const token = String(corpo.t || '')
+  const nome = String(corpo.nome || '')
+    .trim()
+    .slice(0, 120)
+  const documento = String(corpo.documento || '')
+    .trim()
+    .slice(0, 40)
+  const assinatura = String(corpo.assinatura || '')
+
+  if (!assinatura.startsWith('data:image/png;base64,')) {
+    return e.json(400, { error: 'Assine na tela antes de confirmar.' })
+  }
+  if (!nome) {
+    return e.json(400, { error: 'Informe quem está recebendo.' })
+  }
+
+  if (tipo !== 'os' && tipo !== 'pedido') {
+    return e.json(404, { error: 'Documento não encontrado.' })
+  }
+
+  let doc = null
+  try {
+    doc = $app.findRecordById(tipo === 'os' ? 'work_orders' : 'quotes', id)
+  } catch (_) {
+    return e.json(404, { error: 'Documento não encontrado.' })
+  }
+  const salvo = String(doc.getString('client_link_token') || '')
+  if (!token || !salvo || token !== salvo) {
+    return e.json(404, { error: 'Documento não encontrado.' })
+  }
+
+  const bytes = $security.base64Decode(assinatura.split(',')[1])
+  const arquivo = filesystem.NewFileFromBytes(bytes, 'assinatura-cliente.png')
+
+  // data legível sem depender de toLocaleString (ausente na JSVM);
+  // o servidor grava em UTC — a tela de CRM ajusta o fuso ao exibir
+  const agora = new Date()
+  const quando =
+    ('0' + agora.getDate()).slice(-2) +
+    '/' +
+    ('0' + (agora.getMonth() + 1)).slice(-2) +
+    '/' +
+    agora.getFullYear() +
+    ' ' +
+    ('0' + agora.getHours()).slice(-2) +
+    ':' +
+    ('0' + agora.getMinutes()).slice(-2)
+  const nota = `Cliente confirmou o recebimento pelo link em ${quando} — assinado por ${nome.toUpperCase()}${documento ? ` (doc. ${documento})` : ''}.`
+
+  // grava POR CIMA apenas o campo da assinatura — nada no documento é apagado
+  if (tipo === 'os') {
+    doc.set('signature_image', arquivo)
+    doc.set('client_signer_name', nome)
+    if (documento) doc.set('client_signer_doc', documento)
+    $app.save(doc)
+
+    const hist = new Record($app.findCollectionByNameOrId('order_history'))
+    hist.set('work_order', doc.id)
+    hist.set('status_from', doc.getString('status'))
+    hist.set('status_to', 'ASSINADO')
+    hist.set('user_name', 'LINK DO CLIENTE')
+    hist.set('user_id', '')
+    hist.set('notes', nota)
+    $app.save(hist)
+  } else {
+    doc.set('signature_client', arquivo)
+    doc.set('delivered_by_name', nome)
+    $app.save(doc)
+
+    const hist = new Record($app.findCollectionByNameOrId('quote_history'))
+    hist.set('quote', doc.id)
+    hist.set('status_from', doc.getString('status'))
+    hist.set('status_to', 'ASSINADO')
+    hist.set('user_name', 'LINK DO CLIENTE')
+    hist.set('user_id', '')
+    hist.set('notes', nota)
+    $app.save(hist)
+  }
+
+  return e.json(200, { ok: true })
+})

@@ -68,6 +68,7 @@ import {
   X,
   ArrowLeft,
   ArrowRightLeft,
+  Link2,
 } from 'lucide-react'
 import { migrarPedidoParaOS, importarFotosOSParaPedido } from '@/services/migracao'
 import { baixarFotosZip, compartilharFotosZip, type FotoParaZip } from '@/lib/fotosZip'

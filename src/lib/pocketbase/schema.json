@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-22T22:13:37.911Z",
+  "generatedAt": "2026-11-22T22:28:11.950Z",
   "collections": [
     {
       "name": "users",
@@ -613,6 +613,12 @@
           "required": false,
           "system": false,
           "selectValues": ["NAO_EMITIDA", "EMITIDA", "CANCELADA"]
+        },
+        {
+          "name": "client_link_token",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -1247,6 +1253,12 @@
         },
         {
           "name": "work_order",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "client_link_token",
           "type": "text",
           "required": false,
           "system": false
