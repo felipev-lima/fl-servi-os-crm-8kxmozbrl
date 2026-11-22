@@ -71,7 +71,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
       ctx.lineCap = 'round'
       ctx.lineJoin = 'round'
       ctx.lineWidth = 2.5
-      ctx.strokeStyle = '#0F6A3A'
+      ctx.strokeStyle = '#0B3D91'
 
       // Fundo branco
       ctx.fillStyle = '#FFFFFF'
@@ -222,7 +222,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
 
   return (
     <div className="flex flex-col gap-2 w-full">
-      <div className="relative border-2 border-dashed border-[#2E8B57]/40 rounded-lg overflow-hidden bg-white shadow-inner">
+      <div className="relative border-2 border-dashed border-[#1E6FD9]/40 rounded-lg overflow-hidden bg-white shadow-inner">
         <canvas
           ref={canvasRef}
           className="w-full h-36 touch-none cursor-crosshair"
@@ -236,7 +236,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
         />
         {!hasDrawn && !readOnly && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-muted-foreground/60 text-sm gap-2">
-            <PenTool className="w-4 h-4 text-[#0F6A3A]" />
+            <PenTool className="w-4 h-4 text-[#0B3D91]" />
             Assine aqui com o dedo ou caneta
           </div>
         )}
@@ -261,7 +261,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
               variant="outline"
               size="sm"
               onClick={exportSignature}
-              className="h-7 text-xs gap-1 text-[#0F6A3A] border-[#0F6A3A]/30 hover:bg-[#0F6A3A]/10"
+              className="h-7 text-xs gap-1 text-[#0B3D91] border-[#0B3D91]/30 hover:bg-[#0B3D91]/10"
             >
               <Check className="w-3.5 h-3.5" />
               Confirmar

@@ -197,13 +197,13 @@ export default function TechniciansPage() {
             <Button
               variant="outline"
               onClick={() => setOpenImport(true)}
-              className="text-[#0F6A3A] border-[#0F6A3A]/40 hover:bg-[#0F6A3A]/10 font-semibold text-xs gap-1.5"
+              className="text-[#0B3D91] border-[#0B3D91]/40 hover:bg-[#0B3D91]/10 font-semibold text-xs gap-1.5"
             >
               <FileSpreadsheet className="w-4 h-4" /> Importar planilha
             </Button>
             <Button
               onClick={handleOpenCreate}
-              className="bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white font-semibold text-xs gap-1.5 shadow"
+              className="bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white font-semibold text-xs gap-1.5 shadow"
             >
               <Plus className="w-4 h-4" /> Novo Técnico
             </Button>
@@ -227,11 +227,11 @@ export default function TechniciansPage() {
       {modo === 'cartoes' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((tech) => (
-            <Card key={tech.id} className="hover:border-[#0F6A3A]/40 transition shadow-sm">
+            <Card key={tech.id} className="hover:border-[#0B3D91]/40 transition shadow-sm">
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-full bg-[#0F6A3A]/10 text-[#0F6A3A] flex items-center justify-center font-bold text-sm shrink-0">
+                    <div className="w-9 h-9 rounded-full bg-[#0B3D91]/10 text-[#0B3D91] flex items-center justify-center font-bold text-sm shrink-0">
                       {tech.name.slice(0, 2).toUpperCase()}
                     </div>
                     <div>
@@ -262,7 +262,7 @@ export default function TechniciansPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleOpenEdit(tech)}
-                          className="h-8 px-2 text-[11px] font-semibold text-[#0F6A3A] border-[#0F6A3A]/40 hover:bg-[#0F6A3A]/10 gap-1"
+                          className="h-8 px-2 text-[11px] font-semibold text-[#0B3D91] border-[#0B3D91]/40 hover:bg-[#0B3D91]/10 gap-1"
                           title="Editar os dados deste técnico"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
@@ -285,13 +285,13 @@ export default function TechniciansPage() {
                 <div className="space-y-1 text-xs text-muted-foreground pt-1 border-t">
                   {tech.phone && (
                     <div className="flex items-center gap-1.5">
-                      <Phone className="w-3 h-3 text-[#0F6A3A]" />
+                      <Phone className="w-3 h-3 text-[#0B3D91]" />
                       <span>{tech.phone}</span>
                     </div>
                   )}
                   {tech.email && (
                     <div className="flex items-center gap-1.5">
-                      <Mail className="w-3 h-3 text-[#0F6A3A]" />
+                      <Mail className="w-3 h-3 text-[#0B3D91]" />
                       <span className="truncate">{tech.email}</span>
                     </div>
                   )}
@@ -300,7 +300,7 @@ export default function TechniciansPage() {
                 {tech.specialties && (
                   <div className="pt-1">
                     <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-700 mb-0.5">
-                      <Award className="w-3 h-3 text-[#0F6A3A]" /> Especialidades:
+                      <Award className="w-3 h-3 text-[#0B3D91]" /> Especialidades:
                     </div>
                     <p className="text-[11px] text-muted-foreground line-clamp-2">
                       {tech.specialties}
@@ -447,8 +447,8 @@ export default function TechniciansPage() {
             </div>
 
             {/* Rubrica: desenha uma vez, sai impressa no PDF de toda OS dele */}
-            <div className="space-y-1.5 rounded-lg border border-[#0F6A3A]/25 bg-[#0F6A3A]/5 p-2.5">
-              <Label className="text-xs font-semibold text-[#0F6A3A]">Rubrica do técnico</Label>
+            <div className="space-y-1.5 rounded-lg border border-[#0B3D91]/25 bg-[#0B3D91]/5 p-2.5">
+              <Label className="text-xs font-semibold text-[#0B3D91]">Rubrica do técnico</Label>
               <p className="text-[10px] text-muted-foreground leading-snug">
                 Desenhe com o dedo. Ela entra no PDF de cada OS, acima do nome.
               </p>
@@ -473,7 +473,7 @@ export default function TechniciansPage() {
               <Button
                 type="submit"
                 disabled={submitting}
-                className="bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white font-semibold text-xs"
+                className="bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white font-semibold text-xs"
               >
                 {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Salvar Técnico'}
               </Button>

@@ -87,7 +87,7 @@ export default function Dashboard() {
             <span className="bg-white/20 text-white text-[11px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">
               {user?.role || 'Usuário'}
             </span>
-            <span className="text-white/80 text-xs">FL SERVIÇOS • CRM • Macaé/RJ</span>
+            <span className="text-white/80 text-xs">LM SERVIÇOS • CRM • Macaé/RJ</span>
           </div>
           <h1 className="text-2xl font-black tracking-tight">Olá, {user?.name || 'Técnico'}!</h1>
           <p className="text-white/90 text-xs mt-0.5 max-w-xl">
@@ -334,19 +334,19 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Card de Identidade FL SERVIÇOS */}
+          {/* Card de Identidade LM SERVIÇOS */}
           <Card className="bg-gradient-to-br from-slate-900 to-slate-800 text-white border-none shadow-md">
             <CardContent className="p-4 space-y-2 text-xs">
-              <div className="flex items-center gap-2 font-bold text-sm text-emerald-400">
+              <div className="flex items-center gap-2 font-bold text-sm text-sky-400">
                 <FileText className="w-4 h-4" /> Relatório Técnico PDF V3
               </div>
               <p className="text-slate-300 leading-relaxed">
-                CRM da FL SERVIÇOS: ordens de serviço, vendas de produto, orçamentos e faturamento
+                CRM da LM SERVIÇOS: ordens de serviço, vendas de produto, orçamentos e faturamento
                 com imposto e lucro líquido.
               </p>
               <div className="pt-2 text-[11px] text-slate-400 border-t border-slate-700 flex justify-between">
-                <span>FL SERVIÇOS • Macaé/RJ</span>
-                <span className="text-emerald-400 font-semibold">100% Operacional</span>
+                <span>LM SERVIÇOS • Macaé/RJ</span>
+                <span className="text-sky-400 font-semibold">100% Operacional</span>
               </div>
             </CardContent>
           </Card>

@@ -156,7 +156,7 @@ export function SearchCombobox({
                 <Check
                   className={cn(
                     'mt-0.5 h-3.5 w-3.5 shrink-0',
-                    ativo ? 'opacity-100 text-[#0F6A3A]' : 'opacity-0',
+                    ativo ? 'opacity-100 text-[#0B3D91]' : 'opacity-0',
                   )}
                 />
                 <span className="min-w-0 flex-1">

@@ -58,9 +58,9 @@ export default function Login() {
   if (isAuthenticated && user) {
     return (
       <div className="flex items-center justify-center min-h-[70svh] py-6 px-4">
-        <Card className="w-full max-w-md border-emerald-200">
+        <Card className="w-full max-w-md border-[#0B3D91]/30">
           <CardHeader className="text-center">
-            <div className="mx-auto w-12 h-12 bg-[#0F6A3A]/10 text-[#0F6A3A] rounded-full flex items-center justify-center mb-2">
+            <div className="mx-auto w-12 h-12 bg-[#0B3D91]/10 text-[#0B3D91] rounded-full flex items-center justify-center mb-2">
               <CheckCircle className="w-6 h-6" />
             </div>
             <CardTitle>Você já está conectado</CardTitle>
@@ -70,7 +70,7 @@ export default function Login() {
           </CardHeader>
           <CardFooter className="flex justify-center gap-3">
             <Button
-              className="bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white"
+              className="bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white"
               onClick={() => (window.location.href = '/')}
             >
               Ir para o Painel
@@ -89,12 +89,12 @@ export default function Login() {
       <div className="w-full max-w-md mb-4 text-center">
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white border border-slate-200 shadow-lg mb-3 overflow-hidden p-1.5">
           {logoLogin ? (
-            <img src={logoLogin} alt="FL SERVIÇOS" className="w-full h-full object-contain" />
+            <img src={logoLogin} alt="LM SERVIÇOS" className="w-full h-full object-contain" />
           ) : (
-            <span className="text-[#0B3D91] font-black text-lg">FL</span>
+            <span className="text-[#0B3D91] font-black text-lg">LM</span>
           )}
         </div>
-        <h1 className="text-2xl font-black text-[#0B3D91] tracking-tight uppercase">FL SERVIÇOS</h1>
+        <h1 className="text-2xl font-black text-[#0B3D91] tracking-tight uppercase">LM SERVIÇOS</h1>
         <p className="text-xs text-muted-foreground font-medium">
           CRM • OS, vendas e faturamento — Macaé/RJ
         </p>
@@ -117,7 +117,7 @@ export default function Login() {
               <Input
                 id="email"
                 type="email"
-                placeholder="seu.email@flservicos.com"
+                placeholder="seu.email@lmservicos.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -179,7 +179,7 @@ export default function Login() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white font-semibold h-10"
+              className="w-full bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white font-semibold h-10"
             >
               {loading ? (
                 <>

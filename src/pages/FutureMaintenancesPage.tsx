@@ -165,7 +165,7 @@ export default function FutureMaintenancesPage() {
         {isTechnician && (
           <Button
             onClick={handleOpenCreate}
-            className="bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white font-semibold text-xs gap-1.5 shadow"
+            className="bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white font-semibold text-xs gap-1.5 shadow"
           >
             <Plus className="w-4 h-4" /> Agendar Preventiva
           </Button>
@@ -186,11 +186,11 @@ export default function FutureMaintenancesPage() {
       {/* Lista de Manutenções */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filtered.map((m) => (
-          <Card key={m.id} className="hover:border-[#0F6A3A]/40 transition shadow-sm">
+          <Card key={m.id} className="hover:border-[#0B3D91]/40 transition shadow-sm">
             <CardContent className="p-4 space-y-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="space-y-1">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-[#0F6A3A]">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-[#0B3D91]">
                     <Building2 className="w-3.5 h-3.5" />
                     <span className="line-clamp-1">{m.expand?.client?.name || 'Cliente'}</span>
                   </div>
@@ -213,7 +213,7 @@ export default function FutureMaintenancesPage() {
 
               <div className="space-y-1 text-xs text-muted-foreground pt-1 border-t">
                 <div className="flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-[#0F6A3A]" />
+                  <Calendar className="w-3.5 h-3.5 text-[#0B3D91]" />
                   <span className="font-semibold text-slate-800">
                     Data:{' '}
                     {m.scheduled_date
@@ -393,7 +393,7 @@ export default function FutureMaintenancesPage() {
               <Button
                 type="submit"
                 disabled={submitting}
-                className="bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white font-semibold text-xs"
+                className="bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white font-semibold text-xs"
               >
                 {submitting ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />

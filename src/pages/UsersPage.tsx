@@ -61,7 +61,7 @@ const ROLE_LABELS: Record<UserRole, string> = {
 }
 
 const ROLE_BADGE_CLASSES: Record<UserRole, string> = {
-  admin: 'border-[#0F6A3A]/40 bg-[#0F6A3A]/10 text-[#0F6A3A]',
+  admin: 'border-[#0B3D91]/40 bg-[#0B3D91]/10 text-[#0B3D91]',
   tecnico: 'border-blue-200 bg-blue-50 text-blue-700',
   consulta: 'border-slate-300 bg-slate-100 text-slate-600',
   superadmin: 'border-purple-200 bg-purple-50 text-purple-700',
@@ -305,7 +305,7 @@ export default function UsersPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <h1 className="text-2xl font-black text-foreground tracking-tight flex items-center gap-2">
-            <Shield className="w-5 h-5 text-[#0F6A3A]" /> Usuários &amp; Permissões
+            <Shield className="w-5 h-5 text-[#0B3D91]" /> Usuários &amp; Permissões
           </h1>
           <p className="text-xs text-muted-foreground">
             Controle de acesso do sistema: perfis, situações e senhas dos usuários.
@@ -314,7 +314,7 @@ export default function UsersPage() {
 
         <Button
           onClick={() => setCreateOpen(true)}
-          className="bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white font-semibold text-xs gap-1.5 shadow"
+          className="bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white font-semibold text-xs gap-1.5 shadow"
         >
           <Plus className="w-4 h-4" /> Novo Usuário
         </Button>
@@ -363,7 +363,7 @@ export default function UsersPage() {
                 <TableRow key={u.id} className={u.active ? '' : 'opacity-60'}>
                   <TableCell className="font-semibold text-xs py-3">
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-[#0F6A3A]/10 text-[#0F6A3A] flex items-center justify-center font-bold text-[10px] shrink-0">
+                      <div className="w-7 h-7 rounded-full bg-[#0B3D91]/10 text-[#0B3D91] flex items-center justify-center font-bold text-[10px] shrink-0">
                         {u.name.slice(0, 2).toUpperCase()}
                       </div>
                       <span className="line-clamp-1">{u.name}</span>
@@ -422,10 +422,10 @@ export default function UsersPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="text-xs">
                         <DropdownMenuItem onClick={() => openEditDialog(u)}>
-                          <Pencil className="w-3.5 h-3.5 text-[#0F6A3A]" /> Editar nome e e-mail
+                          <Pencil className="w-3.5 h-3.5 text-[#0B3D91]" /> Editar nome e e-mail
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => openRoleDialog(u)}>
-                          <ShieldCheck className="w-3.5 h-3.5 text-[#0F6A3A]" /> Alterar perfil
+                          <ShieldCheck className="w-3.5 h-3.5 text-[#0B3D91]" /> Alterar perfil
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => {
@@ -433,7 +433,7 @@ export default function UsersPage() {
                             setNewPassword('')
                           }}
                         >
-                          <KeyRound className="w-3.5 h-3.5 text-[#0F6A3A]" /> Redefinir senha
+                          <KeyRound className="w-3.5 h-3.5 text-[#0B3D91]" /> Redefinir senha
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -556,7 +556,7 @@ export default function UsersPage() {
               <Button
                 type="submit"
                 disabled={submitting}
-                className="bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white font-semibold text-xs"
+                className="bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white font-semibold text-xs"
               >
                 {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Criar Usuário'}
               </Button>
@@ -602,7 +602,7 @@ export default function UsersPage() {
             <Button
               onClick={handleRoleChange}
               disabled={savingRole}
-              className="bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white font-semibold text-xs"
+              className="bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white font-semibold text-xs"
             >
               {savingRole ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Salvar Perfil'}
             </Button>
@@ -644,7 +644,7 @@ export default function UsersPage() {
             <Button
               onClick={handleResetPassword}
               disabled={resetting}
-              className="bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white font-semibold text-xs"
+              className="bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white font-semibold text-xs"
             >
               {resetting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Redefinir Senha'}
             </Button>
@@ -700,7 +700,7 @@ export default function UsersPage() {
             <Button
               onClick={handleSaveEdit}
               disabled={savingEdit}
-              className="bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white font-semibold text-xs"
+              className="bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white font-semibold text-xs"
             >
               {savingEdit ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Salvar'}
             </Button>

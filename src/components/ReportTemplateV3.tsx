@@ -33,7 +33,7 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
   onClose,
 }) => {
   // Valores de material (custo) so aparecem para o administrador. O PDF vai para
-  // o cliente, que nao deve ver quanto a FL pagou na peca.
+  // o cliente, que nao deve ver quanto a empresa pagou na peca.
   const { isAdmin } = useAuth()
 
   // A assinatura do administrador so entra no documento quando quem emite e o
@@ -228,7 +228,7 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
     try {
       await navigator.share({
         title: `OS ${order.order_number} — ${order.expand?.client?.name || 'Cliente'}`,
-        text: `Relatório da Ordem de Serviço nº ${order.order_number} — F. L. SERVIÇOS`,
+        text: `Relatório da Ordem de Serviço nº ${order.order_number} — LM SERVIÇOS`,
         url: window.location.href,
       })
     } catch (_) {
@@ -269,7 +269,7 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
       {/* Barra de Ações Superior (Oculta na impressão) */}
       <div className="w-full max-w-[210mm] bg-white rounded-lg shadow-sm border p-3 mb-4 flex flex-wrap items-center justify-between gap-2 print:hidden">
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-[#0F6A3A]" />
+          <div className="w-3 h-3 rounded-full bg-[#0B3D91]" />
           <span className="font-semibold text-sm text-foreground">
             Relatório Técnico PDF — Template_OS_V3 (A4)
           </span>
@@ -283,7 +283,7 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
           <Button
             size="sm"
             onClick={handlePrint}
-            className="bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white gap-1.5 shadow"
+            className="bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white gap-1.5 shadow"
           >
             <Printer className="w-4 h-4" />
             Imprimir
@@ -293,7 +293,7 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
             variant="outline"
             onClick={handleSalvarPdf}
             disabled={preparandoPdf}
-            className="gap-1.5 text-[#0F6A3A] border-[#0F6A3A]/40 hover:bg-[#0F6A3A]/10"
+            className="gap-1.5 text-[#0B3D91] border-[#0B3D91]/40 hover:bg-[#0B3D91]/10"
           >
             {preparandoPdf ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -307,7 +307,7 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
               size="sm"
               variant="outline"
               onClick={handleCompartilhar}
-              className="gap-1.5 text-[#0F6A3A] border-[#0F6A3A]/40 hover:bg-[#0F6A3A]/10"
+              className="gap-1.5 text-[#0B3D91] border-[#0B3D91]/40 hover:bg-[#0B3D91]/10"
             >
               <Share2 className="w-4 h-4" />
               Compartilhar
@@ -328,15 +328,15 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
         className="w-full max-w-[210mm] bg-white shadow-xl rounded-none border border-slate-300 print:border-none print:shadow-none print:p-0 print:max-w-none print:text-[10.5px] print:leading-[1.3] p-4 sm:p-6 lg:p-7 font-sans text-slate-800 text-[12px] leading-snug"
       >
         {/* CABEÇALHO COM IDENTIDADE VISUAL */}
-        <div className="border-b-4 border-[#0F6A3A] pb-1.5 mb-1.5">
+        <div className="border-b-4 border-[#0B3D91] pb-1.5 mb-1.5">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-4">
             <div className="flex items-center gap-2.5">
-              <div className="w-11 h-11 bg-gradient-to-br from-[#0F6A3A] to-[#2E8B57] text-white flex items-center justify-center font-black text-base rounded shadow shrink-0">
-                FL
+              <div className="w-11 h-11 bg-gradient-to-br from-[#0B3D91] to-[#1E6FD9] text-white flex items-center justify-center font-black text-base rounded shadow shrink-0">
+                LM
               </div>
               <div>
-                <h1 className="text-base sm:text-xl font-black tracking-tight text-[#0F6A3A] uppercase leading-none">
-                  F. L. SERVIÇOS
+                <h1 className="text-base sm:text-xl font-black tracking-tight text-[#0B3D91] uppercase leading-none">
+                  LM SERVIÇOS
                 </h1>
                 <p className="text-[10px] sm:text-[11px] text-slate-600 leading-tight mt-1">
                   CFTV • Alarme • Rede • Automação • Manutenção
@@ -345,7 +345,7 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
             </div>
 
             <div className="text-left sm:text-right">
-              <div className="inline-block bg-[#0F6A3A]/10 border border-[#0F6A3A]/30 px-2.5 py-1 rounded text-[#0F6A3A] font-bold text-[11px] sm:text-sm">
+              <div className="inline-block bg-[#0B3D91]/10 border border-[#0B3D91]/30 px-2.5 py-1 rounded text-[#0B3D91] font-bold text-[11px] sm:text-sm">
                 ORDEM DE SERVIÇO Nº {order.order_number}
               </div>
               <div className="text-[10px] text-slate-500 mt-1">
@@ -377,7 +377,7 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
         */}
         <div className="grid grid-cols-2 gap-1.5 mb-1.5">
           <div className="border border-slate-200 rounded p-2 bg-slate-50/50">
-            <h2 className="text-[11px] font-bold text-[#0F6A3A] uppercase border-b border-[#0F6A3A]/20 pb-1 mb-1.5 flex items-center gap-1.5">
+            <h2 className="text-[11px] font-bold text-[#0B3D91] uppercase border-b border-[#0B3D91]/20 pb-1 mb-1.5 flex items-center gap-1.5">
               <User className="w-3.5 h-3.5" /> Dados do Cliente
             </h2>
             <div className="space-y-0.5 text-[11px]">
@@ -405,13 +405,13 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
           </div>
 
           <div className="border border-slate-200 rounded p-2 bg-slate-50/50">
-            <h2 className="text-[11px] font-bold text-[#0F6A3A] uppercase border-b border-[#0F6A3A]/20 pb-1 mb-1.5 flex items-center gap-1.5">
+            <h2 className="text-[11px] font-bold text-[#0B3D91] uppercase border-b border-[#0B3D91]/20 pb-1 mb-1.5 flex items-center gap-1.5">
               <Wrench className="w-3.5 h-3.5" /> Informações Técnicas
             </h2>
             <div className="space-y-0.5 text-[11px]">
               <div>
                 <strong className="text-slate-700">Tipo de Serviço:</strong>{' '}
-                <span className="font-semibold text-[#0F6A3A]">{order.service_type}</span>
+                <span className="font-semibold text-[#0B3D91]">{order.service_type}</span>
               </div>
               <div>
                 <strong className="text-slate-700">Técnico:</strong>{' '}
@@ -433,7 +433,7 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
 
         {/* DESCRIÇÃO */}
         <div className="mb-2.5 border border-slate-200 rounded p-2">
-          <h2 className="text-[11px] font-bold text-[#0F6A3A] uppercase border-b border-[#0F6A3A]/20 pb-1 mb-1.5">
+          <h2 className="text-[11px] font-bold text-[#0B3D91] uppercase border-b border-[#0B3D91]/20 pb-1 mb-1.5">
             Descrição do Serviço
           </h2>
           <p className="text-slate-700 text-[11px] whitespace-pre-wrap leading-snug">
@@ -442,20 +442,19 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
         </div>
 
         {/* LAUDO */}
-        <div className="mb-2.5 border border-slate-200 rounded p-2 bg-[#0F6A3A]/[0.02]">
-          <h2 className="text-[11px] font-bold text-[#0F6A3A] uppercase border-b border-[#0F6A3A]/20 pb-1 mb-1.5">
+        <div className="mb-2.5 border border-slate-200 rounded p-2 bg-[#0B3D91]/[0.02]">
+          <h2 className="text-[11px] font-bold text-[#0B3D91] uppercase border-b border-[#0B3D91]/20 pb-1 mb-1.5">
             Laudo Técnico / Execução
           </h2>
           <p className="text-slate-700 text-[11px] whitespace-pre-wrap leading-snug">
-            {order.technical_report ||
-              'Serviço executado conforme normas técnicas da F. L. SERVIÇOS.'}
+            {order.technical_report || 'Serviço executado conforme normas técnicas da LM SERVIÇOS.'}
           </p>
         </div>
 
         {/* MATERIAIS */}
         {materials.length > 0 && (
           <div className="mb-2.5 border border-slate-200 rounded p-2">
-            <h2 className="text-[11px] font-bold text-[#0F6A3A] uppercase border-b border-[#0F6A3A]/20 pb-1 mb-1.5 flex items-center justify-between">
+            <h2 className="text-[11px] font-bold text-[#0B3D91] uppercase border-b border-[#0B3D91]/20 pb-1 mb-1.5 flex items-center justify-between">
               <span>Peças e Materiais Aplicados</span>
               <span className="text-[10px] font-normal text-slate-500">
                 {materials.length} {materials.length === 1 ? 'item' : 'itens'}
@@ -518,7 +517,7 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
                         </td>
                       </tr>
                     )}
-                    <tr className="bg-[#0F6A3A] text-white font-bold">
+                    <tr className="bg-[#0B3D91] text-white font-bold">
                       <td colSpan={4} className="py-1 px-1.5 text-right">
                         TOTAL GERAL
                       </td>
@@ -538,7 +537,7 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
             viviam DENTRO do bloco de materiais. Bloco separado para esse caso. */}
         {isAdmin && materials.length === 0 && valorServico > 0 && (
           <div className="mb-2.5 border border-slate-200 rounded p-2 break-inside-avoid">
-            <h2 className="text-[11px] font-bold text-[#0F6A3A] uppercase border-b border-[#0F6A3A]/20 pb-1 mb-1.5">
+            <h2 className="text-[11px] font-bold text-[#0B3D91] uppercase border-b border-[#0B3D91]/20 pb-1 mb-1.5">
               Serviço / Mão de Obra
             </h2>
             <table className="w-full text-left text-[10px] border-collapse">
@@ -551,7 +550,7 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
                     R$ {valorServico.toFixed(2)}
                   </td>
                 </tr>
-                <tr className="bg-[#0F6A3A] text-white font-bold">
+                <tr className="bg-[#0B3D91] text-white font-bold">
                   <td className="py-1 px-1.5 text-right">TOTAL GERAL</td>
                   <td className="py-1 px-1.5 text-right">R$ {valorServico.toFixed(2)}</td>
                 </tr>
@@ -563,7 +562,7 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
         {/* FOTOS */}
         {photos.length > 0 && (
           <div className="mb-2.5 border border-slate-200 rounded p-2 break-inside-avoid">
-            <h2 className="text-[11px] font-bold text-[#0F6A3A] uppercase border-b border-[#0F6A3A]/20 pb-1 mb-1.5">
+            <h2 className="text-[11px] font-bold text-[#0B3D91] uppercase border-b border-[#0B3D91]/20 pb-1 mb-1.5">
               Evidências Fotográficas
             </h2>
             {/* Fotos: caixa 4:3 com object-contain — mostra a foto INTEIRA, sem
@@ -649,7 +648,7 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
                 </p>
               </div>
               <p className="text-[8px] text-slate-500 leading-tight">Técnico Responsável</p>
-              <p className="text-[8px] text-slate-600 font-semibold mt-0.5">F. L. SERVIÇOS</p>
+              <p className="text-[8px] text-slate-600 font-semibold mt-0.5">LM SERVIÇOS</p>
             </div>
 
             {/* Administrador (só quando o admin emite) */}
@@ -671,7 +670,7 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
                   </p>
                 </div>
                 <p className="text-[8px] text-slate-500 leading-tight">Administrador</p>
-                <p className="text-[8px] text-slate-600 font-semibold mt-0.5">F. L. SERVIÇOS</p>
+                <p className="text-[8px] text-slate-600 font-semibold mt-0.5">LM SERVIÇOS</p>
               </div>
             )}
 
@@ -715,7 +714,7 @@ export const ReportTemplateV3: React.FC<ReportTemplateV3Props> = ({
           <div className="flex justify-between items-start gap-3">
             <span className="leading-tight">
               <strong className="text-slate-600">
-                {empresa.razao_social || 'FL THOMAZ SERVIÇOS E DISTRIBUIÇÃO'}
+                {empresa.razao_social || 'LM SERVIÇOS E DISTRIBUIÇÃO'}
               </strong>
               {' • CNPJ '}
               {empresa.cnpj || '44.288.125/0001-34'}

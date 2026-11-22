@@ -99,7 +99,7 @@ export function ProdutoRapidoDialog({
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle className="text-base font-bold flex items-center gap-2">
-            <PackagePlus className="w-4 h-4 text-[#0F6A3A]" />
+            <PackagePlus className="w-4 h-4 text-[#0B3D91]" />
             Cadastrar produto do campo
           </DialogTitle>
         </DialogHeader>
@@ -197,7 +197,7 @@ export function ProdutoRapidoDialog({
             <Button
               type="submit"
               disabled={salvando}
-              className="bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white font-semibold text-xs"
+              className="bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white font-semibold text-xs"
             >
               {salvando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Cadastrar'}
             </Button>

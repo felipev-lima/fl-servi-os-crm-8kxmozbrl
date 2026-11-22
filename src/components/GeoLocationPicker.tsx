@@ -82,7 +82,7 @@ export const GeoLocationPicker: React.FC<GeoLocationPickerProps> = ({
     <div className="flex flex-col gap-2 p-3 bg-muted/40 rounded-lg border border-border/80">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-          <MapPin className="w-4 h-4 text-[#0F6A3A]" />
+          <MapPin className="w-4 h-4 text-[#0B3D91]" />
           <span>Localização do Atendimento (GPS)</span>
         </div>
         {!readOnly && (
@@ -92,7 +92,7 @@ export const GeoLocationPicker: React.FC<GeoLocationPickerProps> = ({
             size="sm"
             onClick={captureLocation}
             disabled={loading}
-            className="h-8 text-xs gap-1.5 border-[#0F6A3A]/40 text-[#0F6A3A] hover:bg-[#0F6A3A]/10"
+            className="h-8 text-xs gap-1.5 border-[#0B3D91]/40 text-[#0B3D91] hover:bg-[#0B3D91]/10"
           >
             {loading ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -114,7 +114,7 @@ export const GeoLocationPicker: React.FC<GeoLocationPickerProps> = ({
               href={`https://www.google.com/maps?q=${latitude},${longitude}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[#0F6A3A] hover:underline flex items-center gap-1 font-sans text-xs"
+              className="text-[#0B3D91] hover:underline flex items-center gap-1 font-sans text-xs"
             >
               Abrir no Maps <ExternalLink className="w-3 h-3" />
             </a>

@@ -34,10 +34,8 @@ export interface Empresa {
  * planilha — que é síncrono e precisa do nome da empresa no ato.
  */
 export const EMPRESA = {
-  razao_social: 'FL THOMAZ SERVIÇOS E DISTRIBUIÇÃO',
-  // era 'LM SERVIÇOS' — resquício da primeira versão do projeto. O app é da
-  // FL e todos os documentos (PDF, planilha, ficha) levam esta marca.
-  nome_fantasia: 'FL SERVIÇOS',
+  razao_social: 'LM SERVIÇOS E DISTRIBUIÇÃO',
+  nome_fantasia: 'LM SERVIÇOS',
   cnpj: '44.288.125/0001-34',
   ie: '12.290.12-8',
   endereco: 'VILA UNIÃO, 92 - LAGOMAR - MACAÉ/RJ - CEP 27.966-507',

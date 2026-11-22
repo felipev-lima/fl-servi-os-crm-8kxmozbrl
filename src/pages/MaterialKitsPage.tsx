@@ -231,7 +231,7 @@ export default function MaterialKitsPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <h1 className="text-2xl font-black text-foreground tracking-tight flex items-center gap-2">
-            <Layers className="w-6 h-6 text-[#0F6A3A]" />
+            <Layers className="w-6 h-6 text-[#0B3D91]" />
             Listas de Material
           </h1>
           <p className="text-xs text-muted-foreground">
@@ -242,7 +242,7 @@ export default function MaterialKitsPage() {
 
         <Button
           onClick={abrirNova}
-          className="bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white font-semibold text-xs gap-1.5 shadow"
+          className="bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white font-semibold text-xs gap-1.5 shadow"
         >
           <Plus className="w-4 h-4" /> Nova Lista
         </Button>
@@ -252,7 +252,7 @@ export default function MaterialKitsPage() {
 
       {loading && (
         <div className="p-12 text-center">
-          <Loader2 className="w-6 h-6 animate-spin mx-auto text-[#0F6A3A]" />
+          <Loader2 className="w-6 h-6 animate-spin mx-auto text-[#0B3D91]" />
         </div>
       )}
 
@@ -316,7 +316,7 @@ export default function MaterialKitsPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => abrirItens(k)}
-                  className="h-8 shrink-0 gap-1 text-[10px] font-semibold text-[#0F6A3A] border-[#0F6A3A]/40 hover:bg-[#0F6A3A]/10"
+                  className="h-8 shrink-0 gap-1 text-[10px] font-semibold text-[#0B3D91] border-[#0B3D91]/40 hover:bg-[#0B3D91]/10"
                   title="Gerenciar produtos"
                 >
                   <Package className="w-3.5 h-3.5" />
@@ -332,11 +332,11 @@ export default function MaterialKitsPage() {
         className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ${modo !== 'cartoes' ? 'hidden' : ''}`}
       >
         {kits.map((k) => (
-          <Card key={k.id} className="hover:border-[#0F6A3A]/40 transition shadow-sm">
+          <Card key={k.id} className="hover:border-[#0B3D91]/40 transition shadow-sm">
             <CardContent className="p-4 space-y-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-start gap-2.5 min-w-0">
-                  <div className="w-9 h-9 rounded-lg bg-[#0F6A3A]/10 text-[#0F6A3A] flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-lg bg-[#0B3D91]/10 text-[#0B3D91] flex items-center justify-center shrink-0">
                     <Layers className="w-4 h-4" />
                   </div>
                   <div className="min-w-0">
@@ -387,7 +387,7 @@ export default function MaterialKitsPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => abrirItens(k)}
-                className="w-full h-8 text-xs font-semibold text-[#0F6A3A] border-[#0F6A3A]/40 hover:bg-[#0F6A3A]/10 gap-1.5"
+                className="w-full h-8 text-xs font-semibold text-[#0B3D91] border-[#0B3D91]/40 hover:bg-[#0B3D91]/10 gap-1.5"
               >
                 <Package className="w-3.5 h-3.5" /> Gerenciar produtos
               </Button>
@@ -450,7 +450,7 @@ export default function MaterialKitsPage() {
                 id="kit-ativo"
                 checked={form.active !== false}
                 onChange={(e) => setForm((p) => ({ ...p, active: e.target.checked }))}
-                className="h-4 w-4 accent-[#0F6A3A]"
+                className="h-4 w-4 accent-[#0B3D91]"
               />
               <Label htmlFor="kit-ativo" className="text-xs font-semibold">
                 Lista ativa (aparece na OS)
@@ -469,7 +469,7 @@ export default function MaterialKitsPage() {
               <Button
                 type="submit"
                 disabled={savingKit}
-                className="bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white font-semibold text-xs"
+                className="bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white font-semibold text-xs"
               >
                 {savingKit ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Salvar Lista'}
               </Button>
@@ -483,7 +483,7 @@ export default function MaterialKitsPage() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-base font-bold flex items-center gap-2">
-              <Layers className="w-4 h-4 text-[#0F6A3A]" />
+              <Layers className="w-4 h-4 text-[#0B3D91]" />
               {kitAtual?.name || 'Produtos da lista'}
             </DialogTitle>
           </DialogHeader>
@@ -527,7 +527,7 @@ export default function MaterialKitsPage() {
               <Button
                 type="submit"
                 disabled={salvandoItem}
-                className="h-9 text-xs font-semibold bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white gap-1"
+                className="h-9 text-xs font-semibold bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white gap-1"
               >
                 {salvandoItem ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -540,7 +540,7 @@ export default function MaterialKitsPage() {
 
             {loadingItens && (
               <div className="py-8 text-center">
-                <Loader2 className="w-5 h-5 animate-spin mx-auto text-[#0F6A3A]" />
+                <Loader2 className="w-5 h-5 animate-spin mx-auto text-[#0B3D91]" />
               </div>
             )}
 

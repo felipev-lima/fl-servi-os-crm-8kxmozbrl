@@ -181,17 +181,17 @@ export default function ClientsPage() {
 
   // CARTÕES: o formato original desta tela, intacto.
   const cartaoCliente = (client: Client) => (
-    <Card key={client.id} className="hover:border-[#0F6A3A]/40 transition shadow-sm">
+    <Card key={client.id} className="hover:border-[#0B3D91]/40 transition shadow-sm">
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-[#0F6A3A]/10 text-[#0F6A3A] flex items-center justify-center font-bold text-xs shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-[#0B3D91]/10 text-[#0B3D91] flex items-center justify-center font-bold text-xs shrink-0">
               <Building2 className="w-4 h-4" />
             </div>
             <div>
               <h3 className="font-bold text-sm text-foreground line-clamp-1">{client.name}</h3>
               {client.nickname && (
-                <span className="block text-[10px] text-[#0F6A3A] font-semibold uppercase">
+                <span className="block text-[10px] text-[#0B3D91] font-semibold uppercase">
                   {client.nickname}
                 </span>
               )}
@@ -228,18 +228,18 @@ export default function ClientsPage() {
         <div className="space-y-1 text-xs text-muted-foreground pt-1 border-t">
           {client.phone && (
             <div className="flex items-center gap-1.5">
-              <Phone className="w-3 h-3 text-[#0F6A3A]" />
+              <Phone className="w-3 h-3 text-[#0B3D91]" />
               <span>{client.phone}</span>
             </div>
           )}
           {client.email && (
             <div className="flex items-center gap-1.5">
-              <Mail className="w-3 h-3 text-[#0F6A3A]" />
+              <Mail className="w-3 h-3 text-[#0B3D91]" />
               <span className="truncate">{client.email}</span>
             </div>
           )}
           <div className="flex items-start gap-1.5">
-            <MapPin className="w-3 h-3 text-[#0F6A3A] shrink-0 mt-0.5" />
+            <MapPin className="w-3 h-3 text-[#0B3D91] shrink-0 mt-0.5" />
             <span className="line-clamp-2">
               {client.address
                 ? `${client.address}, ${client.neighborhood || ''} - ${client.city || 'Macaé'}`
@@ -319,7 +319,7 @@ export default function ClientsPage() {
         <div>
           <h1 className="text-2xl font-black text-foreground tracking-tight">Clientes</h1>
           <p className="text-xs text-muted-foreground">
-            Cadastro de empresas e clientes atendidos pela FL SERVIÇOS em Macaé e região.
+            Cadastro de empresas e clientes atendidos pela LM SERVIÇOS em Macaé e região.
           </p>
         </div>
 
@@ -327,7 +327,7 @@ export default function ClientsPage() {
           {isTechnician && (
             <Button
               onClick={handleOpenCreate}
-              className="bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white font-semibold text-xs gap-1.5 shadow"
+              className="bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white font-semibold text-xs gap-1.5 shadow"
             >
               <Plus className="w-4 h-4" /> Novo Cliente
             </Button>
@@ -337,7 +337,7 @@ export default function ClientsPage() {
             <Button
               variant="outline"
               onClick={() => setOpenImport(true)}
-              className="text-[#0F6A3A] border-[#0F6A3A]/40 hover:bg-[#0F6A3A]/10 font-semibold text-xs gap-1.5"
+              className="text-[#0B3D91] border-[#0B3D91]/40 hover:bg-[#0B3D91]/10 font-semibold text-xs gap-1.5"
             >
               <FileSpreadsheet className="w-4 h-4" /> Importar planilha
             </Button>
@@ -516,7 +516,7 @@ export default function ClientsPage() {
               <Button
                 type="submit"
                 disabled={submitting}
-                className="bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white font-semibold text-xs"
+                className="bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white font-semibold text-xs"
               >
                 {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Salvar Cliente'}
               </Button>

@@ -344,20 +344,20 @@ export default function PlanilhaPage() {
                 onClick={() => alternar(o.id)}
                 className={`w-full text-left p-3 rounded-lg border transition flex items-start gap-3 ${
                   marcada
-                    ? 'border-[#0F6A3A] bg-[#0F6A3A]/5'
-                    : 'border-slate-200 bg-card hover:border-[#0F6A3A]/40'
+                    ? 'border-[#0B3D91] bg-[#0B3D91]/5'
+                    : 'border-slate-200 bg-card hover:border-[#0B3D91]/40'
                 }`}
               >
                 <div
                   className={`mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 ${
-                    marcada ? 'bg-[#0F6A3A] border-[#0F6A3A]' : 'border-slate-300'
+                    marcada ? 'bg-[#0B3D91] border-[#0B3D91]' : 'border-slate-300'
                   }`}
                 >
                   {marcada && <CheckCircle2 className="w-3 h-3 text-white" />}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-xs font-bold text-[#0F6A3A]">
+                    <span className="font-mono text-xs font-bold text-[#0B3D91]">
                       #{o.order_number}
                     </span>
                     <span className="text-xs font-semibold truncate">
@@ -420,7 +420,7 @@ export default function PlanilhaPage() {
               : `${selecionadas.size} OS selecionada(s)`}
           </span>
           {selecionadas.size > 0 && (
-            <span className="font-mono text-[#0F6A3A] font-bold">
+            <span className="font-mono text-[#0B3D91] font-bold">
               Mão de obra: R$ {totalSelecionadas.toFixed(2)}
             </span>
           )}
@@ -454,7 +454,7 @@ export default function PlanilhaPage() {
         <Button
           onClick={gerar}
           disabled={gerando || selecionadas.size === 0}
-          className="w-full bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white font-semibold gap-2"
+          className="w-full bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white font-semibold gap-2"
         >
           {gerando ? (
             <Loader2 className="w-4 h-4 animate-spin" />

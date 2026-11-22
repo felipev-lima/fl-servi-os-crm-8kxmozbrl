@@ -352,7 +352,7 @@ export default function WorkOrderList() {
         {isTechnician && (
           <Button
             asChild
-            className="bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white font-semibold shadow"
+            className="bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white font-semibold shadow"
           >
             <Link to="/ordens/nova" className="flex items-center gap-2">
               <PlusCircle className="w-4 h-4" />
@@ -377,7 +377,7 @@ export default function WorkOrderList() {
         {/* Filtro por Técnico (Administrador e Consulta) */}
         {podeFiltrarPorTecnico && technicians.length > 0 && (
           <div className="flex items-center gap-2 shrink-0">
-            <User className="w-4 h-4 text-[#0F6A3A]" />
+            <User className="w-4 h-4 text-[#0B3D91]" />
             <select
               value={techFilter}
               onChange={(e) => setTechFilter(e.target.value)}
@@ -423,7 +423,7 @@ export default function WorkOrderList() {
             size="sm"
             onClick={() => setStatusFilter('ALL')}
             className={`h-7 text-[11px] ${
-              statusFilter === 'ALL' ? 'bg-[#0F6A3A] text-white hover:bg-[#0F6A3A]/90' : ''
+              statusFilter === 'ALL' ? 'bg-[#0B3D91] text-white hover:bg-[#0B3D91]/90' : ''
             }`}
           >
             Todas ({orders.length})
@@ -472,7 +472,7 @@ export default function WorkOrderList() {
                     to={`/ordens/${order.id}`}
                     className={`flex items-center gap-2 px-3 hover:bg-muted/40 ${compacto ? 'min-h-[44px] py-1.5' : 'min-h-[44px] py-2.5'}`}
                   >
-                    <span className="w-16 shrink-0 font-mono text-[11px] font-black text-[#0F6A3A]">
+                    <span className="w-16 shrink-0 font-mono text-[11px] font-black text-[#0B3D91]">
                       #{order.order_number}
                     </span>
                     <div className="min-w-0 flex-1">
@@ -539,7 +539,7 @@ export default function WorkOrderList() {
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                           <div className="space-y-1.5 flex-1">
                             <div className="flex items-center gap-2.5 flex-wrap">
-                              <span className="font-mono text-base font-black text-[#0F6A3A] bg-white/70 px-2 py-0.5 rounded">
+                              <span className="font-mono text-base font-black text-[#0B3D91] bg-white/70 px-2 py-0.5 rounded">
                                 #{order.order_number}
                               </span>
                               <h3 className="font-bold text-sm sm:text-base text-foreground">
@@ -564,7 +564,7 @@ export default function WorkOrderList() {
 
                               {order.expand?.technician && (
                                 <span className="flex items-center gap-1">
-                                  <User className="w-3.5 h-3.5 text-[#0F6A3A]" />
+                                  <User className="w-3.5 h-3.5 text-[#0B3D91]" />
                                   {order.expand.technician.name}
                                 </span>
                               )}
@@ -615,7 +615,7 @@ export default function WorkOrderList() {
                   <Card className={`border-l-4 hover:shadow-md ${st.cor} ${st.faixa}`}>
                     <CardContent className="p-3">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm font-black text-[#0F6A3A] bg-white/70 px-1.5 py-0.5 rounded">
+                        <span className="font-mono text-sm font-black text-[#0B3D91] bg-white/70 px-1.5 py-0.5 rounded">
                           #{order.order_number}
                         </span>
                         <span className="truncate text-xs font-bold">
@@ -680,7 +680,7 @@ export default function WorkOrderList() {
             {isTechnician && (
               <Button
                 asChild
-                className="mt-4 bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white text-xs font-semibold"
+                className="mt-4 bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white text-xs font-semibold"
               >
                 <Link to="/ordens/nova">Cadastrar Nova OS</Link>
               </Button>

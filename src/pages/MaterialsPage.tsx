@@ -192,7 +192,7 @@ export default function MaterialsPage() {
         {isAdmin && (
           <Button
             onClick={handleOpenCreate}
-            className="bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white font-semibold text-xs gap-1.5 shadow"
+            className="bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white font-semibold text-xs gap-1.5 shadow"
           >
             <Plus className="w-4 h-4" /> Novo Material
           </Button>
@@ -207,7 +207,7 @@ export default function MaterialsPage() {
           size="sm"
           onClick={() => setAba('todos')}
           className={`h-9 text-xs font-semibold gap-1.5 ${
-            aba === 'todos' ? 'bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white' : ''
+            aba === 'todos' ? 'bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white' : ''
           }`}
         >
           <Package className="w-3.5 h-3.5" />
@@ -222,7 +222,7 @@ export default function MaterialsPage() {
             aba === 'pendentes'
               ? pendentes.length > 0
                 ? 'bg-red-600 hover:bg-red-700 text-white'
-                : 'bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white'
+                : 'bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white'
               : pendentes.length > 0
                 ? 'border-red-300 text-red-700 hover:bg-red-50'
                 : ''
@@ -320,7 +320,7 @@ export default function MaterialsPage() {
               className={`transition shadow-sm ${
                 mat.pending_review
                   ? 'border-red-300 bg-red-50/40 hover:border-red-400'
-                  : 'hover:border-[#0F6A3A]/40'
+                  : 'hover:border-[#0B3D91]/40'
               }`}
             >
               <CardContent className="p-4 space-y-3">
@@ -330,7 +330,7 @@ export default function MaterialsPage() {
                       className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
                         mat.pending_review
                           ? 'bg-red-100 text-red-600'
-                          : 'bg-[#0F6A3A]/10 text-[#0F6A3A]'
+                          : 'bg-[#0B3D91]/10 text-[#0B3D91]'
                       }`}
                     >
                       <Package className="w-4 h-4" />
@@ -580,7 +580,7 @@ export default function MaterialsPage() {
               <Button
                 type="submit"
                 disabled={submitting}
-                className="bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white font-semibold text-xs"
+                className="bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white font-semibold text-xs"
               >
                 {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Salvar Material'}
               </Button>

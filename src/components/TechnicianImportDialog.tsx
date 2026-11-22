@@ -162,7 +162,7 @@ export default function TechnicianImportDialog({
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-base font-bold flex items-center gap-2">
-            <FileSpreadsheet className="w-4 h-4 text-[#0F6A3A]" />
+            <FileSpreadsheet className="w-4 h-4 text-[#0B3D91]" />
             Importar Técnicos por Planilha
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
@@ -175,7 +175,7 @@ export default function TechnicianImportDialog({
         {step === 'select' && (
           <div className="space-y-3">
             <div
-              className="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer hover:border-[#0F6A3A]/50 hover:bg-[#0F6A3A]/5 transition"
+              className="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer hover:border-[#0B3D91]/50 hover:bg-[#0B3D91]/5 transition"
               onClick={() => inputRef.current?.click()}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
@@ -183,7 +183,7 @@ export default function TechnicianImportDialog({
                 handleFile(e.dataTransfer.files?.[0])
               }}
             >
-              <Upload className="w-8 h-8 text-[#0F6A3A] mx-auto mb-2" />
+              <Upload className="w-8 h-8 text-[#0B3D91] mx-auto mb-2" />
               <p className="text-sm font-semibold text-foreground">
                 {parsing ? 'Lendo planilha...' : 'Clique para escolher o arquivo'}
               </p>
@@ -224,8 +224,8 @@ export default function TechnicianImportDialog({
           <div className="space-y-3">
             {/* Resumo */}
             <div className="grid grid-cols-3 gap-2">
-              <div className="bg-[#0F6A3A]/10 border border-[#0F6A3A]/20 rounded-lg p-3 text-center">
-                <p className="text-lg font-black text-[#0F6A3A]">{rows.length}</p>
+              <div className="bg-[#0B3D91]/10 border border-[#0B3D91]/20 rounded-lg p-3 text-center">
+                <p className="text-lg font-black text-[#0B3D91]">{rows.length}</p>
                 <p className="text-[10px] font-semibold text-muted-foreground uppercase">
                   Linhas válidas
                 </p>
@@ -344,7 +344,7 @@ export default function TechnicianImportDialog({
                 size="sm"
                 onClick={handleImport}
                 disabled={importing || toImport.length === 0}
-                className="bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white font-semibold text-xs"
+                className="bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white font-semibold text-xs"
               >
                 {importing ? (
                   <>
@@ -362,8 +362,8 @@ export default function TechnicianImportDialog({
 
         {step === 'done' && result && (
           <div className="space-y-4">
-            <div className="flex items-center gap-3 p-4 bg-[#0F6A3A]/10 border border-[#0F6A3A]/20 rounded-xl">
-              <CheckCircle2 className="w-8 h-8 text-[#0F6A3A] shrink-0" />
+            <div className="flex items-center gap-3 p-4 bg-[#0B3D91]/10 border border-[#0B3D91]/20 rounded-xl">
+              <CheckCircle2 className="w-8 h-8 text-[#0B3D91] shrink-0" />
               <div>
                 <p className="text-sm font-bold text-foreground">Importação concluída</p>
                 <p className="text-xs text-muted-foreground">
@@ -399,7 +399,7 @@ export default function TechnicianImportDialog({
               <Button
                 size="sm"
                 onClick={() => handleOpenChange(false)}
-                className="bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white font-semibold text-xs"
+                className="bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white font-semibold text-xs"
               >
                 Concluir
               </Button>

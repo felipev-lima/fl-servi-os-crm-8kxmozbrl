@@ -286,7 +286,7 @@ export default function ClientImportDialog({
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-base font-bold flex items-center gap-2">
-            <FileSpreadsheet className="w-4 h-4 text-[#0F6A3A]" />
+            <FileSpreadsheet className="w-4 h-4 text-[#0B3D91]" />
             Importar Clientes por Planilha
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
@@ -299,7 +299,7 @@ export default function ClientImportDialog({
         {step === 'select' && (
           <div className="space-y-3">
             <div
-              className="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer hover:border-[#0F6A3A]/50 hover:bg-[#0F6A3A]/5 transition"
+              className="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer hover:border-[#0B3D91]/50 hover:bg-[#0B3D91]/5 transition"
               onClick={() => inputRef.current?.click()}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
@@ -307,7 +307,7 @@ export default function ClientImportDialog({
                 handleFile(e.dataTransfer.files?.[0])
               }}
             >
-              <Upload className="w-8 h-8 text-[#0F6A3A] mx-auto mb-2" />
+              <Upload className="w-8 h-8 text-[#0B3D91] mx-auto mb-2" />
               <p className="text-sm font-semibold text-foreground">
                 {parsing ? 'Lendo planilha...' : 'Clique para escolher o arquivo'}
               </p>
@@ -329,7 +329,7 @@ export default function ClientImportDialog({
               variant="outline"
               size="sm"
               onClick={handleDownloadTemplate}
-              className="w-full h-9 text-xs font-semibold gap-1.5 text-[#0F6A3A] border-[#0F6A3A]/40 hover:bg-[#0F6A3A]/10"
+              className="w-full h-9 text-xs font-semibold gap-1.5 text-[#0B3D91] border-[#0B3D91]/40 hover:bg-[#0B3D91]/10"
             >
               <FileSpreadsheet className="w-3.5 h-3.5" />
               Baixar modelo em branco (.xlsx) para preencher
@@ -365,12 +365,12 @@ export default function ClientImportDialog({
             )}
 
             {/* Filtro Somente Macaé - RJ */}
-            <label className="flex items-start gap-2.5 p-3 rounded-lg border border-[#0F6A3A]/20 bg-[#0F6A3A]/5 cursor-pointer">
+            <label className="flex items-start gap-2.5 p-3 rounded-lg border border-[#0B3D91]/20 bg-[#0B3D91]/5 cursor-pointer">
               <input
                 type="checkbox"
                 checked={onlyMacae}
                 onChange={(e) => setOnlyMacae(e.target.checked)}
-                className="mt-0.5 h-4 w-4 accent-[#0F6A3A]"
+                className="mt-0.5 h-4 w-4 accent-[#0B3D91]"
               />
               <span className="text-xs">
                 <span className="font-semibold text-foreground">Somente Macaé - RJ</span>
@@ -395,8 +395,8 @@ export default function ClientImportDialog({
 
             {/* Resumo */}
             <div className="grid grid-cols-4 gap-2">
-              <div className="bg-[#0F6A3A]/10 border border-[#0F6A3A]/20 rounded-lg p-3 text-center">
-                <p className="text-lg font-black text-[#0F6A3A]">{rows.length}</p>
+              <div className="bg-[#0B3D91]/10 border border-[#0B3D91]/20 rounded-lg p-3 text-center">
+                <p className="text-lg font-black text-[#0B3D91]">{rows.length}</p>
                 <p className="text-[10px] font-semibold text-muted-foreground uppercase">
                   Linhas válidas
                 </p>
@@ -552,7 +552,7 @@ export default function ClientImportDialog({
                 size="sm"
                 onClick={handleImport}
                 disabled={importing || dedupedToImport.length === 0}
-                className="bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white font-semibold text-xs"
+                className="bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white font-semibold text-xs"
               >
                 {importing ? (
                   <>
@@ -571,8 +571,8 @@ export default function ClientImportDialog({
 
         {step === 'done' && result && (
           <div className="space-y-4">
-            <div className="flex items-center gap-3 p-4 bg-[#0F6A3A]/10 border border-[#0F6A3A]/20 rounded-xl">
-              <CheckCircle2 className="w-8 h-8 text-[#0F6A3A] shrink-0" />
+            <div className="flex items-center gap-3 p-4 bg-[#0B3D91]/10 border border-[#0B3D91]/20 rounded-xl">
+              <CheckCircle2 className="w-8 h-8 text-[#0B3D91] shrink-0" />
               <div>
                 <p className="text-sm font-bold text-foreground">Importação concluída</p>
                 <p className="text-xs text-muted-foreground">
@@ -608,7 +608,7 @@ export default function ClientImportDialog({
               <Button
                 size="sm"
                 onClick={() => handleOpenChange(false)}
-                className="bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white font-semibold text-xs"
+                className="bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white font-semibold text-xs"
               >
                 Concluir
               </Button>

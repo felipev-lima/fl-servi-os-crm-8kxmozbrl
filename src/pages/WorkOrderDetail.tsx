@@ -1187,7 +1187,7 @@ export default function WorkOrderDetail() {
                     <td style="text-align:right">${fmt(valorServico)}</td></tr>`
                : ''
            }
-           <tr style="background:#0F6A3A;color:#fff;font-weight:bold">
+           <tr style="background:#0B3D91;color:#fff;font-weight:bold">
              <td colspan="4" style="text-align:right">TOTAL GERAL</td>
              <td style="text-align:right">${fmt(totalGeral)}</td></tr>`
         : ''
@@ -1198,30 +1198,30 @@ export default function WorkOrderDetail() {
 <title>OS ${order.order_number} - ${nomeCliente}</title>
 <style>
   body{font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#222;margin:24px;line-height:1.5}
-  h1{color:#0F6A3A;font-size:20px;margin:0}
-  h2{color:#0F6A3A;font-size:13px;text-transform:uppercase;border-bottom:1px solid #0F6A3A;
+  h1{color:#0B3D91;font-size:20px;margin:0}
+  h2{color:#0B3D91;font-size:13px;text-transform:uppercase;border-bottom:1px solid #0B3D91;
      padding-bottom:3px;margin:18px 0 8px}
   table{width:100%;border-collapse:collapse;font-size:12px}
   th,td{border:1px solid #ddd;padding:4px 6px;text-align:left}
   th{background:#f4f4f4}
   .rot{font-weight:bold}
-  /* a tabela do cabeçalho (logo FL) não leva as bordas das tabelas de dados */
+  /* a tabela do cabeçalho (logo LM) não leva as bordas das tabelas de dados */
   .cabecalho, .cabecalho td {border:none !important}
-  .cabecalho h1{color:#0F6A3A;font-size:20px;margin:0}
+  .cabecalho h1{color:#0B3D91;font-size:20px;margin:0}
   @media print{body{margin:0}}
 </style></head><body>
-<!-- Cabeçalho com a logo FL. Usa TABELA (nao flexbox) porque o arquivo abre
+<!-- Cabeçalho com a logo LM. Usa TABELA (nao flexbox) porque o arquivo abre
      no navegador do celular e em clientes de e-mail, que ignoram flex. -->
 <table class="cabecalho" style="width:100%;border-collapse:collapse;border:none;
-              border-bottom:3px solid #0F6A3A;margin-bottom:14px">
+              border-bottom:3px solid #0B3D91;margin-bottom:14px">
   <tr>
     <td style="width:52px;border:none;padding:0 10px 10px 0;vertical-align:middle">
-      <div style="width:44px;height:44px;background:#0F6A3A;color:#fff;border-radius:8px;
+      <div style="width:44px;height:44px;background:linear-gradient(135deg,#0B3D91,#1E6FD9);color:#fff;border-radius:8px;
                   text-align:center;line-height:44px;font-family:Arial,Helvetica,sans-serif;
-                  font-weight:bold;font-size:19px;letter-spacing:0.5px">FL</div>
+                  font-weight:bold;font-size:19px;letter-spacing:0.5px">LM</div>
     </td>
     <td style="border:none;padding:0 0 10px 0;vertical-align:middle">
-      <h1 style="margin:0">F. L. SERVIÇOS</h1>
+      <h1 style="margin:0">LM SERVIÇOS</h1>
       <div style="color:#666;font-size:11px">CFTV • Alarme • Rede • Automação • Manutenção</div>
     </td>
   </tr>
@@ -1258,7 +1258,7 @@ ${
                <td style="text-align:right;width:95px">${fmt(valorServico)}</td></tr>`
           : ''
       }
-        <tr style="background:#0F6A3A;color:#fff;font-weight:bold">
+        <tr style="background:#0B3D91;color:#fff;font-weight:bold">
           <td style="text-align:right">TOTAL GERAL</td>
           <td style="text-align:right;width:95px">${fmt(totalGeral)}</td></tr></table>`
     : ''
@@ -1266,7 +1266,7 @@ ${
 <h2>Fotos</h2>
 <p>${orderPhotos.length} foto(s) na pasta <strong>fotos</strong> deste arquivo.</p>
 <div style="margin-top:18px;padding-top:8px;border-top:1px solid #ddd;color:#888;font-size:9px">
-  FL THOMAZ SERVIÇOS E DISTRIBUIÇÃO • CNPJ 44.288.125/0001-34 • IE 12.290.12-8<br>
+  LM SERVIÇOS E DISTRIBUIÇÃO • CNPJ 44.288.125/0001-34 • IE 12.290.12-8<br>
   VILA UNIÃO, 92 — LAGOMAR — MACAÉ/RJ — CEP 27.966-507
 </div>
 </body></html>`
@@ -1474,7 +1474,7 @@ ${
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3">
-        <Loader2 className="w-8 h-8 animate-spin text-[#0F6A3A]" />
+        <Loader2 className="w-8 h-8 animate-spin text-[#0B3D91]" />
         <span className="text-xs text-muted-foreground">
           Carregando dados da Ordem de Serviço...
         </span>
@@ -1512,7 +1512,7 @@ ${
           </Button>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-mono text-xl font-black text-[#0F6A3A]">
+              <span className="font-mono text-xl font-black text-[#0B3D91]">
                 {isNew ? 'Nova Ordem de Serviço' : `OS #${order.order_number}`}
               </span>
               {!isNew && (
@@ -1532,7 +1532,7 @@ ${
             <p className="text-xs text-muted-foreground">
               {isNew
                 ? 'Preencha os dados abaixo para registrar o chamado'
-                : 'Atendimento técnico FL SERVIÇOS • Macaé/RJ'}
+                : 'Atendimento técnico LM SERVIÇOS • Macaé/RJ'}
             </p>
           </div>
         </div>
@@ -1543,7 +1543,7 @@ ${
               variant="outline"
               size="sm"
               onClick={() => setShowPdfView(true)}
-              className="flex-1 sm:flex-none gap-1.5 text-xs border-[#0F6A3A]/40 text-[#0F6A3A] hover:bg-[#0F6A3A]/10 font-medium"
+              className="flex-1 sm:flex-none gap-1.5 text-xs border-[#0B3D91]/40 text-[#0B3D91] hover:bg-[#0B3D91]/10 font-medium"
             >
               <FileText className="w-4 h-4 shrink-0" />
               <span className="hidden sm:inline">Gerar Relatório PDF (V3)</span>
@@ -1557,7 +1557,7 @@ ${
               size="sm"
               onClick={handleBaixarOSZip}
               disabled={baixandoZip}
-              className="flex-1 sm:flex-none gap-1.5 text-xs border-[#0F6A3A]/40 text-[#0F6A3A] hover:bg-[#0F6A3A]/10 font-medium"
+              className="flex-1 sm:flex-none gap-1.5 text-xs border-[#0B3D91]/40 text-[#0B3D91] hover:bg-[#0B3D91]/10 font-medium"
               title="Baixa a OS inteira em pasta organizada, para subir no OneDrive"
             >
               {baixandoZip ? (
@@ -1575,7 +1575,7 @@ ${
               size="sm"
               onClick={handleSaveOrder}
               disabled={saving}
-              className="flex-1 sm:flex-none bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white font-semibold text-xs gap-1.5 shadow"
+              className="flex-1 sm:flex-none bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white font-semibold text-xs gap-1.5 shadow"
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               {isNew ? 'Criar Ordem' : 'Salvar Alterações'}
@@ -1600,7 +1600,7 @@ ${
         <Card className="bg-card border-border/80">
           <CardContent className="p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
             <span className="font-semibold text-foreground flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-[#0F6A3A]" /> Alterar Status do Atendimento:
+              <Clock className="w-3.5 h-3.5 text-[#0B3D91]" /> Alterar Status do Atendimento:
             </span>
             <div className="flex flex-wrap gap-1.5">
               {
@@ -1634,7 +1634,7 @@ ${
                     size="sm"
                     onClick={() => handleStatusChange(st)}
                     className={`h-7 text-[11px] ${
-                      order.status === st ? 'bg-[#0F6A3A] text-white' : ''
+                      order.status === st ? 'bg-[#0B3D91] text-white' : ''
                     }`}
                   >
                     {st}
@@ -1684,7 +1684,7 @@ ${
                         variant="ghost"
                         size="sm"
                         onClick={() => setNovoClienteAberto(true)}
-                        className="h-6 px-1.5 text-[11px] font-semibold text-[#0F6A3A] hover:bg-[#0F6A3A]/10 gap-0.5"
+                        className="h-6 px-1.5 text-[11px] font-semibold text-[#0B3D91] hover:bg-[#0B3D91]/10 gap-0.5"
                         title="Cadastrar um cliente novo agora"
                       >
                         <Plus className="w-3 h-3" /> Novo
@@ -1885,7 +1885,7 @@ ${
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold">Observações Internas</Label>
                 <Input
-                  placeholder="Anotações para a equipe FL SERVIÇOS..."
+                  placeholder="Anotações para a equipe LM SERVIÇOS..."
                   value={order.notes || ''}
                   onChange={(e) => setOrder((prev) => ({ ...prev, notes: e.target.value }))}
                   disabled={!canEdit}
@@ -1896,7 +1896,7 @@ ${
               {/* Checklist de itens pendentes */}
               <div className="space-y-1.5 rounded-lg border border-slate-200 bg-slate-50/60 p-2.5">
                 <Label className="text-xs font-semibold flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#0F6A3A]" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#0B3D91]" />
                   Itens pendentes / checklist
                 </Label>
                 <div className="flex gap-1.5">
@@ -1918,7 +1918,7 @@ ${
                     size="sm"
                     onClick={adicionarItemChecklist}
                     disabled={!canEdit || !novoItemChecklist.trim()}
-                    className="h-8 px-2.5 bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white gap-1 shrink-0"
+                    className="h-8 px-2.5 bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white gap-1 shrink-0"
                   >
                     <Plus className="w-3.5 h-3.5" /> Add
                   </Button>
@@ -1935,7 +1935,7 @@ ${
                           checked={item.done}
                           onChange={() => alternarItemChecklist(item.id)}
                           disabled={!canEdit}
-                          className="h-4 w-4 accent-[#0F6A3A] shrink-0 cursor-pointer"
+                          className="h-4 w-4 accent-[#0B3D91] shrink-0 cursor-pointer"
                           aria-label={`Marcar "${item.text}" como concluído`}
                         />
                         <span
@@ -1966,8 +1966,8 @@ ${
 
               {/* Valor de mao de obra: entra na nota, so o admin ve e edita */}
               {isAdmin && (
-                <div className="space-y-1.5 rounded-lg border border-[#0F6A3A]/25 bg-[#0F6A3A]/5 p-2.5">
-                  <Label className="text-xs font-semibold text-[#0F6A3A]">
+                <div className="space-y-1.5 rounded-lg border border-[#0B3D91]/25 bg-[#0B3D91]/5 p-2.5">
+                  <Label className="text-xs font-semibold text-[#0B3D91]">
                     Valor do serviço / mão de obra (R$)
                   </Label>
                   <Input
@@ -2007,9 +2007,9 @@ ${
             <CardContent className="space-y-4">
               {/* Listas prontas: aplica um conjunto de produtos de uma vez */}
               {canEdit && kits.length > 0 && (
-                <div className="p-3 rounded-lg border border-[#0F6A3A]/25 bg-[#0F6A3A]/5 space-y-2">
+                <div className="p-3 rounded-lg border border-[#0B3D91]/25 bg-[#0B3D91]/5 space-y-2">
                   <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-[#0F6A3A]">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-[#0B3D91]">
                       <Layers className="w-3.5 h-3.5" />
                       Listas prontas de material
                     </div>
@@ -2018,7 +2018,7 @@ ${
                       variant="ghost"
                       size="sm"
                       asChild
-                      className="h-6 px-1.5 text-[11px] font-semibold text-[#0F6A3A] hover:bg-[#0F6A3A]/10 gap-0.5"
+                      className="h-6 px-1.5 text-[11px] font-semibold text-[#0B3D91] hover:bg-[#0B3D91]/10 gap-0.5"
                     >
                       <Link to="/listas-material">
                         <Plus className="w-3 h-3" /> Nova lista
@@ -2049,7 +2049,7 @@ ${
                       type="button"
                       onClick={handleApplyKit}
                       disabled={applyingKit || !selectedKitId}
-                      className="h-10 sm:h-9 w-full text-xs font-semibold bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white gap-1"
+                      className="h-10 sm:h-9 w-full text-xs font-semibold bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white gap-1"
                     >
                       {applyingKit ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -2076,7 +2076,7 @@ ${
                           variant="ghost"
                           size="sm"
                           onClick={() => setNovoProdutoAberto(true)}
-                          className="h-6 px-1.5 text-[11px] font-semibold text-[#0F6A3A] hover:bg-[#0F6A3A]/10 gap-0.5"
+                          className="h-6 px-1.5 text-[11px] font-semibold text-[#0B3D91] hover:bg-[#0B3D91]/10 gap-0.5"
                           title="Cadastrar um produto que não está no catálogo"
                         >
                           <Plus className="w-3 h-3" /> Novo
@@ -2121,7 +2121,7 @@ ${
                     <Button
                       type="submit"
                       disabled={addingMaterial}
-                      className="w-full bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white h-9 text-xs font-semibold gap-1"
+                      className="w-full bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white h-9 text-xs font-semibold gap-1"
                     >
                       {addingMaterial ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -2252,7 +2252,7 @@ ${
                           <span className="text-[9px] font-semibold uppercase text-muted-foreground block mb-0.5">
                             Total
                           </span>
-                          <span className="text-sm font-mono font-bold text-[#0F6A3A] leading-9 block">
+                          <span className="text-sm font-mono font-bold text-[#0B3D91] leading-9 block">
                             {mat.total_price ? `R$ ${mat.total_price.toFixed(2)}` : '—'}
                           </span>
                         </div>
@@ -2371,7 +2371,7 @@ ${
                                 '-'
                               )}
                             </td>
-                            <td className="p-2.5 text-right font-mono font-bold text-[#0F6A3A]">
+                            <td className="p-2.5 text-right font-mono font-bold text-[#0B3D91]">
                               {mat.total_price ? `R$ ${mat.total_price.toFixed(2)}` : '-'}
                             </td>
                           </>
@@ -2445,7 +2445,7 @@ ${
                     <Button
                       type="button"
                       onClick={() => cameraInputRef.current?.click()}
-                      className="bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white h-10 text-xs font-semibold gap-2 flex-1"
+                      className="bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white h-10 text-xs font-semibold gap-2 flex-1"
                     >
                       <Camera className="w-4 h-4" />
                       Tirar foto agora
@@ -2527,7 +2527,7 @@ ${
                         <Button
                           type="submit"
                           disabled={uploadingPhoto}
-                          className="bg-[#0F6A3A] hover:bg-[#0F6A3A]/90 text-white h-9 text-xs font-semibold gap-1.5 w-full sm:w-auto"
+                          className="bg-[#0B3D91] hover:bg-[#0B3D91]/90 text-white h-9 text-xs font-semibold gap-1.5 w-full sm:w-auto"
                         >
                           {uploadingPhoto ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -2599,7 +2599,7 @@ ${
                     variant="outline"
                     size="sm"
                     onClick={handleShareAllPhotos}
-                    className="h-8 text-[11px] gap-1.5 border-[#0F6A3A]/40 text-[#0F6A3A] hover:bg-[#0F6A3A]/10"
+                    className="h-8 text-[11px] gap-1.5 border-[#0B3D91]/40 text-[#0B3D91] hover:bg-[#0B3D91]/10"
                     title="Enviar todas as fotos de uma vez pelo WhatsApp"
                   >
                     <Share2 className="w-3.5 h-3.5" />
@@ -2781,7 +2781,7 @@ ${
                     key={item.id}
                     className="p-3 rounded-lg border bg-muted/20 flex items-start gap-3 text-xs"
                   >
-                    <div className="w-2 h-2 rounded-full bg-[#0F6A3A] mt-1.5 shrink-0" />
+                    <div className="w-2 h-2 rounded-full bg-[#0B3D91] mt-1.5 shrink-0" />
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-foreground">
