@@ -11,6 +11,15 @@
  * no histórico dos dois lados, e mantém as fotos dele: o destino recebe
  * CÓPIAS (o arquivo é baixado e reenviado), nunca transferência. O financeiro
  * não é tocado: nenhum lançamento (transaction) é criado ou alterado aqui.
+ *
+ * IMPORTAÇÃO DE FOTOS PÓS-MIGRAÇÃO: documentos migrados ANTES de a cópia de
+ * fotos existir (v0.0.124) ficaram sem fotos — caso real da OS #1006, já
+ * CANCELADA, que o botão "Migrar para Pedido" não deixa refazer. Para esses há
+ * `importarFotosOSParaPedido` e `importarFotosPedidoParaOS`: localizam o
+ * documento de origem pelo número citado no histórico ("Migrado da OS nº X" /
+ * "Migrado do Pedido nº X") e COPIAM as fotos para o destino. A origem NUNCA é
+ * tocada, uma foto que falhar não aborta as demais e o histórico do destino
+ * registra quantas fotos vieram e de qual documento.
  */
 import {
   getWorkOrderById,
@@ -21,6 +30,8 @@ import {
   addOrderMaterial,
   getMaterials,
   getOrderPhotos,
+  getWorkOrders,
+  addOrderPhoto,
 } from '@/services/api'
 import { getQuote, createQuote, updateQuote, registrarHistoricoPedido } from '@/services/crm'
 import pb from '@/lib/pocketbase/client'
@@ -28,6 +39,18 @@ import pb from '@/lib/pocketbase/client'
 export interface ResultadoMigracao {
   destinoId: string
   destinoNumero: number | string
+}
+
+export interface ResultadoImportacaoFotos {
+  /** OS de origem, resolvida pelo histórico (null = não encontrada) */
+  origemId: string | null
+  origemNumero: number | null
+  /** fotos da origem que já existiam no destino (evita duplicar) */
+  jaNoDestino: number
+  /** fotos efetivamente copiadas agora */
+  copiadas: number
+  /** nomes/arquivos das fotos que falharam (a importação continua) */
+  falhas: string[]
 }
 
 const hoje = () => new Date().toISOString().slice(0, 10)
@@ -287,4 +310,238 @@ export async function migrarPedidoParaOS(
   }
 
   return { destinoId: novaOS.id, destinoNumero: novaOS.order_number }
+}
+
+// ========================================================================
+// IMPORTAÇÃO DE FOTOS DEPOIS DA MIGRAÇÃO (caso real: OS #1006).
+//
+// A OS #1006 foi migrada para pedido ANTES de a cópia de fotos existir
+// (v0.0.124): o pedido nasceu sem fotos e a OS, já CANCELADA, não pode ser
+// migrada de novo. Estes dois caminhos copiam as fotos DEPOIS, sem migrar de
+// novo nem criar documento novo — e servem para os dois sentidos.
+// ========================================================================
+
+/** Extrai o número citado na nota de migração do histórico do pedido. */
+function numeroNaNota(nota: string, prefixo: RegExp): number | null {
+  const m = (nota || '').match(prefixo)
+  if (!m) return null
+  const n = Number(m[1])
+  return Number.isFinite(n) && n > 0 ? n : null
+}
+
+/**
+ * Localiza a OS de origem de um pedido migrado.
+ *
+ * Procura no `quote_history` do pedido a nota "Migrado da OS nº X" (gravada por
+ * `migrarOSParaPedido`) e acha a OS pelo `order_number`. É a mesma OS que o
+ * botão "Migrar para Pedido" deixou CANCELADA — ela continua com as fotos dela.
+ */
+export async function localizarOSOrigemDoPedido(
+  quoteId: string,
+): Promise<{ id: string; numero: number } | null> {
+  let historico: any[] = []
+  try {
+    const res = await pb.collection('quote_history').getFullList({
+      filter: `quote = "${quoteId}"`,
+      sort: '-created',
+    })
+    historico = res as any[]
+  } catch {
+    return null
+  }
+  for (const h of historico) {
+    const num = numeroNaNota(h.notes || '', /Migrado da OS #(\d+)/i)
+    if (num === null) continue
+    try {
+      const list = await pb.collection('work_orders').getList(1, 1, {
+        filter: `order_number = ${num}`,
+      })
+      if (list.items.length > 0) return { id: (list.items[0] as any).id, numero: num }
+    } catch {
+      /* segue para a próxima nota com número */
+    }
+  }
+  return null
+}
+
+/**
+ * Localiza o pedido de origem de uma OS migrada.
+ *
+ * Procura na descrição da OS (e no histórico dela) a nota "Migrado do Pedido
+ * nº X" e acha o pedido pelo `number`. É a mesma regra da migração inversa.
+ */
+export async function localizarPedidoOrigemDaOS(
+  orderId: string,
+): Promise<{ id: string; numero: number } | null> {
+  let notas: string[] = []
+  try {
+    const os: any = await getWorkOrderById(orderId)
+    notas.push(String(os?.description || ''))
+  } catch {
+    /* segue só com o histórico */
+  }
+  try {
+    const res = await pb.collection('order_history').getFullList({
+      filter: `work_order = "${orderId}"`,
+      sort: '-created',
+    })
+    for (const h of res as any[]) notas.push(String(h.notes || ''))
+  } catch {
+    /* descrição pode bastar */
+  }
+  for (const nota of notas) {
+    const num = numeroNaNota(nota, /Migrado do Pedido nº\s*(\d+)/i)
+    if (num === null) continue
+    try {
+      const list = await pb.collection('quotes').getList(1, 1, { filter: `number = ${num}` })
+      if (list.items.length > 0) return { id: (list.items[0] as any).id, numero: num }
+    } catch {
+      /* segue para a próxima nota com número */
+    }
+  }
+  return null
+}
+
+/**
+ * Copia as fotos da OS de origem para o campo multi-arquivo `photos` do
+ * pedido.
+ *
+ * Mesma lógica da cópia na migração: baixa o arquivo de cada foto da coleção
+ * `order_photos` e anexa em `quotes.photos`. A ORIGEM NUNCA É TOCADA — a OS
+ * cancelada mantém as fotos dela. Falha em uma foto não aborta as demais.
+ * Fotos cujo NOME DE ARQUIVO já existe no pedido são contadas em `jaNoDestino`
+ * e não reenviadas (evita duplicar se o botão for tocado duas vezes); como a
+ * cópia na migração conserva o nome do arquivo, ela detecta inclusive as
+ * importadas antes.
+ */
+export async function importarFotosOSParaPedido(
+  quoteId: string,
+  usuario: string,
+): Promise<ResultadoImportacaoFotos> {
+  const origem = await localizarOSOrigemDoPedido(quoteId)
+  const resultado: ResultadoImportacaoFotos = {
+    origemId: origem?.id ?? null,
+    origemNumero: origem?.numero ?? null,
+    jaNoDestino: 0,
+    copiadas: 0,
+    falhas: [],
+  }
+  if (!origem) throw new Error('Não encontrei a OS de origem no histórico deste pedido.')
+
+  const pedido: any = await getQuote(quoteId)
+  const jaTem: string[] = ((pedido.photos as string[]) || []).map((f) => f.toLowerCase())
+
+  const fotos = await getOrderPhotos(origem.id)
+  if (fotos.length === 0) return resultado // a origem não tem fotos — aviso na tela
+
+  const fd = new FormData()
+  for (const foto of fotos) {
+    try {
+      const nomeArquivo = foto.image || ''
+      if (nomeArquivo && jaTem.includes(nomeArquivo.toLowerCase())) {
+        resultado.jaNoDestino += 1
+        continue
+      }
+      const url = pb.files.getURL(
+        { id: foto.id, collectionName: 'order_photos' } as any,
+        foto.image,
+      )
+      const res = await fetch(url)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const blob = await res.blob()
+      const nome = nomeArquivo || `foto-${foto.display_order || resultado.copiadas + 1}.jpg`
+      fd.append('photos', new File([blob], nome, { type: blob.type || 'image/jpeg' }))
+      resultado.copiadas += 1
+    } catch (e) {
+      console.warn('foto da OS não importada para o pedido', e)
+      resultado.falhas.push(foto.description || foto.image || 'foto')
+    }
+  }
+
+  if (resultado.copiadas > 0) {
+    // anexa às fotos que o pedido JÁ TEM: PocketBase substitui o campo
+    // multi-arquivo inteiro a cada update, então reenviamos os nomes antigos
+    for (const nome of jaTem) fd.append('photos', nome)
+    await updateQuote(quoteId, fd as any)
+    await registrarHistoricoPedido(
+      quoteId,
+      '',
+      (pedido.status || 'PEDIDO') as string,
+      usuario,
+      `Importadas ${resultado.copiadas} foto(s) da OS #${origem.numero} — a OS continua com as fotos dela (nada foi apagado)`,
+    )
+  }
+  return resultado
+}
+
+/**
+ * Caminho inverso: copia as fotos do pedido de origem para a OS, criando um
+ * registro em `order_photos` por foto, com `display_order` preservado
+ * (continuando a contagem das fotos que a OS já tem). O pedido cancelado
+ * MANTÉM as fotos dele — nada é transferido, tudo é cópia.
+ */
+export async function importarFotosPedidoParaOS(
+  orderId: string,
+  usuario: string,
+): Promise<ResultadoImportacaoFotos> {
+  const origem = await localizarPedidoOrigemDaOS(orderId)
+  const resultado: ResultadoImportacaoFotos = {
+    origemId: origem?.id ?? null,
+    origemNumero: origem?.numero ?? null,
+    jaNoDestino: 0,
+    copiadas: 0,
+    falhas: [],
+  }
+  if (!origem) throw new Error('Não encontrei o pedido de origem no histórico desta OS.')
+
+  const pedido: any = await getQuote(origem.id)
+  const fotosPedido: string[] = (pedido.photos as string[]) || []
+  if (fotosPedido.length === 0) return resultado // a origem não tem fotos — aviso na tela
+
+  const fotosDaOS = await getOrderPhotos(orderId)
+  const jaTem = new Set(
+    fotosDaOS
+      .map((f) => (f.image || '').toLowerCase())
+      .filter((n) => n && !/^(foto|img|image)[\s-]?\d+\.(jpg|jpeg|png)$/i.test(n)),
+  )
+
+  let ordem = fotosDaOS.length
+  for (let i = 0; i < fotosPedido.length; i++) {
+    const nomeArquivo = fotosPedido[i]
+    try {
+      if (nomeArquivo && jaTem.has(nomeArquivo.toLowerCase())) {
+        resultado.jaNoDestino += 1
+        continue
+      }
+      const url = pb.files.getURL({ id: pedido.id, collectionName: 'quotes' } as any, nomeArquivo)
+      const res = await fetch(url)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const blob = await res.blob()
+      const fd = new FormData()
+      fd.append('work_order', orderId)
+      fd.append('image', new File([blob], nomeArquivo, { type: blob.type || 'image/jpeg' }))
+      fd.append('display_order', String(++ordem))
+      await pb.collection('order_photos').create(fd)
+      resultado.copiadas += 1
+    } catch (e) {
+      console.warn('foto do pedido não importada para a OS', e)
+      resultado.falhas.push(nomeArquivo || 'foto')
+    }
+  }
+
+  if (resultado.copiadas > 0) {
+    try {
+      await updateWorkOrder(
+        orderId,
+        {} as any,
+        usuario,
+        undefined,
+        undefined,
+        `Importadas ${resultado.copiadas} foto(s) do Pedido nº ${origem.numero} — o pedido continua com as fotos dele (nada foi apagado)`,
+      )
+    } catch {
+      /* a origem segue registrada só no aviso da tela */
+    }
+  }
+  return resultado
 }

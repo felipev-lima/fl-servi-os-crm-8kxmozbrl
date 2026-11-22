@@ -60,7 +60,7 @@ import { SearchCombobox } from '@/components/SearchCombobox'
 import { ProdutoRapidoDialog } from '@/components/ProdutoRapidoDialog'
 import { ClienteRapidoDialog } from '@/components/ClienteRapidoDialog'
 import { createZip, baixarBlob, safeName, type ZipEntry } from '@/lib/zip'
-import { migrarOSParaPedido } from '@/services/migracao'
+import { migrarOSParaPedido, importarFotosPedidoParaOS } from '@/services/migracao'
 import { avisarSincronizacao } from '@/lib/onedriveSync'
 import { gravarGpsNaFoto, pegarPosicao } from '@/lib/gpsFoto'
 import { prepararFoto } from '@/lib/imagem'
@@ -87,6 +87,7 @@ import {
   Layers,
   Navigation,
   ArrowRightLeft,
+  ImagePlus,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -154,6 +155,7 @@ export default function WorkOrderDetail() {
   const [novoProdutoAberto, setNovoProdutoAberto] = useState(false)
   const [novoClienteAberto, setNovoClienteAberto] = useState(false)
   const [migrando, setMigrando] = useState(false)
+  const [importandoFotos, setImportandoFotos] = useState(false)
 
   const [photoDescription, setPhotoDescription] = useState('')
   const [pendingPhotos, setPendingPhotos] = useState<
@@ -212,6 +214,42 @@ export default function WorkOrderDetail() {
       toast.error(e?.message || 'Não foi possível migrar a OS para pedido.', { duration: 8000 })
     } finally {
       setMigrando(false)
+    }
+  }
+
+  /**
+   * IMPORTAR FOTOS DO PEDIDO DE ORIGEM (caminho inverso da migração).
+   *
+   * Para a OS nascida de um Pedido→OS que ficou sem fotos (a cópia de fotos só
+   * existe desde a v0.0.124). Localiza o pedido de origem pela nota "Migrado do
+   * Pedido nº X" e COPIA as fotos dele para cá — o pedido mantém as fotos dele.
+   */
+  const importarFotosDoPedido = async () => {
+    if (!id || isNew) return
+    setImportandoFotos(true)
+    try {
+      const r = await importarFotosPedidoParaOS(id, user?.name || 'Sistema')
+      if (r.origemNumero === null) {
+        toast.error('Não encontrei o pedido de origem no histórico desta OS.', { duration: 8000 })
+      } else if (r.copiadas === 0 && r.jaNoDestino === 0) {
+        toast.info(`O pedido nº ${r.origemNumero} não tem fotos.`, { duration: 8000 })
+      } else {
+        let msg =
+          r.copiadas > 0
+            ? `${r.copiadas} foto(s) importada(s) do Pedido nº ${r.origemNumero}.`
+            : 'As fotos do pedido já estão nesta OS.'
+        if (r.jaNoDestino > 0) msg += ` ${r.jaNoDestino} já existia(m) aqui.`
+        if (r.falhas.length > 0) msg += ` Falharam: ${r.falhas.join(', ')}.`
+        toast.success(msg, { duration: 10000 })
+        const photos = await getOrderPhotos(id)
+        setOrderPhotos(photos)
+      }
+    } catch (e: any) {
+      toast.error(e?.message || 'Não foi possível importar as fotos do pedido.', {
+        duration: 8000,
+      })
+    } finally {
+      setImportandoFotos(false)
     }
   }
 
@@ -1620,6 +1658,25 @@ ${
               )}
               <span className="hidden sm:inline">Migrar para Pedido</span>
               <span className="sm:hidden">Migrar</span>
+            </Button>
+          )}
+
+          {!isNew && isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={importarFotosDoPedido}
+              disabled={importandoFotos}
+              className="flex-1 sm:flex-none gap-1.5 text-xs border-[#0B3D91]/40 text-[#0B3D91] hover:bg-[#0B3D91]/10 font-medium"
+              title="Copia para esta OS as fotos do pedido de origem (se ela veio de uma migração Pedido → OS); o pedido mantém as fotos dele"
+            >
+              {importandoFotos ? (
+                <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
+              ) : (
+                <ImagePlus className="w-4 h-4 shrink-0" />
+              )}
+              <span className="hidden sm:inline">Importar fotos do pedido de origem</span>
+              <span className="sm:hidden">Importar fotos</span>
             </Button>
           )}
 

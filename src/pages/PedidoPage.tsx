@@ -69,7 +69,7 @@ import {
   ArrowLeft,
   ArrowRightLeft,
 } from 'lucide-react'
-import { migrarPedidoParaOS } from '@/services/migracao'
+import { migrarPedidoParaOS, importarFotosOSParaPedido } from '@/services/migracao'
 import { toast } from 'sonner'
 
 interface ItemLocal extends QuoteItem {
@@ -123,6 +123,7 @@ export default function PedidoPage() {
   const [statusAtual, setStatusAtual] = useState<string>('PEDIDO')
   /** nomes dos arquivos já gravados no servidor (pedido reaberto) */
   const [fotosSalvas, setFotosSalvas] = useState<string[]>([])
+  const [importandoFotos, setImportandoFotos] = useState(false)
 
   // busca de cliente
   const [buscaCliente, setBuscaCliente] = useState('')
@@ -561,6 +562,46 @@ export default function PedidoPage() {
     }
   }
 
+  /**
+   * IMPORTAR FOTOS DA OS DE ORIGEM (caso real: OS #1006).
+   *
+   * O pedido nasceu de uma migração OS→Pedido feita ANTES de a cópia de fotos
+   * existir (v0.0.124). Este botão localiza a OS de origem pela nota "Migrado
+   * da OS nº X" do histórico e COPIA as fotos dela para o pedido — a OS
+   * cancelada mantém as fotos dela, nada é apagado.
+   */
+  const importarFotosDaOS = async () => {
+    if (!salvoId) {
+      toast.error('Salve o pedido antes de importar as fotos.')
+      return
+    }
+    setImportandoFotos(true)
+    try {
+      const r = await importarFotosOSParaPedido(salvoId, user?.name || 'Sistema')
+      if (r.origemNumero === null) {
+        toast.error('Não encontrei a OS de origem no histórico deste pedido.', { duration: 8000 })
+      } else if (r.copiadas === 0 && r.jaNoDestino === 0) {
+        toast.info(`A OS nº ${r.origemNumero} não tem fotos.`, { duration: 8000 })
+      } else {
+        let msg =
+          r.copiadas > 0
+            ? `${r.copiadas} foto(s) importada(s) da OS nº ${r.origemNumero}.`
+            : 'As fotos da OS já estão neste pedido.'
+        if (r.jaNoDestino > 0) msg += ` ${r.jaNoDestino} já existia(m) aqui.`
+        if (r.falhas.length > 0) msg += ` Falharam: ${r.falhas.join(', ')}.`
+        toast.success(msg, { duration: 10000 })
+        if (salvoId === id) {
+          const q = await getQuote(salvoId)
+          setFotosSalvas((q.photos || []) as string[])
+        }
+      }
+    } catch (e: any) {
+      toast.error(e?.message || 'Não foi possível importar as fotos da OS.', { duration: 8000 })
+    } finally {
+      setImportandoFotos(false)
+    }
+  }
+
   if (carregando) {
     return (
       <div className="flex items-center justify-center gap-2 py-20 text-sm text-muted-foreground">
@@ -654,6 +695,24 @@ export default function PedidoPage() {
           <Button variant="outline" size="sm" onClick={imprimir} className="h-9 gap-1.5 text-xs">
             <Printer className="h-4 w-4" /> PDF
           </Button>
+          {!ehNovo && isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={importarFotosDaOS}
+              disabled={importandoFotos || salvando}
+              className="h-9 gap-1.5 text-xs border-[#0B3D91]/40 text-[#0B3D91] hover:bg-[#0B3D91]/10 font-medium"
+              title="Copia para este pedido as fotos da OS de origem (se ele veio de uma migração OS → Pedido); a OS mantém as fotos dela"
+            >
+              {importandoFotos ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Images className="h-4 w-4" />
+              )}
+              <span className="hidden sm:inline">Importar fotos da OS de origem</span>
+              <span className="sm:hidden">Importar fotos</span>
+            </Button>
+          )}
           {!ehNovo && isAdmin && (
             <Button
               variant="outline"
