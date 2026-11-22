@@ -78,6 +78,10 @@ export interface Material {
   category?: string
   brand?: string
   price?: number
+  /** Custo de aquisição (derivado do preço pela marcação quando informado pelo admin) */
+  cost?: number
+  /** TRUE quando o custo acima foi estimado pela marcação, não digitado */
+  cost_estimated?: boolean
   current_stock?: number
   notes?: string
   /** Cadastrado rápido pelo técnico em campo — aguarda revisão do admin */
