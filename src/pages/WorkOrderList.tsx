@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
-import { getWorkOrders, getTechnicians } from '@/services/api'
+import { getWorkOrders, getWorkOrdersPage, getTechnicians } from '@/services/api'
 import pb from '@/lib/pocketbase/client'
 import { WorkOrder, OrderStatus, Technician } from '@/types/flservicos'
 import { Button } from '@/components/ui/button'
@@ -39,21 +39,62 @@ export default function WorkOrderList() {
     setStatusFilter(statusDaUrl || 'ALL')
   }, [statusDaUrl])
 
-  useEffect(() => {
-    loadOrders()
-  }, [])
+  /**
+   * FILTRO E PAGINAÇÃO NO SERVIDOR (melhoria de 22/11/2026).
+   *
+   * Antes: `getWorkOrders()` baixava a base INTEIRA e o navegador filtrava.
+   * Com 17 OS não se nota; com algumas centenas, abrir a lista demora e a
+   * busca (disparada a cada tecla) trava a tela.
+   *
+   * Agora o PocketBase filtra e devolve só a página pedida. O agrupamento por
+   * prioridade continua sendo feito aqui, na página já filtrada — é o que o
+   * Felipe vê e usa.
+   *
+   * `--ver-todas` continua funcionando: baixa tudo de uma vez (17 hoje), para
+   * quem quiser a lista completa sem paginar.
+   */
+  const [pagina, setPagina] = useState(1)
+  const [totalOS, setTotalOS] = useState(0)
+  const [totalPaginas, setTotalPaginas] = useState(1)
+  const PER_PAGE = 30
 
-  const loadOrders = async () => {
+  const loadOrders = React.useCallback(async () => {
     setLoading(true)
     try {
-      const data = await getWorkOrders()
-      setOrders(data)
+      const r = await getWorkOrdersPage({
+        page: pagina,
+        perPage: PER_PAGE,
+        busca: search,
+        status: statusFilter,
+        tecnico: techFilter,
+        apenasDoTecnico: soProprias ? meuTecnicoId : undefined,
+      })
+      setOrders(r.items)
+      setTotalOS(r.totalItems)
+      setTotalPaginas(r.totalPages)
     } catch (err) {
       console.error(err)
     } finally {
       setLoading(false)
     }
-  }
+  }, [pagina, search, statusFilter, techFilter, soProprias, meuTecnicoId])
+
+  /**
+   * Recarrega quando muda filtro, busca ou página.
+   * A busca espera 400 ms após a última tecla: sem isso, cada letra disparava
+   * uma consulta ao servidor e a resposta chegava fora de ordem.
+   */
+  useEffect(() => {
+    const t = setTimeout(() => {
+      void loadOrders()
+    }, 400)
+    return () => clearTimeout(t)
+  }, [loadOrders])
+
+  // filtro novo -> volta para a primeira página (senão cai em página vazia)
+  useEffect(() => {
+    setPagina(1)
+  }, [search, statusFilter, techFilter])
 
   // Filtro por técnico: disponível para Administrador e Consulta. O técnico
   // comum continua vendo apenas as próprias OS por padrão.
@@ -156,31 +197,18 @@ export default function WorkOrderList() {
     return statusOS === filtro
   }
 
-  const filteredOrders = orders.filter((o) => {
-    const term = search.toLowerCase()
-    const matchNumber = o.order_number.toString().includes(term)
-    const matchClient = o.expand?.client?.name.toLowerCase().includes(term)
-    const matchDesc = o.description.toLowerCase().includes(term)
-    const matchService = o.service_type.toLowerCase().includes(term)
-    const matchTech = o.expand?.technician?.name.toLowerCase().includes(term)
-
-    const matchesSearch = matchNumber || matchClient || matchDesc || matchService || matchTech
-    // "HOJE" não é um status: filtra as OS agendadas/abertas para hoje
-    const hojeStr = new Date().toISOString().slice(0, 10)
-    const ehHoje =
-      (o.scheduled_date || '').slice(0, 10) === hojeStr ||
-      (o.opened_at || '').slice(0, 10) === hojeStr
-    const matchesStatus =
-      statusFilter === 'ALL' ||
-      (statusFilter === 'HOJE' ? ehHoje : passaNoFiltro(o.status, statusFilter))
-    // Técnico comum: só a própria OS (vínculo technicians.user). Admin e
-    // Consulta usam o dropdown; sem filtro, veem tudo.
-    const matchesTech = soProprias
-      ? meuTecnicoId !== '' && o.technician === meuTecnicoId
-      : techFilter === 'ALL' || o.technician === techFilter
-
-    return matchesSearch && matchesStatus && matchesTech
-  })
+  /**
+   * O SERVIDOR JÁ FILTROU.
+   *
+   * Antes esta função repetia busca, status e técnico aqui no navegador sobre
+   * a base inteira. Agora `getWorkOrdersPage` traz só o que casa com o filtro,
+   * então repetir aqui não filtraria nada — e, pior, um resultado que o banco
+   * aceitou poderia ser descartado por diferença de acento ou maiúscula.
+   *
+   * `passaNoFiltro` continua sendo usado apenas para CONTAR por situação nos
+   * cartões do topo, que é sobre a página carregada.
+   */
+  const filteredOrders = orders
 
   /**
    * ORDEM DE PRIORIDADE (pedido do Felipe, 21/11/2026).
@@ -539,6 +567,41 @@ export default function WorkOrderList() {
                 </Link>
               )
             })}
+          </div>
+        )}
+
+        {/*
+          NAVEGAÇÃO DE PÁGINAS (melhoria de 22/11/2026).
+          A lista agora vem do servidor em blocos de 30. Só aparece quando há
+          mais de uma página — com 17 OS, o Felipe não vê este bloco.
+        */}
+        {totalPaginas > 1 && (
+          <div className="flex items-center justify-between gap-2 rounded-xl border bg-card px-3 py-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={pagina <= 1 || loading}
+              onClick={() => setPagina((p) => Math.max(1, p - 1))}
+              className="h-8 text-xs"
+            >
+              ← Anterior
+            </Button>
+
+            <span className="text-[11px] font-semibold text-muted-foreground">
+              Página {pagina} de {totalPaginas} · {totalOS} OS
+            </span>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={pagina >= totalPaginas || loading}
+              onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+              className="h-8 text-xs"
+            >
+              Próxima →
+            </Button>
           </div>
         )}
 

@@ -427,6 +427,30 @@ export default function WorkOrderDetail() {
       return
     }
 
+    /**
+     * MESMO AVISO DO BOTÃO DE STATUS, ao SALVAR como FINALIZADA.
+     *
+     * O usuário pode mudar o status pelo seletor e só depois tocar em "Salvar".
+     * Sem esta checagem, o aviso do seletor não pegaria esse caminho.
+     */
+    const jaFinalizada = statusOriginalRef.current === 'FINALIZADA'
+    if (order.status === 'FINALIZADA' && !jaFinalizada) {
+      const temAssinatura = Boolean(signatureDataUrl || (order as any).signature_image || '')
+      if (!temAssinatura) {
+        const seguir = confirm(
+          'ATENÇÃO — esta OS NÃO tem a assinatura do cliente.\n\n' +
+            'Finalizar sem assinatura fecha o serviço sem prova do aceite do ' +
+            'responsável.\n\n' +
+            'OK = salvar como FINALIZADA mesmo assim\n' +
+            'Cancelar = voltar e colher a assinatura',
+        )
+        if (!seguir) {
+          toast.info('Salvamento cancelado. Colha a assinatura e salve de novo.')
+          return
+        }
+      }
+    }
+
     setSaving(true)
     try {
       const currentUserName = user?.name || 'Técnico FL'
@@ -510,6 +534,40 @@ export default function WorkOrderDetail() {
     }
 
     const oldStatus = order.status as OrderStatus
+
+    /**
+     * AVISO AO FINALIZAR SEM ASSINATURA (melhoria de 22/11/2026).
+     *
+     * FINALIZAR significa "o serviço foi executado e o cliente aceitou". Sem a
+     * assinatura do responsável, não há prova do aceite — foi o caso da OS
+     * 1016, fechada sem nenhuma assinatura.
+     *
+     * Aqui NÃO se bloqueia: o Felipe pode ter motivo legítimo (cliente não
+     * estava no local, assinatura em papel). Avisa e pede confirmação
+     * explícita. Quem decide continua sendo ele.
+     */
+    if (newStatus === 'FINALIZADA') {
+      const temAssinatura = Boolean(signatureDataUrl || (order as any).signature_image || '')
+      const temFoto = orderPhotos.length > 0
+      if (!temAssinatura) {
+        const seguir = confirm(
+          'ATENÇÃO — esta OS NÃO tem a assinatura do cliente.\n\n' +
+            'Finalizar sem assinatura significa fechar o serviço sem prova de que o ' +
+            'responsável aceitou a execução.\n\n' +
+            (temFoto
+              ? `A OS tem ${orderPhotos.length} foto(s) de evidência, mas foto não ` +
+                'substitui o aceite.\n\n'
+              : 'A OS também não tem foto de evidência.\n\n') +
+            'OK = finalizar mesmo assim\n' +
+            'Cancelar = voltar e colher a assinatura na aba "Assinatura & GPS"',
+        )
+        if (!seguir) {
+          toast.info('Finalização cancelada. Colha a assinatura na aba "Assinatura & GPS".')
+          return
+        }
+      }
+    }
+
     const note = prompt(`Motivo da mudança para ${newStatus} (opcional):`) || ''
 
     try {

@@ -119,6 +119,100 @@ export async function getWorkOrders(filter?: string): Promise<WorkOrder[]> {
   return records as unknown as WorkOrder[]
 }
 
+/**
+ * LISTA PAGINADA COM FILTRO NO SERVIDOR (melhoria de 22/11/2026).
+ *
+ * `getWorkOrders` baixa a base INTEIRA e o navegador filtra depois. Funciona
+ * com 17 OS; com algumas centenas a abertura da lista fica lenta e a busca
+ * (que dispara a cada tecla) trava a tela.
+ *
+ * Aqui o filtro vai para o PocketBase e só a página pedida desce. A busca
+ * textual usa os campos do próprio banco via `~` (contém, sem diferenciar
+ * maiúscula), inclusive dentro do cliente e do técnico expandidos.
+ *
+ * Devolve também `totalItems` para a tela mostrar "x de y".
+ */
+export interface PaginaOS {
+  items: WorkOrder[]
+  page: number
+  perPage: number
+  totalItems: number
+  totalPages: number
+}
+
+export async function getWorkOrdersPage(opcoes: {
+  page?: number
+  perPage?: number
+  busca?: string
+  status?: string
+  tecnico?: string
+  apenasDoTecnico?: string
+}): Promise<PaginaOS> {
+  const {
+    page = 1,
+    perPage = 30,
+    busca = '',
+    status = 'ALL',
+    tecnico = 'ALL',
+    apenasDoTecnico,
+  } = opcoes
+  const condicoes: string[] = []
+
+  /**
+   * BUSCA. Escapa aspas para não quebrar a expressão do PocketBase — um nome
+   * com `'` (raro, mas existe) derrubava a consulta com 400.
+   */
+  const termo = busca.trim().replace(/'/g, "\\'")
+  if (termo) {
+    const campos = [
+      'order_number ~ {:t}',
+      'description ~ {:t}',
+      'technical_report ~ {:t}',
+      'service_type ~ {:t}',
+      'client.name ~ {:t}',
+      'client.nickname ~ {:t}',
+      'technician.name ~ {:t}',
+    ].join(' || ')
+    condicoes.push(`(${campos})`)
+  }
+
+  /**
+   * STATUS. "EM ANDAMENTO" inclui o valor antigo AGUARDANDO MATERIAL, que
+   * continua gravado em OS de antes da migration 0060.
+   * "HOJE" não é status: é agendada/aberta para hoje.
+   */
+  if (status === 'HOJE') {
+    const hoje = new Date().toISOString().slice(0, 10)
+    condicoes.push(`(scheduled_date >= "${hoje} 00:00:00" && scheduled_date <= "${hoje} 23:59:59")`)
+  } else if (status === 'EM ANDAMENTO') {
+    condicoes.push(`(status = "EM ANDAMENTO" || status = "AGUARDANDO MATERIAL")`)
+  } else if (status && status !== 'ALL') {
+    condicoes.push(`status = "${status}"`)
+  }
+
+  // Técnico: o próprio (usuário técnico) tem prioridade sobre o dropdown
+  const alvoTecnico = apenasDoTecnico || (tecnico !== 'ALL' ? tecnico : '')
+  if (alvoTecnico) condicoes.push(`technician = "${alvoTecnico}"`)
+
+  const filtro = condicoes.join(' && ')
+
+  const resposta = await pb.collection('work_orders').getList(page, perPage, {
+    sort: '-order_number',
+    expand: 'client,technician',
+    filter: filtro,
+    // {:t} resolve para o termo já escapado, evitando injeção na expressão
+    ...(termo ? { filter: pb.filter(filtro, { t: busca.trim() }) } : {}),
+  })
+
+  return {
+    items: resposta.items as unknown as WorkOrder[],
+    page: resposta.page,
+    perPage: resposta.perPage,
+    totalItems: resposta.totalItems,
+    totalPages: resposta.totalPages,
+  }
+}
+
 export async function getWorkOrderById(id: string): Promise<WorkOrder> {
   const record = await pb.collection('work_orders').getOne(id, {
     expand: 'client,technician',
