@@ -65,6 +65,12 @@ import { avisarSincronizacao } from '@/lib/onedriveSync'
 import { gravarGpsNaFoto, pegarPosicao } from '@/lib/gpsFoto'
 import { prepararFoto } from '@/lib/imagem'
 import {
+  urlDoLinkCliente,
+  mensagemWhatsapp,
+  abrirWhatsapp,
+  tokenDoLinkCliente,
+} from '@/lib/linkCliente'
+import {
   Save,
   Printer,
   FileText,
@@ -88,6 +94,7 @@ import {
   Navigation,
   ArrowRightLeft,
   ImagePlus,
+  Link2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -156,6 +163,13 @@ export default function WorkOrderDetail() {
   const [novoClienteAberto, setNovoClienteAberto] = useState(false)
   const [migrando, setMigrando] = useState(false)
   const [importandoFotos, setImportandoFotos] = useState(false)
+  /**
+   * LINK DO CLIENTE (sem login) — botão igual ao do Pedido.
+   * Copia o link exclusivo desta OS e abre o WhatsApp com a mensagem pronta,
+   * usando o telefone do cadastro do cliente. O token vem do campo
+   * client_link_token gravado na própria OS (hook no servidor). Só admin.
+   */
+  const [copiandoLink, setCopiandoLink] = useState(false)
 
   const [photoDescription, setPhotoDescription] = useState('')
   const [pendingPhotos, setPendingPhotos] = useState<
@@ -250,6 +264,42 @@ export default function WorkOrderDetail() {
       })
     } finally {
       setImportandoFotos(false)
+    }
+  }
+
+  /**
+   * LINK DO CLIENTE — copia o link exclusivo desta OS e abre o WhatsApp com a
+   * mensagem pronta (telefone do cadastro). Reaproveita src/lib/linkCliente,
+   * o mesmo caminho do botão do Pedido. Nada é gravado nem apagado aqui.
+   */
+  const enviarLinkCliente = async () => {
+    if (!id || isNew) return
+    const token = tokenDoLinkCliente(order)
+    if (!token) {
+      toast.error('Esta OS ainda não tem link do cliente. Salve a OS e reabra.', {
+        duration: 8000,
+      })
+      return
+    }
+    const clienteDoCadastro = clients.find((c) => c.id === order.client)
+    const link = urlDoLinkCliente('os', id, token)
+    setCopiandoLink(true)
+    try {
+      await navigator.clipboard.writeText(link)
+      toast.success('Link copiado! Abrindo o WhatsApp...', { duration: 4000 })
+      abrirWhatsapp({
+        telefone: clienteDoCadastro?.phone,
+        mensagem: mensagemWhatsapp({
+          tipo: 'os',
+          numero: order.order_number || '',
+          cliente: clienteDoCadastro?.name,
+          url: link,
+        }),
+      })
+    } catch {
+      toast.error('Não foi possível copiar o link.', { duration: 6000 })
+    } finally {
+      setCopiandoLink(false)
     }
   }
 
@@ -1620,6 +1670,25 @@ ${
               <FileText className="w-4 h-4 shrink-0" />
               <span className="hidden sm:inline">Gerar Relatório PDF (V3)</span>
               <span className="sm:hidden">PDF</span>
+            </Button>
+          )}
+
+          {!isNew && isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={enviarLinkCliente}
+              disabled={copiandoLink}
+              className="flex-1 sm:flex-none gap-1.5 text-xs border-[#0B3D91]/40 text-[#0B3D91] hover:bg-[#0B3D91]/10 font-medium"
+              title="Copia o link exclusivo desta OS e abre o WhatsApp com a mensagem pronta para o cliente (sem login, sem valores)"
+            >
+              {copiandoLink ? (
+                <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
+              ) : (
+                <Link2 className="w-4 h-4 shrink-0" />
+              )}
+              <span className="hidden sm:inline">Link do cliente</span>
+              <span className="sm:hidden">Link</span>
             </Button>
           )}
 

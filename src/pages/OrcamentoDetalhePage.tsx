@@ -36,8 +36,15 @@ import {
   CheckCircle2,
   Wrench,
   Images,
+  Link2,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import {
+  urlDoLinkCliente,
+  mensagemWhatsapp,
+  abrirWhatsapp,
+  tokenDoLinkCliente,
+} from '@/lib/linkCliente'
 
 const ETAPAS: { valor: string; label: string }[] = [
   { valor: 'ORCAMENTO', label: 'Orçamento' },
@@ -49,7 +56,7 @@ const ETAPAS: { valor: string; label: string }[] = [
 export default function OrcamentoDetalhePage() {
   const { id } = useParams()
   const navegar = useNavigate()
-  const { user } = useAuth()
+  const { user, isAdmin } = useAuth()
   const [doc, setDoc] = useState<Quote | null>(null)
   const [empresa, setEmpresa] = useState<Empresa>({})
   const [carregando, setCarregando] = useState(true)
@@ -66,6 +73,43 @@ export default function OrcamentoDetalhePage() {
   const canvasCliente = useRef<HTMLCanvasElement | null>(null)
   const canvasEntregador = useRef<HTMLCanvasElement | null>(null)
   const refDoc = useRef<HTMLDivElement | null>(null)
+
+  /**
+   * LINK DO CLIENTE (sem login) — mesmo botão do Pedido e da OS.
+   * Copia o link exclusivo deste documento e abre o WhatsApp com a mensagem
+   * pronta, usando o telefone do cadastro do cliente. O token vem do campo
+   * client_link_token gravado no próprio orçamento (hook no servidor). Só admin.
+   */
+  const [copiandoLink, setCopiandoLink] = useState(false)
+  const enviarLinkCliente = async () => {
+    if (!doc?.id) return
+    const token = tokenDoLinkCliente(doc)
+    if (!token) {
+      toast.error('Este documento ainda não tem link do cliente. Salve-o e reabra.', {
+        duration: 8000,
+      })
+      return
+    }
+    const link = urlDoLinkCliente('pedido', doc.id, token)
+    setCopiandoLink(true)
+    try {
+      await navigator.clipboard.writeText(link)
+      toast.success('Link copiado! Abrindo o WhatsApp...', { duration: 4000 })
+      abrirWhatsapp({
+        telefone: doc.expand?.client?.phone,
+        mensagem: mensagemWhatsapp({
+          tipo: 'pedido',
+          numero: doc.number || doc.id.slice(-6).toUpperCase(),
+          cliente: doc.expand?.client?.name,
+          url: link,
+        }),
+      })
+    } catch {
+      toast.error('Não foi possível copiar o link.', { duration: 6000 })
+    } finally {
+      setCopiandoLink(false)
+    }
+  }
 
   const carregar = async () => {
     if (!id) return
@@ -450,6 +494,22 @@ export default function OrcamentoDetalhePage() {
         >
           <Printer className="h-3.5 w-3.5" /> Imprimir
         </Button>
+        {isAdmin && (
+          <Button
+            variant="outline"
+            onClick={enviarLinkCliente}
+            disabled={copiandoLink || salvando}
+            className="h-8 gap-1.5 text-[11px] border-[#0B3D91]/40 text-[#0B3D91] hover:bg-[#0B3D91]/10 font-medium"
+            title="Copia o link exclusivo deste documento e abre o WhatsApp com a mensagem pronta para o cliente (sem login, sem valores)"
+          >
+            {copiandoLink ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Link2 className="h-3.5 w-3.5" />
+            )}
+            Link do cliente
+          </Button>
+        )}
         {fotosSalvas.length > 0 && (
           <Button
             variant="outline"
