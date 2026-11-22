@@ -70,6 +70,7 @@ import {
   ArrowRightLeft,
 } from 'lucide-react'
 import { migrarPedidoParaOS, importarFotosOSParaPedido } from '@/services/migracao'
+import { baixarFotosZip, compartilharFotosZip, type FotoParaZip } from '@/lib/fotosZip'
 import { toast } from 'sonner'
 
 interface ItemLocal extends QuoteItem {
@@ -124,6 +125,52 @@ export default function PedidoPage() {
   /** nomes dos arquivos já gravados no servidor (pedido reaberto) */
   const [fotosSalvas, setFotosSalvas] = useState<string[]>([])
   const [importandoFotos, setImportandoFotos] = useState(false)
+  const [baixandoZip, setBaixandoZip] = useState(false)
+  const [compartilhandoZip, setCompartilhandoZip] = useState(false)
+
+  /** lista de fotos do pedido pronta para o zip/compartilhar (src/lib/fotosZip) */
+  const fotosParaZip: FotoParaZip[] = fotosSalvas.map((nome) => ({
+    nome,
+    url: getFileUrl('quotes', salvoId, nome) || '',
+  }))
+
+  const baixarZipFotos = async () => {
+    if (!salvoId || fotosParaZip.length === 0) return
+    setBaixandoZip(true)
+    try {
+      const qtde = await baixarFotosZip({
+        fotos: fotosParaZip,
+        nomeArquivo: `PEDIDO-${numero || 'fotos'}-FOTOS`,
+        pasta: `fotos-pedido-${numero || ''}`,
+      })
+      if (qtde === 0) toast.error('Não foi possível preparar as fotos.')
+      else toast.success(`ZIP com ${qtde} foto(s) baixado.`)
+    } catch {
+      toast.error('Erro ao montar o ZIP de fotos.')
+    } finally {
+      setBaixandoZip(false)
+    }
+  }
+
+  const compartilharZipFotos = async () => {
+    if (!salvoId || fotosParaZip.length === 0) return
+    setCompartilhandoZip(true)
+    try {
+      const r = await compartilharFotosZip({
+        fotos: fotosParaZip,
+        nomeArquivo: `PEDIDO-${numero || 'fotos'}-FOTOS`,
+        pasta: `fotos-pedido-${numero || ''}`,
+        titulo: `Fotos do pedido ${numero || ''}`,
+      })
+      if (r === 'vazio') toast.error('Não foi possível preparar as fotos.')
+      else if (r === 'baixado') toast.info('Compartilhamento indisponível — ZIP baixado.')
+      else toast.success('ZIP compartilhado.')
+    } catch {
+      toast.error('Erro ao compartilhar as fotos.')
+    } finally {
+      setCompartilhandoZip(false)
+    }
+  }
 
   // busca de cliente
   const [buscaCliente, setBuscaCliente] = useState('')
@@ -695,6 +742,42 @@ export default function PedidoPage() {
           <Button variant="outline" size="sm" onClick={imprimir} className="h-9 gap-1.5 text-xs">
             <Printer className="h-4 w-4" /> PDF
           </Button>
+          {!ehNovo && fotosSalvas.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={baixarZipFotos}
+              disabled={baixandoZip || salvando}
+              className="h-9 gap-1.5 text-xs border-[#0B3D91]/40 text-[#0B3D91] hover:bg-[#0B3D91]/10 font-medium"
+              title="Baixa todas as fotos deste pedido num único arquivo .zip"
+            >
+              {baixandoZip ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Images className="h-4 w-4" />
+              )}
+              <span className="hidden sm:inline">Baixar fotos (.zip)</span>
+              <span className="sm:hidden">ZIP</span>
+            </Button>
+          )}
+          {!ehNovo && fotosSalvas.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={compartilharZipFotos}
+              disabled={compartilhandoZip || salvando}
+              className="h-9 gap-1.5 text-xs border-[#0B3D91]/40 text-[#0B3D91] hover:bg-[#0B3D91]/10 font-medium"
+              title="Abre o menu de compartilhamento do aparelho com o .zip das fotos (WhatsApp, e-mail...)"
+            >
+              {compartilhandoZip ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Images className="h-4 w-4" />
+              )}
+              <span className="hidden sm:inline">Compartilhar fotos</span>
+              <span className="sm:hidden">Compartilhar</span>
+            </Button>
+          )}
           {!ehNovo && isAdmin && (
             <Button
               variant="outline"

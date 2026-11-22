@@ -53,9 +53,10 @@ import {
   ShoppingCart,
   AlertTriangle,
   Navigation,
+  FileText,
 } from 'lucide-react'
 
-type StatusKey = 'ABERTA' | 'AGENDADA' | 'EM ANDAMENTO' | 'FINALIZADA' | 'LANCADA'
+type StatusKey = 'ABERTA' | 'AGENDADA' | 'EM ANDAMENTO' | 'ORCAMENTO' | 'FINALIZADA' | 'LANCADA'
 
 /**
  * Os cinco status, na ordem do trabalho.
@@ -138,6 +139,20 @@ const STATUS: {
     ajuda: 'Já lançada no financeiro',
     cor: 'border-indigo-300 bg-indigo-100',
     faixa: 'border-l-indigo-600',
+  },
+  {
+    // proposta de orçamento (migration 0062): não é pendência nem atraso —
+    // aguarda aprovação do cliente. Recorte próprio para não perder o registro.
+    chave: 'ORCAMENTO',
+    rotulo: 'Orçamento',
+    curto: 'Orçamento',
+    icone: FileText,
+    borda: 'border-l-violet-500',
+    bg: 'bg-violet-100',
+    texto: 'text-violet-900',
+    ajuda: 'Proposta enviada, aguardando aprovação',
+    cor: 'border-violet-300 bg-violet-100',
+    faixa: 'border-l-violet-500',
   },
 ]
 
@@ -242,6 +257,7 @@ export default function Painel() {
       ABERTA: 0,
       AGENDADA: 0,
       'EM ANDAMENTO': 0,
+      ORCAMENTO: 0,
       FINALIZADA: 0,
       LANCADA: 0,
     }
@@ -253,10 +269,15 @@ export default function Painel() {
     return c
   }, [os])
 
-  /** em aberto = ainda dá trabalho (não finalizada, não lançada, não cancelada) */
+  /** em aberto = ainda dá trabalho (não finalizada, não lançada, não cancelada).
+   * ORCAMENTO (proposta) também sai: proposta aguardando aprovação não é pendência —
+   * ela tem recorte próprio no seletor, sem se perder. */
   const emAberto = os.filter(
     (o) =>
-      o.status !== 'FINALIZADA' && (o.status as string) !== 'LANCADA' && o.status !== 'CANCELADA',
+      o.status !== 'FINALIZADA' &&
+      (o.status as string) !== 'LANCADA' &&
+      o.status !== 'CANCELADA' &&
+      o.status !== 'ORCAMENTO',
   )
   const osHoje = os.filter((o) => (o.scheduled_date || '').slice(0, 10) === hojeStr)
 
@@ -270,6 +291,8 @@ export default function Painel() {
   const pendentes = useMemo(() => {
     return os.filter((o) => {
       if (o.status === 'FINALIZADA' || o.status === 'CANCELADA') return false
+      // proposta de orçamento não é atraso — mesmo com data vencida
+      if ((o.status as string) === 'ORCAMENTO') return false
       const d = (o.scheduled_date || '').slice(0, 10)
       return !!d && d < hojeStr
     })
@@ -460,7 +483,7 @@ export default function Painel() {
         PENDENTE em vermelho: data já passou e ninguém movimentou a OS. Antes
         essas sumiam no meio da lista sem chamar atenção.
       */}
-      <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-6">
+      <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-8">
         {/* HOJE */}
         <button
           type="button"

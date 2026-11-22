@@ -14,6 +14,8 @@ import { getEmpresa, urlArquivo, type Empresa } from '@/lib/empresa'
 import { getNextOrderNumber, createWorkOrder, addOrderMaterial } from '@/services/api'
 import { useAuth } from '@/contexts/AuthContext'
 import pb from '@/lib/pocketbase/client'
+import { getFileUrl } from '@/services/api'
+import { baixarFotosZip, compartilharFotosZip, type FotoParaZip } from '@/lib/fotosZip'
 import type { Quote, TransactionKind } from '@/types/crm'
 import { TIPOS, brl, dataBR } from '@/types/crm'
 import { Card, CardContent } from '@/components/ui/card'
@@ -33,6 +35,7 @@ import {
   X,
   CheckCircle2,
   Wrench,
+  Images,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -58,6 +61,8 @@ export default function OrcamentoDetalhePage() {
   const [assinaturaEntregador, setAssinaturaEntregador] = useState('')
   const [fotos, setFotos] = useState<File[]>([])
   const [mostrarEntrega, setMostrarEntrega] = useState(false)
+  const [baixandoZip, setBaixandoZip] = useState(false)
+  const [compartilhandoZip, setCompartilhandoZip] = useState(false)
   const canvasCliente = useRef<HTMLCanvasElement | null>(null)
   const canvasEntregador = useRef<HTMLCanvasElement | null>(null)
   const refDoc = useRef<HTMLDivElement | null>(null)
@@ -90,6 +95,55 @@ export default function OrcamentoDetalhePage() {
 
   const urlLogo = urlArquivo(empresa, 'logo')
   const urlAssinaturaDiretor = urlArquivo(empresa, 'assinatura_diretor')
+
+  /**
+   * FOTOS SALVAS NO DOCUMENTO (mesmo recurso do Pedido e da OS).
+   * Aparecem nos botões de ZIP e compartilhar abaixo. Nada é apagado:
+   * aqui só se lê os arquivos e se monta um pacote em memória.
+   */
+  const fotosSalvas = ((doc?.photos || []) as string[]).filter(Boolean)
+  const fotosParaZip: FotoParaZip[] = fotosSalvas.map((nome) => ({
+    nome,
+    url: getFileUrl('quotes', doc?.id || '', nome),
+  }))
+
+  const baixarZipFotos = async () => {
+    if (!doc || fotosParaZip.length === 0) return
+    setBaixandoZip(true)
+    try {
+      const qtde = await baixarFotosZip({
+        fotos: fotosParaZip,
+        nomeArquivo: `ORCAMENTO-${doc.id.slice(-6)}-FOTOS`,
+        pasta: `fotos-orcamento-${doc.id.slice(-6)}`,
+      })
+      if (qtde === 0) toast.error('Não foi possível preparar as fotos.')
+      else toast.success(`ZIP com ${qtde} foto(s) baixado.`)
+    } catch {
+      toast.error('Erro ao montar o ZIP de fotos.')
+    } finally {
+      setBaixandoZip(false)
+    }
+  }
+
+  const compartilharZipFotos = async () => {
+    if (!doc || fotosParaZip.length === 0) return
+    setCompartilhandoZip(true)
+    try {
+      const r = await compartilharFotosZip({
+        fotos: fotosParaZip,
+        nomeArquivo: `ORCAMENTO-${doc.id.slice(-6)}-FOTOS`,
+        pasta: `fotos-orcamento-${doc.id.slice(-6)}`,
+        titulo: 'Fotos do orçamento',
+      })
+      if (r === 'vazio') toast.error('Não foi possível preparar as fotos.')
+      else if (r === 'baixado') toast.info('Compartilhamento indisponível — ZIP baixado.')
+      else toast.success('ZIP compartilhado.')
+    } catch {
+      toast.error('Erro ao compartilhar as fotos.')
+    } finally {
+      setCompartilhandoZip(false)
+    }
+  }
 
   /**
    * Lê o canvas na hora de salvar.
@@ -396,6 +450,38 @@ export default function OrcamentoDetalhePage() {
         >
           <Printer className="h-3.5 w-3.5" /> Imprimir
         </Button>
+        {fotosSalvas.length > 0 && (
+          <Button
+            variant="outline"
+            onClick={baixarZipFotos}
+            disabled={baixandoZip || salvando}
+            className="h-8 gap-1.5 text-[11px] border-[#0B3D91]/40 text-[#0B3D91] hover:bg-[#0B3D91]/10 font-medium"
+            title="Baixa todas as fotos deste documento num único arquivo .zip"
+          >
+            {baixandoZip ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Images className="h-3.5 w-3.5" />
+            )}
+            Baixar fotos (.zip)
+          </Button>
+        )}
+        {fotosSalvas.length > 0 && (
+          <Button
+            variant="outline"
+            onClick={compartilharZipFotos}
+            disabled={compartilhandoZip || salvando}
+            className="h-8 gap-1.5 text-[11px] border-[#0B3D91]/40 text-[#0B3D91] hover:bg-[#0B3D91]/10 font-medium"
+            title="Abre o menu de compartilhamento do aparelho com o .zip das fotos (WhatsApp, e-mail...)"
+          >
+            {compartilhandoZip ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Images className="h-3.5 w-3.5" />
+            )}
+            Compartilhar fotos
+          </Button>
+        )}
         {st === 'ORCAMENTO' && (
           <Button
             variant="outline"

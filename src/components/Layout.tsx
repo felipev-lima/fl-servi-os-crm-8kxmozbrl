@@ -200,7 +200,10 @@ export default function Layout() {
                   }`}
                 >
                   <Icon className="w-4 h-4 shrink-0" />
-                  <span className="hidden xl:inline">{item.name}</span>
+                  {/* RÓTULO SEMPRE À VISTA (inclusive no PWA standalone):
+                      antes era `hidden xl:inline` e no app instalado a janela
+                      fica mais estreita que 1280px — o menu saía só com ícones. */}
+                  <span className="inline">{item.name}</span>
                 </Link>
               )
             })}

@@ -191,6 +191,14 @@ export default function WorkOrderList() {
       texto: 'text-slate-700',
       faixa: 'border-l-slate-500',
     },
+    // Proposta de orçamento (migration 0062): uma proposta não é pendência,
+    // tem grupo/aba própria e sai das contagens de pendentes/atrasadas.
+    ORCAMENTO: {
+      label: 'Orçamento',
+      cor: 'border-violet-300 bg-violet-100',
+      texto: 'text-violet-900',
+      faixa: 'border-l-violet-500',
+    },
   }
   const statusConfig = PALETA as any
   /** normaliza o status antigo para o novo */
@@ -282,6 +290,13 @@ export default function WorkOrderList() {
       status: 'LANCADA',
       cor: 'bg-indigo-100 border-indigo-300',
       texto: 'text-indigo-900',
+    },
+    {
+      chave: 'ORCAMENTO',
+      rotulo: 'Orçamento',
+      status: 'ORCAMENTO',
+      cor: 'bg-violet-100 border-violet-300',
+      texto: 'text-violet-900',
     },
   ]
 

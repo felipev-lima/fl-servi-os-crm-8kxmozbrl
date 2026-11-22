@@ -96,6 +96,8 @@ export type OrderStatus =
   | 'EM ANDAMENTO'
   | 'AGUARDANDO MATERIAL'
   | 'FINALIZADA'
+  | 'LANCADA'
+  | 'ORCAMENTO'
   | 'CANCELADA'
 
 export type ServiceType =
