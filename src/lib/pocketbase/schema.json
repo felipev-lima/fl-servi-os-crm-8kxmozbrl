@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-22T20:49:37.527Z",
+  "generatedAt": "2026-11-22T21:33:11.919Z",
   "collections": [
     {
       "name": "users",
@@ -443,7 +443,8 @@
             "EM ANDAMENTO",
             "FINALIZADA",
             "LANCADA",
-            "CANCELADA"
+            "CANCELADA",
+            "ORCAMENTO"
           ]
         },
         {
