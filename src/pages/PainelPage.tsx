@@ -255,7 +255,8 @@ export default function Painel() {
 
   /** em aberto = ainda dá trabalho (não finalizada, não lançada, não cancelada) */
   const emAberto = os.filter(
-    (o) => o.status !== 'FINALIZADA' && o.status !== 'LANCADA' && o.status !== 'CANCELADA',
+    (o) =>
+      o.status !== 'FINALIZADA' && (o.status as string) !== 'LANCADA' && o.status !== 'CANCELADA',
   )
   const osHoje = os.filter((o) => (o.scheduled_date || '').slice(0, 10) === hojeStr)
 

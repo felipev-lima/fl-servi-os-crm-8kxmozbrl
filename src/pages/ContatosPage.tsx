@@ -42,6 +42,7 @@ import {
   Save,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useViewMode, ViewModeSelector } from '@/components/ViewModeSelector'
 
 const POR_PAGINA = 25
 
@@ -80,6 +81,7 @@ export default function ContatosPage() {
   const [carregando, setCarregando] = useState(true)
   const [busca, setBusca] = useState('')
   const [filtro, setFiltro] = useState<'FALTANDO' | 'TODOS' | 'COMPLETO'>('FALTANDO')
+  const [modo, setModo] = useViewMode('contatos')
   const [pagina, setPagina] = useState(1)
   const [rascunho, setRascunho] = useState<Record<string, { phone?: string; email?: string }>>({})
   const [salvandoId, setSalvandoId] = useState<string | null>(null)
@@ -87,7 +89,7 @@ export default function ContatosPage() {
   // importação
   const [openImport, setOpenImport] = useState(false)
   const [linhas, setLinhas] = useState<
-    { nome: string; telefone: string; email: string; contato: string }[]
+    { nome: string; documento: string; telefone: string; email: string; contato: string }[]
   >([])
   const [importando, setImportando] = useState(false)
   const [nomeArquivo, setNomeArquivo] = useState('')
@@ -392,7 +394,7 @@ export default function ContatosPage() {
         />
       </div>
 
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap items-center gap-1">
         {[
           ['FALTANDO', `Faltando contato (${clientes.length - completos.length})`],
           ['COMPLETO', `Completos (${completos.length})`],
@@ -411,48 +413,111 @@ export default function ContatosPage() {
             {rot}
           </Button>
         ))}
+        <ViewModeSelector valor={modo} onChange={setModo} className="ml-auto" />
       </div>
 
-      <div className="space-y-1.5">
-        {listados.map((c) => {
-          const tel = (c.phone || '').trim()
-          const mail = (c.email || '').trim()
-          const salvando = salvandoId === c.id
-          return (
-            <Card
-              key={c.id}
-              className={salvando ? 'border-[#0B3D91]' : !tel ? 'border-rose-200' : ''}
-            >
-              <CardContent className="space-y-1.5 p-2.5">
-                <div className="flex items-start gap-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[11px] font-bold">{c.nickname || c.name}</p>
-                    <p className="truncate text-[9px] text-muted-foreground">
+      {modo === 'cartoes' ? (
+        <div className="space-y-1.5">
+          {listados.map((c) => {
+            const tel = (c.phone || '').trim()
+            const mail = (c.email || '').trim()
+            const salvando = salvandoId === c.id
+            return (
+              <Card
+                key={c.id}
+                className={salvando ? 'border-[#0B3D91]' : !tel ? 'border-rose-200' : ''}
+              >
+                <CardContent className="space-y-1.5 p-2.5">
+                  <div className="flex items-start gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[11px] font-bold">{c.nickname || c.name}</p>
+                      <p className="truncate text-[9px] text-muted-foreground">
+                        {c.name} · {c.document || 'sem documento'}
+                      </p>
+                    </div>
+                    {salvando && <Loader2 className="h-3.5 w-3.5 animate-spin text-[#0B3D91]" />}
+                    {!tel && !salvando && (
+                      <Badge className="shrink-0 border-rose-300 bg-rose-100 px-1 py-0 text-[7px] text-rose-800">
+                        sem tel
+                      </Badge>
+                    )}
+                    {tel && (
+                      <a
+                        href={`https://wa.me/${digitos(tel)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="shrink-0 rounded border border-emerald-300 bg-emerald-50 px-1.5 py-1 text-emerald-700"
+                        title="Abrir no WhatsApp"
+                      >
+                        <MessageCircle className="h-3 w-3" />
+                      </a>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <div>
+                      <Label className="text-[8px] text-muted-foreground">Telefone</Label>
+                      <Input
+                        value={valorDe(c, 'phone')}
+                        onChange={(e) => digitar(c.id, 'phone', e.target.value)}
+                        onBlur={() => salvarLinha(c)}
+                        placeholder="(22) 99999-9999"
+                        inputMode="tel"
+                        className="h-7 text-[10px]"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-[8px] text-muted-foreground">E-mail</Label>
+                      <Input
+                        value={valorDe(c, 'email')}
+                        onChange={(e) => digitar(c.id, 'email', e.target.value)}
+                        onBlur={() => salvarLinha(c)}
+                        placeholder="email@cliente.com"
+                        inputMode="email"
+                        className="h-7 text-[10px]"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+
+          {listados.length === 0 && (
+            <div className="rounded-xl border-2 border-dashed p-10 text-center">
+              <CheckCircle2 className="mx-auto mb-2 h-7 w-7 text-emerald-500" />
+              <p className="text-sm font-semibold">Nada pendente neste filtro</p>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="divide-y overflow-hidden rounded-xl border bg-card">
+          {listados.map((c) => {
+            const tel = (c.phone || '').trim()
+            const mail = (c.email || '').trim()
+            const salvando = salvandoId === c.id
+            const compacto = modo === 'compacta'
+            return (
+              <div
+                key={c.id}
+                className={`flex items-center gap-2 ${compacto ? 'px-2.5 py-1.5' : 'px-3 py-2'} ${
+                  salvando
+                    ? 'border-l-2 border-[#0B3D91]'
+                    : !tel
+                      ? 'border-l-2 border-rose-300'
+                      : ''
+                }`}
+              >
+                <div className="min-w-0 flex-1">
+                  <p className={`truncate font-bold ${compacto ? 'text-[11px]' : 'text-xs'}`}>
+                    {c.nickname || c.name}
+                  </p>
+                  {!compacto && (
+                    <p className="truncate text-[10px] text-muted-foreground">
                       {c.name} · {c.document || 'sem documento'}
                     </p>
-                  </div>
-                  {salvando && <Loader2 className="h-3.5 w-3.5 animate-spin text-[#0B3D91]" />}
-                  {!tel && !salvando && (
-                    <Badge className="shrink-0 border-rose-300 bg-rose-100 px-1 py-0 text-[7px] text-rose-800">
-                      sem tel
-                    </Badge>
                   )}
-                  {tel && (
-                    <a
-                      href={`https://wa.me/${digitos(tel)}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="shrink-0 rounded border border-emerald-300 bg-emerald-50 px-1.5 py-1 text-emerald-700"
-                      title="Abrir no WhatsApp"
-                    >
-                      <MessageCircle className="h-3 w-3" />
-                    </a>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 gap-1.5">
-                  <div>
-                    <Label className="text-[8px] text-muted-foreground">Telefone</Label>
+                  <div className={compacto ? 'flex gap-1' : 'grid grid-cols-2 gap-1.5'}>
                     <Input
                       value={valorDe(c, 'phone')}
                       onChange={(e) => digitar(c.id, 'phone', e.target.value)}
@@ -461,9 +526,6 @@ export default function ContatosPage() {
                       inputMode="tel"
                       className="h-7 text-[10px]"
                     />
-                  </div>
-                  <div>
-                    <Label className="text-[8px] text-muted-foreground">E-mail</Label>
                     <Input
                       value={valorDe(c, 'email')}
                       onChange={(e) => digitar(c.id, 'email', e.target.value)}
@@ -474,18 +536,37 @@ export default function ContatosPage() {
                     />
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          )
-        })}
+                <div className="flex shrink-0 flex-col items-center gap-1">
+                  {salvando && <Loader2 className="h-3.5 w-3.5 animate-spin text-[#0B3D91]" />}
+                  {!tel && !salvando && (
+                    <Badge className="border-rose-300 bg-rose-100 px-1 py-0 text-[7px] text-rose-800">
+                      sem tel
+                    </Badge>
+                  )}
+                  {tel && (
+                    <a
+                      href={`https://wa.me/${digitos(tel)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded border border-emerald-300 bg-emerald-50 px-1.5 py-1 text-emerald-700"
+                      title="Abrir no WhatsApp"
+                    >
+                      <MessageCircle className="h-3 w-3" />
+                    </a>
+                  )}
+                </div>
+              </div>
+            )
+          })}
 
-        {listados.length === 0 && (
-          <div className="rounded-xl border-2 border-dashed p-10 text-center">
-            <CheckCircle2 className="mx-auto mb-2 h-7 w-7 text-emerald-500" />
-            <p className="text-sm font-semibold">Nada pendente neste filtro</p>
-          </div>
-        )}
-      </div>
+          {listados.length === 0 && (
+            <div className="rounded-xl border-2 border-dashed p-10 text-center">
+              <CheckCircle2 className="mx-auto mb-2 h-7 w-7 text-emerald-500" />
+              <p className="text-sm font-semibold">Nada pendente neste filtro</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {paginas > 1 && (
         <div className="flex items-center justify-between px-1">

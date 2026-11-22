@@ -37,12 +37,14 @@ import {
   XCircle,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { ListagemModos, useViewMode, ViewModeSelector } from '@/components/ViewModeSelector'
 
 export default function TechniciansPage() {
   const { isAdmin } = useAuth()
   const [technicians, setTechnicians] = useState<Technician[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [modo, setModo] = useViewMode('tecnicos')
 
   // Dialog Form
   const [openDialog, setOpenDialog] = useState(false)
@@ -218,98 +220,151 @@ export default function TechniciansPage() {
           onChange={(e) => setSearch(e.target.value)}
           className="border-none shadow-none text-xs focus-visible:ring-0 h-8"
         />
+        <ViewModeSelector valor={modo} onChange={setModo} className="ml-auto" />
       </div>
 
-      {/* Grid de Técnicos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map((tech) => (
-          <Card key={tech.id} className="hover:border-[#0F6A3A]/40 transition shadow-sm">
-            <CardContent className="p-4 space-y-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-full bg-[#0F6A3A]/10 text-[#0F6A3A] flex items-center justify-center font-bold text-sm shrink-0">
-                    {tech.name.slice(0, 2).toUpperCase()}
+      {/* Listagem de Técnicos (modos: lista, compacta e cartões) */}
+      {modo === 'cartoes' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.map((tech) => (
+            <Card key={tech.id} className="hover:border-[#0F6A3A]/40 transition shadow-sm">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-full bg-[#0F6A3A]/10 text-[#0F6A3A] flex items-center justify-center font-bold text-sm shrink-0">
+                      {tech.name.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-sm text-foreground line-clamp-1">
+                        {tech.name}
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        {tech.role_title || 'Técnico'}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-bold text-sm text-foreground line-clamp-1">{tech.name}</h3>
-                    <p className="text-xs text-muted-foreground">{tech.role_title || 'Técnico'}</p>
+
+                  <div className="flex items-center gap-1.5">
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] ${
+                        tech.active
+                          ? 'border-emerald-300 text-emerald-700 bg-emerald-50'
+                          : 'border-slate-300 text-slate-500 bg-slate-50'
+                      }`}
+                    >
+                      {tech.active ? 'Ativo' : 'Inativo'}
+                    </Badge>
+
+                    {isAdmin && (
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenEdit(tech)}
+                          className="h-8 px-2 text-[11px] font-semibold text-[#0F6A3A] border-[#0F6A3A]/40 hover:bg-[#0F6A3A]/10 gap-1"
+                          title="Editar os dados deste técnico"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                          Editar
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(tech.id)}
+                          className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
+                          title="Remover técnico"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5">
-                  <Badge
-                    variant="outline"
-                    className={`text-[10px] ${
-                      tech.active
-                        ? 'border-emerald-300 text-emerald-700 bg-emerald-50'
-                        : 'border-slate-300 text-slate-500 bg-slate-50'
-                    }`}
-                  >
-                    {tech.active ? 'Ativo' : 'Inativo'}
-                  </Badge>
-
-                  {isAdmin && (
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleOpenEdit(tech)}
-                        className="h-8 px-2 text-[11px] font-semibold text-[#0F6A3A] border-[#0F6A3A]/40 hover:bg-[#0F6A3A]/10 gap-1"
-                        title="Editar os dados deste técnico"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                        Editar
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(tech.id)}
-                        className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
-                        title="Remover técnico"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
+                <div className="space-y-1 text-xs text-muted-foreground pt-1 border-t">
+                  {tech.phone && (
+                    <div className="flex items-center gap-1.5">
+                      <Phone className="w-3 h-3 text-[#0F6A3A]" />
+                      <span>{tech.phone}</span>
+                    </div>
+                  )}
+                  {tech.email && (
+                    <div className="flex items-center gap-1.5">
+                      <Mail className="w-3 h-3 text-[#0F6A3A]" />
+                      <span className="truncate">{tech.email}</span>
                     </div>
                   )}
                 </div>
-              </div>
 
-              <div className="space-y-1 text-xs text-muted-foreground pt-1 border-t">
-                {tech.phone && (
-                  <div className="flex items-center gap-1.5">
-                    <Phone className="w-3 h-3 text-[#0F6A3A]" />
-                    <span>{tech.phone}</span>
+                {tech.specialties && (
+                  <div className="pt-1">
+                    <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-700 mb-0.5">
+                      <Award className="w-3 h-3 text-[#0F6A3A]" /> Especialidades:
+                    </div>
+                    <p className="text-[11px] text-muted-foreground line-clamp-2">
+                      {tech.specialties}
+                    </p>
                   </div>
                 )}
-                {tech.email && (
-                  <div className="flex items-center gap-1.5">
-                    <Mail className="w-3 h-3 text-[#0F6A3A]" />
-                    <span className="truncate">{tech.email}</span>
-                  </div>
-                )}
+              </CardContent>
+            </Card>
+          ))}
+
+          {filtered.length === 0 && !loading && (
+            <div className="col-span-full p-12 text-center border-2 border-dashed rounded-xl bg-card">
+              <Wrench className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm font-semibold text-foreground">Nenhum técnico cadastrado</p>
+            </div>
+          )}
+        </div>
+      ) : (
+        <ListagemModos
+          modo={modo}
+          itens={filtered}
+          chaveItem={(t) => t.id}
+          cartoes={() => null}
+          linhaDe={(tech) => ({
+            titulo: tech.name,
+            subtitulo: tech.role_title || 'Técnico',
+            detalhe: [tech.phone, tech.email, tech.specialties].filter(Boolean).join(' • '),
+            badge: tech.active ? 'Ativo' : 'Inativo',
+            badgeClasse: tech.active
+              ? 'border-emerald-300 text-emerald-700 bg-emerald-50'
+              : 'border-slate-300 text-slate-500 bg-slate-50',
+            extras: isAdmin ? (
+              <div className="flex items-center gap-1 shrink-0">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleOpenEdit(tech)}
+                  className="h-7 w-7 p-0"
+                  title="Editar os dados deste técnico"
+                >
+                  <Edit2 className="w-3.5 h-3.5 text-muted-foreground" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDelete(tech.id)}
+                  className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10"
+                  title="Remover técnico"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
               </div>
-
-              {tech.specialties && (
-                <div className="pt-1">
-                  <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-700 mb-0.5">
-                    <Award className="w-3 h-3 text-[#0F6A3A]" /> Especialidades:
-                  </div>
-                  <p className="text-[11px] text-muted-foreground line-clamp-2">
-                    {tech.specialties}
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-
-        {filtered.length === 0 && !loading && (
-          <div className="col-span-full p-12 text-center border-2 border-dashed rounded-xl bg-card">
-            <Wrench className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-            <p className="text-sm font-semibold text-foreground">Nenhum técnico cadastrado</p>
-          </div>
-        )}
-      </div>
+            ) : undefined,
+          })}
+          vazio={
+            !loading ? (
+              <div className="p-12 text-center border-2 border-dashed rounded-xl bg-card">
+                <Wrench className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm font-semibold text-foreground">Nenhum técnico cadastrado</p>
+              </div>
+            ) : undefined
+          }
+        />
+      )}
 
       {/* Modal Técnico */}
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>

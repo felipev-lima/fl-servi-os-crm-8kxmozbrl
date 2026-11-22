@@ -29,6 +29,7 @@ import {
   Clock,
   FileText,
 } from 'lucide-react'
+import { useViewMode, ViewModeSelector } from '@/components/ViewModeSelector'
 
 export default function PedidosPage() {
   const { isAdmin } = useAuth()
@@ -36,6 +37,7 @@ export default function PedidosPage() {
   const [carregando, setCarregando] = useState(true)
   const [busca, setBusca] = useState('')
   const [filtro, setFiltro] = useState<string>('TODOS')
+  const [modo, setModo] = useViewMode('pedidos')
 
   useEffect(() => {
     ;(async () => {
@@ -211,86 +213,153 @@ export default function PedidosPage() {
           <option value="NUMERO">Nº do pedido</option>
           <option value="CLIENTE">Nome do cliente</option>
         </select>
+        <ViewModeSelector valor={modo} onChange={setModo} className="ml-auto" />
       </div>
 
-      <div className="space-y-4">
-        {gruposPedido.map((g) => (
-          <div key={g.chave} className="space-y-1.5">
-            {/* cabeçalho do grupo, com a cor da etapa */}
-            <div
-              className={`flex items-center justify-between rounded-lg border-l-4 px-3 py-1.5 ${g.cor}`}
-            >
-              <h2 className={`text-[11px] font-black uppercase tracking-wide ${g.texto}`}>
-                {g.rotulo} <span className="font-bold opacity-70">({g.itens.length})</span>
-              </h2>
-            </div>
+      {modo === 'cartoes' ? (
+        <div className="space-y-4">
+          {gruposPedido.map((g) => (
+            <div key={g.chave} className="space-y-1.5">
+              {/* cabeçalho do grupo, com a cor da etapa */}
+              <div
+                className={`flex items-center justify-between rounded-lg border-l-4 px-3 py-1.5 ${g.cor}`}
+              >
+                <h2 className={`text-[11px] font-black uppercase tracking-wide ${g.texto}`}>
+                  {g.rotulo} <span className="font-bold opacity-70">({g.itens.length})</span>
+                </h2>
+              </div>
 
-            {g.itens.map((p) => {
-              const itens = p.items || []
-              const total = totalDoDocumento(itens)
-              const cfg = configStatus(p.status)
-              return (
-                <Link key={p.id} to={`/pedido/${p.id}`} className="block">
-                  {/* a cor do cartão é a do status: bate o olho e já sabe a etapa */}
-                  <Card className={`border-l-4 ${cfg.cor}`}>
-                    <CardContent className="flex items-center gap-2 p-2.5">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <Badge
-                            variant="outline"
-                            className={`px-1.5 py-0 text-[8px] ${cfg.texto}`}
-                          >
-                            {cfg.rotulo}
-                          </Badge>
-                          {p.number ? (
-                            <span className="font-mono text-[10px] font-bold text-[#0B3D91]">
-                              nº {p.number}
+              {g.itens.map((p) => {
+                const itens = p.items || []
+                const total = totalDoDocumento(itens)
+                const cfg = configStatus(p.status)
+                return (
+                  <Link key={p.id} to={`/pedido/${p.id}`} className="block">
+                    {/* a cor do cartão é a do status: bate o olho e já sabe a etapa */}
+                    <Card className={`border-l-4 ${cfg.cor}`}>
+                      <CardContent className="flex items-center gap-2 p-2.5">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <Badge
+                              variant="outline"
+                              className={`px-1.5 py-0 text-[8px] ${cfg.texto}`}
+                            >
+                              {cfg.rotulo}
+                            </Badge>
+                            {p.number ? (
+                              <span className="font-mono text-[10px] font-bold text-[#0B3D91]">
+                                nº {p.number}
+                              </span>
+                            ) : null}
+                            <span className="text-[9px] text-muted-foreground">
+                              {dataBR(p.date)}
                             </span>
-                          ) : null}
-                          <span className="text-[9px] text-muted-foreground">{dataBR(p.date)}</span>
-                          <span className="text-[9px] text-muted-foreground">
-                            · {itens.length} item(ns)
-                          </span>
+                            <span className="text-[9px] text-muted-foreground">
+                              · {itens.length} item(ns)
+                            </span>
+                          </div>
+                          <p className="mt-0.5 text-[11px] font-semibold leading-tight">
+                            {p.expand?.client?.name || '—'}
+                          </p>
+                          {p.delivered_by_name && (
+                            <p className="truncate text-[9px] text-muted-foreground">
+                              Entregue por {p.delivered_by_name}
+                            </p>
+                          )}
                         </div>
-                        <p className="mt-0.5 text-[11px] font-semibold leading-tight">
+                        <div className="shrink-0 text-right">
+                          {isAdmin && (
+                            <span className="block font-mono text-xs font-bold text-[#0B3D91]">
+                              {brl(total)}
+                            </span>
+                          )}
+                          <ArrowRight className="mt-0.5 ml-auto h-3.5 w-3.5 text-muted-foreground" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                )
+              })}
+            </div>
+          ))}
+
+          {lista.length === 0 && (
+            <div className="rounded-xl border-2 border-dashed p-10 text-center">
+              <ShoppingCart className="mx-auto mb-2 h-7 w-7 text-muted-foreground" />
+              <p className="text-sm font-semibold">
+                {pedidos.length === 0 ? 'Nenhum pedido ainda' : 'Nada neste filtro'}
+              </p>
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                {pedidos.length === 0
+                  ? 'Crie o primeiro pelo botão "Novo pedido".'
+                  : 'Tente outro termo de busca.'}
+              </p>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* LISTA e LISTA COMPACTA: linhas simples agrupadas pela mesma esteira */
+        <div className="space-y-4">
+          {gruposPedido.map((g) => (
+            <div key={g.chave} className="space-y-1">
+              <div
+                className={`flex items-center justify-between rounded-lg border-l-4 px-3 py-1.5 ${g.cor}`}
+              >
+                <h2 className={`text-[11px] font-black uppercase tracking-wide ${g.texto}`}>
+                  {g.rotulo} <span className="font-bold opacity-70">({g.itens.length})</span>
+                </h2>
+              </div>
+              <div className="divide-y overflow-hidden rounded-lg border bg-card">
+                {g.itens.map((p) => {
+                  const compacto = modo === 'compacta'
+                  return (
+                    <Link
+                      key={p.id}
+                      to={`/pedido/${p.id}`}
+                      className={`flex items-center gap-2 px-3 ${compacto ? 'min-h-[44px] py-1.5' : 'min-h-[44px] py-2.5'}`}
+                    >
+                      {p.number ? (
+                        <span className="w-14 shrink-0 font-mono text-[10px] font-bold text-[#0B3D91]">
+                          nº {p.number}
+                        </span>
+                      ) : (
+                        <span className="w-14 shrink-0" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[11px] font-semibold leading-tight">
                           {p.expand?.client?.name || '—'}
                         </p>
-                        {p.delivered_by_name && (
+                        {!compacto && (
                           <p className="truncate text-[9px] text-muted-foreground">
-                            Entregue por {p.delivered_by_name}
+                            {configStatus(p.status).rotulo} · {dataBR(p.date)} ·{' '}
+                            {(p.items || []).length} item(ns)
+                            {p.delivered_by_name ? ` · entregue por ${p.delivered_by_name}` : ''}
                           </p>
                         )}
                       </div>
-                      <div className="shrink-0 text-right">
-                        {isAdmin && (
-                          <span className="block font-mono text-xs font-bold text-[#0B3D91]">
-                            {brl(total)}
-                          </span>
-                        )}
-                        <ArrowRight className="mt-0.5 ml-auto h-3.5 w-3.5 text-muted-foreground" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              )
-            })}
-          </div>
-        ))}
+                      {isAdmin && (
+                        <span className="shrink-0 font-mono text-xs font-bold text-[#0B3D91]">
+                          {brl(totalDoDocumento(p.items || []))}
+                        </span>
+                      )}
+                      <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
 
-        {lista.length === 0 && (
-          <div className="rounded-xl border-2 border-dashed p-10 text-center">
-            <ShoppingCart className="mx-auto mb-2 h-7 w-7 text-muted-foreground" />
-            <p className="text-sm font-semibold">
-              {pedidos.length === 0 ? 'Nenhum pedido ainda' : 'Nada neste filtro'}
-            </p>
-            <p className="mt-1 text-[10px] text-muted-foreground">
-              {pedidos.length === 0
-                ? 'Crie o primeiro pelo botão "Novo pedido".'
-                : 'Tente outro termo de busca.'}
-            </p>
-          </div>
-        )}
-      </div>
+          {lista.length === 0 && (
+            <div className="rounded-xl border-2 border-dashed p-10 text-center">
+              <ShoppingCart className="mx-auto mb-2 h-7 w-7 text-muted-foreground" />
+              <p className="text-sm font-semibold">
+                {pedidos.length === 0 ? 'Nenhum pedido ainda' : 'Nada neste filtro'}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

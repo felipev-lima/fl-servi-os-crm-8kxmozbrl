@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/dialog'
 import { Plus, Layers, Edit2, Trash2, Loader2, Package, X, ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
+import { useViewMode, ViewModeSelector } from '@/components/ViewModeSelector'
 
 const TIPOS: ServiceType[] = [
   'Instalação',
@@ -65,6 +66,7 @@ export default function MaterialKitsPage() {
   const [novoMaterial, setNovoMaterial] = useState('')
   const [novaQtd, setNovaQtd] = useState('')
   const [salvandoItem, setSalvandoItem] = useState(false)
+  const [modo, setModo] = useViewMode('listas-material')
 
   const carregar = async () => {
     setLoading(true)
@@ -246,6 +248,8 @@ export default function MaterialKitsPage() {
         </Button>
       </div>
 
+      <ViewModeSelector valor={modo} onChange={setModo} className="ml-auto" />
+
       {loading && (
         <div className="p-12 text-center">
           <Loader2 className="w-6 h-6 animate-spin mx-auto text-[#0F6A3A]" />
@@ -262,7 +266,71 @@ export default function MaterialKitsPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {modo !== 'cartoes' && kits.length > 0 && (
+        <div className="divide-y overflow-hidden rounded-xl border bg-card">
+          {kits.map((k) => {
+            const compacto = modo === 'compacta'
+            return (
+              <div
+                key={k.id}
+                className={`flex items-center gap-2 px-3 ${compacto ? 'min-h-[44px] py-1.5' : 'min-h-[44px] py-2.5'}`}
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-bold">{k.name}</p>
+                  {!compacto && (
+                    <p className="truncate text-[10px] text-muted-foreground">
+                      {k.service_type || '—'}
+                      {k.description ? ` · ${k.description}` : ''}
+                    </p>
+                  )}
+                </div>
+                {k.active === false && (
+                  <Badge
+                    variant="outline"
+                    className="shrink-0 text-[10px] border-slate-300 text-slate-500 bg-slate-50"
+                  >
+                    Inativa
+                  </Badge>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => abrirEdicao(k)}
+                  className="h-8 w-8 shrink-0 p-0"
+                  title="Editar nome e descrição"
+                >
+                  <Edit2 className="w-3.5 h-3.5 text-muted-foreground" />
+                </Button>
+                {isAdmin && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => excluirKit(k)}
+                    className="h-8 w-8 shrink-0 p-0 text-destructive hover:bg-destructive/10"
+                    title="Apagar lista"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => abrirItens(k)}
+                  className="h-8 shrink-0 gap-1 text-[10px] font-semibold text-[#0F6A3A] border-[#0F6A3A]/40 hover:bg-[#0F6A3A]/10"
+                  title="Gerenciar produtos"
+                >
+                  <Package className="w-3.5 h-3.5" />
+                  {!compacto && <span>Produtos</span>}
+                </Button>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      <div
+        className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ${modo !== 'cartoes' ? 'hidden' : ''}`}
+      >
         {kits.map((k) => (
           <Card key={k.id} className="hover:border-[#0F6A3A]/40 transition shadow-sm">
             <CardContent className="p-4 space-y-3">

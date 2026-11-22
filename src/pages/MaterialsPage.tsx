@@ -36,6 +36,7 @@ import { CAMPO_ALTO, uc } from '@/lib/texto'
 import { semAcento } from '@/lib/busca'
 import { MaterialKind } from '@/types/flservicos'
 import { toast } from 'sonner'
+import { ListagemModos, useViewMode, ViewModeSelector } from '@/components/ViewModeSelector'
 
 const KINDS: { value: MaterialKind; label: string; desc: string }[] = [
   { value: 'CAPITAL', label: 'CAPITAL', desc: 'equipamento — câmera, DVR, switch, rack...' },
@@ -50,6 +51,7 @@ export default function MaterialsPage() {
   const [search, setSearch] = useState('')
   // Aba de revisão: só os produtos que o técnico cadastrou em campo
   const [aba, setAba] = useState<'todos' | 'pendentes'>('todos')
+  const [modo, setModo] = useViewMode('materiais')
 
   // Dialog Form
   const [openDialog, setOpenDialog] = useState(false)
@@ -255,122 +257,176 @@ export default function MaterialsPage() {
           onChange={(e) => setSearch(e.target.value)}
           className="border-none shadow-none text-xs focus-visible:ring-0 h-8"
         />
+        <ViewModeSelector valor={modo} onChange={setModo} className="ml-auto" />
       </div>
 
-      {/* Tabela / Grid de Materiais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map((mat) => (
-          <Card
-            key={mat.id}
-            className={`transition shadow-sm ${
-              mat.pending_review
-                ? 'border-red-300 bg-red-50/40 hover:border-red-400'
-                : 'hover:border-[#0F6A3A]/40'
-            }`}
-          >
-            <CardContent className="p-4 space-y-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2.5">
-                  <div
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
-                      mat.pending_review
-                        ? 'bg-red-100 text-red-600'
-                        : 'bg-[#0F6A3A]/10 text-[#0F6A3A]'
-                    }`}
-                  >
-                    <Package className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3
-                      className={`font-bold text-sm line-clamp-1 ${
-                        mat.pending_review ? 'text-red-700' : 'text-foreground'
+      {/* Tabela / Grid de Materiais (modos: lista, compacta e cartões) */}
+      {modo !== 'cartoes' ? (
+        <ListagemModos
+          modo={modo}
+          itens={filtered}
+          chaveItem={(m) => m.id}
+          cartoes={() => null}
+          linhaDe={(mat) => ({
+            titulo: mat.name,
+            subtitulo: [mat.category, mat.brand].filter(Boolean).join(' • '),
+            detalhe: `${mat.current_stock ?? 0} ${mat.unit} em estoque`,
+            badge: mat.default_kind || undefined,
+            badgeClasse:
+              mat.default_kind === 'CAPITAL'
+                ? 'bg-[#0B3D91]/10 text-[#0B3D91]'
+                : mat.default_kind === 'CONSUMO'
+                  ? 'bg-amber-100 text-amber-700'
+                  : 'bg-emerald-100 text-emerald-700',
+            valor: isAdmin && mat.price ? `R$ ${mat.price.toFixed(2)}` : undefined,
+            extras: isAdmin ? (
+              <div className="flex items-center gap-1 shrink-0">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleOpenEdit(mat)}
+                  className="h-7 w-7 p-0"
+                >
+                  <Edit2 className="w-3.5 h-3.5 text-muted-foreground" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDelete(mat.id)}
+                  className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            ) : undefined,
+          })}
+          vazio={
+            !loading ? (
+              <div className="p-12 text-center border-2 border-dashed rounded-xl bg-card">
+                <Package className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm font-semibold text-foreground">
+                  Nenhum material encontrado no catálogo
+                </p>
+              </div>
+            ) : undefined
+          }
+        />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.map((mat) => (
+            <Card
+              key={mat.id}
+              className={`transition shadow-sm ${
+                mat.pending_review
+                  ? 'border-red-300 bg-red-50/40 hover:border-red-400'
+                  : 'hover:border-[#0F6A3A]/40'
+              }`}
+            >
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <div
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
+                        mat.pending_review
+                          ? 'bg-red-100 text-red-600'
+                          : 'bg-[#0F6A3A]/10 text-[#0F6A3A]'
                       }`}
                     >
-                      {mat.name}
-                    </h3>
-                    {mat.pending_review && (
-                      <span className="inline-block mt-0.5 text-[9px] font-bold uppercase bg-red-600 text-white px-1.5 py-0.5 rounded">
-                        aguardando revisão
-                      </span>
-                    )}
-                    {mat.default_kind && (
-                      <span
-                        className={`inline-block mr-1 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${
-                          mat.default_kind === 'CAPITAL'
-                            ? 'bg-[#0B3D91]/10 text-[#0B3D91]'
-                            : mat.default_kind === 'CONSUMO'
-                              ? 'bg-amber-100 text-amber-700'
-                              : 'bg-emerald-100 text-emerald-700'
+                      <Package className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3
+                        className={`font-bold text-sm line-clamp-1 ${
+                          mat.pending_review ? 'text-red-700' : 'text-foreground'
                         }`}
                       >
-                        {mat.default_kind}
-                      </span>
-                    )}
-                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                      <span className="font-semibold text-slate-700 bg-slate-100 px-1.5 py-0.2 rounded">
-                        {mat.unit}
-                      </span>
-                      {mat.category && <span>{mat.category}</span>}
-                      {mat.brand && <span>• {mat.brand}</span>}
+                        {mat.name}
+                      </h3>
+                      {mat.pending_review && (
+                        <span className="inline-block mt-0.5 text-[9px] font-bold uppercase bg-red-600 text-white px-1.5 py-0.5 rounded">
+                          aguardando revisão
+                        </span>
+                      )}
+                      {mat.default_kind && (
+                        <span
+                          className={`inline-block mr-1 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                            mat.default_kind === 'CAPITAL'
+                              ? 'bg-[#0B3D91]/10 text-[#0B3D91]'
+                              : mat.default_kind === 'CONSUMO'
+                                ? 'bg-amber-100 text-amber-700'
+                                : 'bg-emerald-100 text-emerald-700'
+                          }`}
+                        >
+                          {mat.default_kind}
+                        </span>
+                      )}
+                      <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                        <span className="font-semibold text-slate-700 bg-slate-100 px-1.5 py-0.2 rounded">
+                          {mat.unit}
+                        </span>
+                        {mat.category && <span>{mat.category}</span>}
+                        {mat.brand && <span>• {mat.brand}</span>}
+                      </div>
                     </div>
                   </div>
+
+                  {isAdmin && (
+                    <div className="flex items-center">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleOpenEdit(mat)}
+                        className="h-7 w-7 p-0"
+                      >
+                        <Edit2 className="w-3.5 h-3.5 text-muted-foreground" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(mat.id)}
+                        className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
-                {isAdmin && (
-                  <div className="flex items-center">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleOpenEdit(mat)}
-                      className="h-7 w-7 p-0"
-                    >
-                      <Edit2 className="w-3.5 h-3.5 text-muted-foreground" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(mat.id)}
-                      className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
+                <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t">
+                  <div>
+                    <span className="text-[10px] text-muted-foreground block">Preço Unitário</span>
+                    {/* REGRA: preço só para admin, em qualquer modo de visualização */}
+                    <span className="font-mono font-bold text-slate-800">
+                      {isAdmin ? (mat.price ? `R$ ${mat.price.toFixed(2)}` : 'R$ 0,00') : '—'}
+                    </span>
                   </div>
+                  <div>
+                    <span className="text-[10px] text-muted-foreground block">Estoque Atual</span>
+                    <span className="font-mono font-medium text-slate-700">
+                      {mat.current_stock ?? 0} {mat.unit}
+                    </span>
+                  </div>
+                </div>
+
+                {mat.notes && (
+                  <p className="text-[11px] text-muted-foreground bg-muted/20 p-1.5 rounded line-clamp-2">
+                    {mat.notes}
+                  </p>
                 )}
-              </div>
+              </CardContent>
+            </Card>
+          ))}
 
-              <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t">
-                <div>
-                  <span className="text-[10px] text-muted-foreground block">Preço Unitário</span>
-                  <span className="font-mono font-bold text-slate-800">
-                    {mat.price ? `R$ ${mat.price.toFixed(2)}` : 'R$ 0,00'}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-muted-foreground block">Estoque Atual</span>
-                  <span className="font-mono font-medium text-slate-700">
-                    {mat.current_stock ?? 0} {mat.unit}
-                  </span>
-                </div>
-              </div>
-
-              {mat.notes && (
-                <p className="text-[11px] text-muted-foreground bg-muted/20 p-1.5 rounded line-clamp-2">
-                  {mat.notes}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-
-        {filtered.length === 0 && !loading && (
-          <div className="col-span-full p-12 text-center border-2 border-dashed rounded-xl bg-card">
-            <Package className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-            <p className="text-sm font-semibold text-foreground">
-              Nenhum material encontrado no catálogo
-            </p>
-          </div>
-        )}
-      </div>
+          {filtered.length === 0 && !loading && (
+            <div className="col-span-full p-12 text-center border-2 border-dashed rounded-xl bg-card">
+              <Package className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm font-semibold text-foreground">
+                Nenhum material encontrado no catálogo
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Modal Material */}
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>

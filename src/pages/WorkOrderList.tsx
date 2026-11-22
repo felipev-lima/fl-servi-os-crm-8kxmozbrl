@@ -19,6 +19,7 @@ import {
   MapPin,
   Clock,
 } from 'lucide-react'
+import { useViewMode, ViewModeSelector } from '@/components/ViewModeSelector'
 
 export default function WorkOrderList() {
   const { isTechnician, isAdmin, isConsultant, user } = useAuth()
@@ -34,6 +35,7 @@ export default function WorkOrderList() {
   const [statusFilter, setStatusFilter] = useState<string>(statusDaUrl || 'ALL')
   /** como ordenar DENTRO de cada grupo (pedido do Felipe, 21/11/2026) */
   const [ordem, setOrdem] = useState<'PRIORIDADE' | 'NUMERO' | 'CLIENTE' | 'DATA'>('PRIORIDADE')
+  const [modo, setModo] = useViewMode('ordens')
 
   useEffect(() => {
     setStatusFilter(statusDaUrl || 'ALL')
@@ -410,6 +412,9 @@ export default function WorkOrderList() {
           </select>
         </div>
 
+        {/* Seletor de modo de visualização (Lista / Compacta / Cartões) */}
+        <ViewModeSelector valor={modo} onChange={setModo} className="shrink-0" />
+
         {/* Botões de Filtro Rápido por Status */}
         <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 text-xs">
           <Button
@@ -448,104 +453,150 @@ export default function WorkOrderList() {
 
       {/* Lista agrupada por prioridade */}
       <div className="space-y-5">
-        {grupos.map((g) => (
-          <div key={g.chave} className="space-y-2">
-            {/* cabeçalho do grupo, com a cor da situação */}
-            <div
-              className={`flex items-center justify-between rounded-lg border-l-4 px-3 py-1.5 ${g.cor} ${g.texto}`}
-            >
-              <h2 className="text-xs font-black uppercase tracking-wide">
-                {g.rotulo} <span className="font-bold opacity-70">({g.itens.length})</span>
-              </h2>
-            </div>
-
-            {g.itens.map((order) => {
-              // status antigo (AGUARDANDO MATERIAL) cai na paleta de EM ANDAMENTO
-              const status = statusConfig[statusDe(order.status)] || {
-                label: order.status,
-                cor: 'border-slate-300 bg-slate-100',
-                texto: 'text-slate-700',
-                faixa: 'border-l-slate-400',
-              }
-
-              return (
-                /**
-                 * O CARTÃO INTEIRO ABRE A OS (pedido do Felipe, 21/11/2026).
-                 *
-                 * Havia um botão "Abrir OS" à direita, o que obrigava acertar o
-                 * alvo. Agora tocar em qualquer ponto do cartão — nome do cliente,
-                 * número, descrição — abre a OS. O botão saiu.
-                 *
-                 * A cor do cartão segue a paleta do PAINEL, para ele reconhecer a
-                 * situação pelo fundo, sem ler: cinza, azul, âmbar, verde, azul
-                 * escuro.
-                 */
-                <Link key={order.id} to={`/ordens/${order.id}`} className="block">
-                  <Card
-                    className={`border-l-4 transition-all hover:shadow-md ${status.cor} ${status.faixa}`}
+        {modo !== 'cartoes' &&
+          grupos.length === 0 &&
+          semGrupo.length === 0 &&
+          filteredOrders.length > 0 && (
+            <div className="divide-y overflow-hidden rounded-xl border bg-card">
+              {filteredOrders.map((order) => {
+                const st = statusConfig[statusDe(order.status)] || {
+                  label: order.status,
+                  cor: 'border-slate-300 bg-slate-100',
+                  texto: 'text-slate-700',
+                  faixa: 'border-l-slate-400',
+                }
+                const compacto = modo === 'compacta'
+                return (
+                  <Link
+                    key={order.id}
+                    to={`/ordens/${order.id}`}
+                    className={`flex items-center gap-2 px-3 hover:bg-muted/40 ${compacto ? 'min-h-[44px] py-1.5' : 'min-h-[44px] py-2.5'}`}
                   >
-                    <CardContent className="p-4 sm:p-5">
-                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <div className="space-y-1.5 flex-1">
-                          <div className="flex items-center gap-2.5 flex-wrap">
-                            <span className="font-mono text-base font-black text-[#0F6A3A] bg-white/70 px-2 py-0.5 rounded">
-                              #{order.order_number}
-                            </span>
-                            <h3 className="font-bold text-sm sm:text-base text-foreground">
-                              {order.expand?.client?.name || 'Cliente Avulso'}
-                            </h3>
-                            <Badge
-                              variant="outline"
-                              className={`text-[11px] font-bold ${status.texto}`}
-                            >
-                              {status.label}
-                            </Badge>
+                    <span className="w-16 shrink-0 font-mono text-[11px] font-black text-[#0F6A3A]">
+                      #{order.order_number}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-bold">
+                        {order.expand?.client?.name || 'Cliente Avulso'}
+                      </p>
+                      {!compacto && (
+                        <p className="truncate text-[10px] text-muted-foreground">
+                          {order.service_type}
+                          {order.expand?.technician ? ` · ${order.expand.technician.name}` : ''}
+                          {order.scheduled_date
+                            ? ` · Prev: ${new Date(order.scheduled_date).toLocaleDateString('pt-BR')}`
+                            : ''}
+                        </p>
+                      )}
+                    </div>
+                    <Badge variant="outline" className={`shrink-0 text-[10px] ${st.texto}`}>
+                      {st.label}
+                    </Badge>
+                    <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  </Link>
+                )
+              })}
+            </div>
+          )}
+        {modo === 'cartoes' &&
+          grupos.map((g) => (
+            <div key={g.chave} className="space-y-2">
+              {/* cabeçalho do grupo, com a cor da situação */}
+              <div
+                className={`flex items-center justify-between rounded-lg border-l-4 px-3 py-1.5 ${g.cor} ${g.texto}`}
+              >
+                <h2 className="text-xs font-black uppercase tracking-wide">
+                  {g.rotulo} <span className="font-bold opacity-70">({g.itens.length})</span>
+                </h2>
+              </div>
+
+              {g.itens.map((order) => {
+                // status antigo (AGUARDANDO MATERIAL) cai na paleta de EM ANDAMENTO
+                const status = statusConfig[statusDe(order.status)] || {
+                  label: order.status,
+                  cor: 'border-slate-300 bg-slate-100',
+                  texto: 'text-slate-700',
+                  faixa: 'border-l-slate-400',
+                }
+
+                return (
+                  /**
+                   * O CARTÃO INTEIRO ABRE A OS (pedido do Felipe, 21/11/2026).
+                   *
+                   * Havia um botão "Abrir OS" à direita, o que obrigava acertar o
+                   * alvo. Agora tocar em qualquer ponto do cartão — nome do cliente,
+                   * número, descrição — abre a OS. O botão saiu.
+                   *
+                   * A cor do cartão segue a paleta do PAINEL, para ele reconhecer a
+                   * situação pelo fundo, sem ler: cinza, azul, âmbar, verde, azul
+                   * escuro.
+                   */
+                  <Link key={order.id} to={`/ordens/${order.id}`} className="block">
+                    <Card
+                      className={`border-l-4 transition-all hover:shadow-md ${status.cor} ${status.faixa}`}
+                    >
+                      <CardContent className="p-4 sm:p-5">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                          <div className="space-y-1.5 flex-1">
+                            <div className="flex items-center gap-2.5 flex-wrap">
+                              <span className="font-mono text-base font-black text-[#0F6A3A] bg-white/70 px-2 py-0.5 rounded">
+                                #{order.order_number}
+                              </span>
+                              <h3 className="font-bold text-sm sm:text-base text-foreground">
+                                {order.expand?.client?.name || 'Cliente Avulso'}
+                              </h3>
+                              <Badge
+                                variant="outline"
+                                className={`text-[11px] font-bold ${status.texto}`}
+                              >
+                                {status.label}
+                              </Badge>
+                            </div>
+
+                            <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                              {order.description}
+                            </p>
+
+                            <div className="flex flex-wrap items-center gap-y-1 gap-x-4 pt-1 text-xs text-muted-foreground">
+                              <span className="font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
+                                {order.service_type}
+                              </span>
+
+                              {order.expand?.technician && (
+                                <span className="flex items-center gap-1">
+                                  <User className="w-3.5 h-3.5 text-[#0F6A3A]" />
+                                  {order.expand.technician.name}
+                                </span>
+                              )}
+
+                              {order.scheduled_date && (
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                                  Prev: {new Date(order.scheduled_date).toLocaleDateString('pt-BR')}
+                                </span>
+                              )}
+
+                              {order.location_address && (
+                                <span className="flex items-center gap-1 line-clamp-1 max-w-[200px]">
+                                  <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                  Macaé/RJ
+                                </span>
+                              )}
+                            </div>
                           </div>
 
-                          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                            {order.description}
-                          </p>
-
-                          <div className="flex flex-wrap items-center gap-y-1 gap-x-4 pt-1 text-xs text-muted-foreground">
-                            <span className="font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
-                              {order.service_type}
-                            </span>
-
-                            {order.expand?.technician && (
-                              <span className="flex items-center gap-1">
-                                <User className="w-3.5 h-3.5 text-[#0F6A3A]" />
-                                {order.expand.technician.name}
-                              </span>
-                            )}
-
-                            {order.scheduled_date && (
-                              <span className="flex items-center gap-1">
-                                <Calendar className="w-3.5 h-3.5 text-blue-600" />
-                                Prev: {new Date(order.scheduled_date).toLocaleDateString('pt-BR')}
-                              </span>
-                            )}
-
-                            {order.location_address && (
-                              <span className="flex items-center gap-1 line-clamp-1 max-w-[200px]">
-                                <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                                Macaé/RJ
-                              </span>
-                            )}
-                          </div>
+                          {/* o botão "Abrir OS" saiu: o cartão inteiro é o link */}
+                          <ArrowRight className="hidden sm:block w-4 h-4 shrink-0 text-muted-foreground" />
                         </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                )
+              })}
+            </div>
+          ))}
 
-                        {/* o botão "Abrir OS" saiu: o cartão inteiro é o link */}
-                        <ArrowRight className="hidden sm:block w-4 h-4 shrink-0 text-muted-foreground" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              )
-            })}
-          </div>
-        ))}
-
-        {semGrupo.length > 0 && (
+        {modo === 'cartoes' && semGrupo.length > 0 && (
           <div className="space-y-2">
             <div className="rounded-lg border-l-4 border-slate-400 bg-slate-100 px-3 py-1.5 text-slate-700">
               <h2 className="text-xs font-black uppercase tracking-wide">

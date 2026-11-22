@@ -36,12 +36,14 @@ import { toast } from 'sonner'
 import ClientImportDialog from '@/components/ClientImportDialog'
 import { CAMPO_ALTO, uc } from '@/lib/texto'
 import { semAcento } from '@/lib/busca'
+import { ListagemModos, useViewMode, ViewModeSelector } from '@/components/ViewModeSelector'
 
 export default function ClientsPage() {
   const { isTechnician, isAdmin } = useAuth()
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [modo, setModo] = useViewMode('clientes')
 
   // Dialog Form
   const [openDialog, setOpenDialog] = useState(false)
@@ -177,6 +179,140 @@ export default function ClientsPage() {
     )
   })
 
+  // CARTÕES: o formato original desta tela, intacto.
+  const cartaoCliente = (client: Client) => (
+    <Card key={client.id} className="hover:border-[#0F6A3A]/40 transition shadow-sm">
+      <CardContent className="p-4 space-y-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-[#0F6A3A]/10 text-[#0F6A3A] flex items-center justify-center font-bold text-xs shrink-0">
+              <Building2 className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-bold text-sm text-foreground line-clamp-1">{client.name}</h3>
+              {client.nickname && (
+                <span className="block text-[10px] text-[#0F6A3A] font-semibold uppercase">
+                  {client.nickname}
+                </span>
+              )}
+              <span className="text-[10px] text-muted-foreground uppercase font-semibold">
+                {client.type || 'PJ'} {client.document ? `• ${client.document}` : ''}
+              </span>
+            </div>
+          </div>
+
+          {isTechnician && (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleOpenEdit(client)}
+                className="h-7 w-7 p-0"
+              >
+                <Edit2 className="w-3.5 h-3.5 text-muted-foreground" />
+              </Button>
+              {isAdmin && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDelete(client.id)}
+                  className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-1 text-xs text-muted-foreground pt-1 border-t">
+          {client.phone && (
+            <div className="flex items-center gap-1.5">
+              <Phone className="w-3 h-3 text-[#0F6A3A]" />
+              <span>{client.phone}</span>
+            </div>
+          )}
+          {client.email && (
+            <div className="flex items-center gap-1.5">
+              <Mail className="w-3 h-3 text-[#0F6A3A]" />
+              <span className="truncate">{client.email}</span>
+            </div>
+          )}
+          <div className="flex items-start gap-1.5">
+            <MapPin className="w-3 h-3 text-[#0F6A3A] shrink-0 mt-0.5" />
+            <span className="line-clamp-2">
+              {client.address
+                ? `${client.address}, ${client.neighborhood || ''} - ${client.city || 'Macaé'}`
+                : client.city || 'Macaé/RJ'}
+            </span>
+          </div>
+        </div>
+
+        {client.notes && (
+          <p className="text-[11px] text-muted-foreground/80 bg-muted/30 p-2 rounded line-clamp-2 italic">
+            &quot;{client.notes}&quot;
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  )
+
+  // LISTA / COMPACTA: mesmos dados, em linhas.
+  const linhaCliente = (client: Client) => ({
+    titulo: client.nickname || client.name,
+    subtitulo: client.name,
+    detalhe: [
+      client.phone,
+      client.address
+        ? `${client.address}, ${client.neighborhood || ''} - ${client.city || 'Macaé'}`
+        : client.city,
+    ]
+      .filter(Boolean)
+      .join(' • '),
+    badge: `${client.type || 'PJ'}${client.document ? ` • ${client.document}` : ''}`,
+    extras: isTechnician ? (
+      <div className="flex items-center gap-1 shrink-0">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handleOpenEdit(client)}
+          className="h-7 w-7 p-0"
+        >
+          <Edit2 className="w-3.5 h-3.5 text-muted-foreground" />
+        </Button>
+        {isAdmin && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleDelete(client.id)}
+            className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </Button>
+        )}
+      </div>
+    ) : undefined,
+  })
+
+  const vazioClientes =
+    filtered.length === 0 && !loading ? (
+      <div className="p-12 text-center border-2 border-dashed rounded-xl bg-card">
+        <Building2 className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+        <p className="text-sm font-semibold text-foreground">Nenhum cliente encontrado</p>
+      </div>
+    ) : undefined
+
+  const listagem = (
+    <ListagemModos
+      modo={modo}
+      itens={filtered}
+      chaveItem={(c) => c.id}
+      cartoes={cartaoCliente}
+      linhaDe={linhaCliente}
+      vazio={vazioClientes}
+    />
+  )
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -218,96 +354,15 @@ export default function ClientsPage() {
           onChange={(e) => setSearch(e.target.value)}
           className="border-none shadow-none text-xs focus-visible:ring-0 h-8"
         />
+        <ViewModeSelector valor={modo} onChange={setModo} className="ml-auto" />
       </div>
 
-      {/* Grid de Clientes */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map((client) => (
-          <Card key={client.id} className="hover:border-[#0F6A3A]/40 transition shadow-sm">
-            <CardContent className="p-4 space-y-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-[#0F6A3A]/10 text-[#0F6A3A] flex items-center justify-center font-bold text-xs shrink-0">
-                    <Building2 className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-sm text-foreground line-clamp-1">
-                      {client.name}
-                    </h3>
-                    {client.nickname && (
-                      <span className="block text-[10px] text-[#0F6A3A] font-semibold uppercase">
-                        {client.nickname}
-                      </span>
-                    )}
-                    <span className="text-[10px] text-muted-foreground uppercase font-semibold">
-                      {client.type || 'PJ'} {client.document ? `• ${client.document}` : ''}
-                    </span>
-                  </div>
-                </div>
-
-                {isTechnician && (
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleOpenEdit(client)}
-                      className="h-7 w-7 p-0"
-                    >
-                      <Edit2 className="w-3.5 h-3.5 text-muted-foreground" />
-                    </Button>
-                    {isAdmin && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(client.id)}
-                        className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-1 text-xs text-muted-foreground pt-1 border-t">
-                {client.phone && (
-                  <div className="flex items-center gap-1.5">
-                    <Phone className="w-3 h-3 text-[#0F6A3A]" />
-                    <span>{client.phone}</span>
-                  </div>
-                )}
-                {client.email && (
-                  <div className="flex items-center gap-1.5">
-                    <Mail className="w-3 h-3 text-[#0F6A3A]" />
-                    <span className="truncate">{client.email}</span>
-                  </div>
-                )}
-                <div className="flex items-start gap-1.5">
-                  <MapPin className="w-3 h-3 text-[#0F6A3A] shrink-0 mt-0.5" />
-                  <span className="line-clamp-2">
-                    {client.address
-                      ? `${client.address}, ${client.neighborhood || ''} - ${client.city || 'Macaé'}`
-                      : client.city || 'Macaé/RJ'}
-                  </span>
-                </div>
-              </div>
-
-              {client.notes && (
-                <p className="text-[11px] text-muted-foreground/80 bg-muted/30 p-2 rounded line-clamp-2 italic">
-                  &quot;{client.notes}&quot;
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-
-        {filtered.length === 0 && !loading && (
-          <div className="col-span-full p-12 text-center border-2 border-dashed rounded-xl bg-card">
-            <Building2 className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-            <p className="text-sm font-semibold text-foreground">Nenhum cliente encontrado</p>
-          </div>
-        )}
-      </div>
+      {/* Listagem de Clientes (modos: lista, compacta e cartões) */}
+      {modo === 'cartoes' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{listagem}</div>
+      ) : (
+        listagem
+      )}
 
       {/* Modal de Criação / Edição */}
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>

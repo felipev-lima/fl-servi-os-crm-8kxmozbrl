@@ -47,6 +47,8 @@ import {
   Receipt,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useViewMode, ViewModeSelector } from '@/components/ViewModeSelector'
+import { useAuth } from '@/contexts/AuthContext'
 
 const FLUXO = [
   {
@@ -83,6 +85,8 @@ export default function OrcamentosPage() {
   const [carregando, setCarregando] = useState(true)
   const [filtro, setFiltro] = useState('TODOS')
   const [busca, setBusca] = useState('')
+  const [modo, setModo] = useViewMode('orcamentos')
+  const { isAdmin } = useAuth()
 
   const [aberto, setAberto] = useState(false)
   const [clienteId, setClienteId] = useState('')
@@ -303,13 +307,14 @@ export default function OrcamentosPage() {
           placeholder="Buscar por cliente..."
           className="h-9 pl-9 text-xs"
         />
+        <ViewModeSelector valor={modo} onChange={setModo} className="mt-2 ml-auto" />
       </div>
 
       {carregando ? (
         <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" /> Carregando...
         </div>
-      ) : (
+      ) : modo === 'cartoes' ? (
         <div className="space-y-1.5">
           {filtrados.map((d) => {
             const cfg = FLUXO.find((f) => f.valor === (d.status || 'ORCAMENTO')) || FLUXO[0]
@@ -372,6 +377,49 @@ export default function OrcamentosPage() {
               <p className="mt-1 text-[11px] text-muted-foreground">
                 Crie um orçamento para começar o processo.
               </p>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* LISTA e LISTA COMPACTA: linhas simples, sem cartão */
+        <div className="divide-y overflow-hidden rounded-xl border bg-card">
+          {filtrados.map((d) => {
+            const cfg = FLUXO.find((f) => f.valor === (d.status || 'ORCAMENTO')) || FLUXO[0]
+            const Icone = cfg.icone
+            const compacto = modo === 'compacta'
+            return (
+              <Link
+                key={d.id}
+                to={`/orcamentos/${d.id}`}
+                className={`flex items-center gap-2 px-3 hover:bg-muted/40 ${compacto ? 'min-h-[44px] py-1.5' : 'min-h-[44px] py-2.5'}`}
+              >
+                <Badge className={`shrink-0 gap-0.5 border px-1.5 py-0 text-[8px] ${cfg.cor}`}>
+                  <Icone className="h-2.5 w-2.5" /> {cfg.label}
+                </Badge>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[11px] font-bold text-[#0B3D91]">
+                    {d.expand?.client?.nickname || d.expand?.client?.name || 'Cliente'}
+                  </p>
+                  {!compacto && (
+                    <p className="truncate text-[9px] text-muted-foreground">
+                      {dataBR(d.date || d.created)} · {(d.items || []).length} item(ns)
+                    </p>
+                  )}
+                </div>
+                {isAdmin && (
+                  <span className="shrink-0 font-mono text-xs font-bold text-[#0B3D91]">
+                    {brl(totalDoDocumento(d.items))}
+                  </span>
+                )}
+                <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              </Link>
+            )
+          })}
+
+          {filtrados.length === 0 && (
+            <div className="rounded-xl border-2 border-dashed p-10 text-center">
+              <FileText className="mx-auto mb-2 h-7 w-7 text-muted-foreground" />
+              <p className="text-sm font-semibold">Nenhum documento</p>
             </div>
           )}
         </div>

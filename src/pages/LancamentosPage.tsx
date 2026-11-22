@@ -14,7 +14,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
-  getClients,
   getTransactions,
   createTransaction,
   deleteTransaction,
@@ -47,6 +46,8 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useViewMode, ViewModeSelector } from '@/components/ViewModeSelector'
+import { useAuth } from '@/contexts/AuthContext'
 
 const POR_PAGINA = 40
 
@@ -59,6 +60,8 @@ export default function LancamentosPage() {
   const [filtroTipo, setFiltroTipo] = useState('TODOS')
   const [busca, setBusca] = useState('')
   const [carregando, setCarregando] = useState(true)
+  const [modo, setModo] = useViewMode('lancamentos')
+  const { isAdmin } = useAuth()
 
   // formulário
   const [aberto, setAberto] = useState(false)
@@ -227,6 +230,7 @@ export default function LancamentosPage() {
             className="h-9 pl-9 text-xs"
           />
         </div>
+        <ViewModeSelector valor={modo} onChange={setModo} className="ml-auto" />
         <div className="flex flex-wrap gap-1">
           <Button
             size="sm"
@@ -267,7 +271,7 @@ export default function LancamentosPage() {
         <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" /> Carregando...
         </div>
-      ) : (
+      ) : modo === 'cartoes' ? (
         <div className="space-y-1.5">
           {filtrados.map((t) => {
             const cfg = TIPOS[t.kind]
@@ -345,6 +349,84 @@ export default function LancamentosPage() {
                   </div>
                 </CardContent>
               </Card>
+            )
+          })}
+
+          {filtrados.length === 0 && (
+            <div className="rounded-xl border-2 border-dashed p-10 text-center">
+              <p className="text-sm font-semibold">Nenhum lançamento</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Ajuste os filtros ou registre um novo.
+              </p>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* LISTA e LISTA COMPACTA: linhas simples — mesma paginação de 40 */
+        <div className="divide-y overflow-hidden rounded-xl border bg-card">
+          {filtrados.map((t) => {
+            const cfg = TIPOS[t.kind]
+            const v = totalDaLinha(t)
+            const enviado = (t.sent_to_finance || 'PENDENTE') === 'ENVIADA'
+            const compacto = modo === 'compacta'
+            return (
+              <div
+                key={t.id}
+                className={`flex items-center gap-2 px-3 ${compacto ? 'min-h-[44px] py-1.5' : 'min-h-[44px] py-2.5'}`}
+              >
+                <Badge className={`shrink-0 border px-1.5 py-0 text-[8px] ${cfg.cor} ${cfg.bg}`}>
+                  {cfg.label}
+                </Badge>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[11px] font-bold">
+                    {t.expand?.client?.nickname || t.expand?.client?.name || 'Cliente'}
+                  </p>
+                  {!compacto && (
+                    <p className="truncate text-[10px] text-muted-foreground">
+                      {dataBR(t.date)} · {t.description}
+                      {t.work_order_ref ? ` · OS ${t.work_order_ref}` : ''}
+                    </p>
+                  )}
+                </div>
+                {enviado ? (
+                  <Badge className="shrink-0 border-emerald-300 bg-emerald-100 px-1.5 py-0 text-[8px] text-emerald-800">
+                    ENVIADO
+                  </Badge>
+                ) : (
+                  <Badge className="shrink-0 border-amber-300 bg-amber-100 px-1.5 py-0 text-[8px] text-amber-800">
+                    PENDENTE
+                  </Badge>
+                )}
+                {isAdmin && (
+                  <span
+                    className={`shrink-0 font-mono text-xs font-bold ${
+                      v < 0 ? 'text-emerald-700' : 'text-slate-800'
+                    }`}
+                  >
+                    {brl(v)}
+                  </span>
+                )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => marcar(t, enviado ? 'PENDENTE' : 'ENVIADA')}
+                  className={`h-7 w-7 shrink-0 p-0 ${
+                    enviado ? 'text-amber-700' : 'text-emerald-700'
+                  }`}
+                  aria-label={enviado ? 'Marcar pendente' : 'Marcar enviado'}
+                >
+                  {enviado ? <Clock3 className="h-3 w-3" /> : <Send className="h-3 w-3" />}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => excluir(t)}
+                  className="h-7 w-7 shrink-0 p-0 text-muted-foreground hover:text-red-600"
+                  aria-label="Excluir"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
             )
           })}
 

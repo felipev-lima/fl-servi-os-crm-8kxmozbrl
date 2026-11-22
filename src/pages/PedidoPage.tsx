@@ -73,6 +73,9 @@ import { toast } from 'sonner'
 interface ItemLocal extends QuoteItem {
   nome: string
   unidade?: string
+  /** nome do produto: QuoteItem pode vir com `name` ou só `description` */
+  name?: string
+  material?: string
 }
 
 export default function PedidoPage() {
@@ -191,9 +194,9 @@ export default function PedidoPage() {
           setItens(
             (q.items || []).map((i) => ({
               ...i,
-              nome: i.name || i.description || '',
+              nome: (i as any).name || i.description || '',
               unidade: i.unit,
-            })),
+            })) as ItemLocal[],
           )
         }
       } catch {
