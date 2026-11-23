@@ -124,6 +124,13 @@ export default function PedidoPage() {
   const [entregador, setEntregador] = useState('')
   const [entregadorId, setEntregadorId] = useState('')
   const [tecnicos, setTecnicos] = useState<any[]>([])
+  /**
+   * VÁRIAS PESSOAS NO PEDIDO (pedido do Felipe, 23/11/2026): "pode ser que eu
+   * coloque mais de uma pessoa para ir executar o serviço ou entrega de
+   * material". Cada id marcado vai para o campo `technicians` do pedido, e é
+   * isso que faz o pedido aparecer para cada um deles quando entra no app.
+   */
+  const [designados, setDesignados] = useState<string[]>([])
   const [assinouCliente, setAssinouCliente] = useState(false)
   const [assinouEntregador, setAssinouEntregador] = useState(false)
   /** RECEBIDO POR: nome que a cliente digitou ao assinar pelo link público */
@@ -315,6 +322,10 @@ export default function PedidoPage() {
           setData((q.date || '').slice(0, 10) || new Date().toISOString().slice(0, 10))
           setObs(q.notes || '')
           setEntregador(q.delivered_by_name || '')
+          // TÉCNICOS DESIGNADOS: reabrir o pedido tem de mostrar quem está
+          // marcado, senão salvar de novo apagaria a designação sem aviso.
+          const tec = (q as any).technicians
+          setDesignados(Array.isArray(tec) ? tec.filter(Boolean) : tec ? [tec] : [])
           // RECEBIDO POR: nome digitado pela cliente no link público — campo
           // próprio (received_by_name), separado do entregador do admin
           setRecebidoPor((q as any).received_by_name || '')
@@ -589,6 +600,14 @@ export default function PedidoPage() {
       fd.append('status', salvoId ? statusAtual || 'ENTREGUE' : 'PEDIDO')
       fd.append('notes', obs)
       fd.append('delivered_by_name', entregador)
+      // relação com vários técnicos: em FormData, a MESMA chave repetida.
+      // Mandar vazio limpa a relação (senão o pedido continuaria preso ao
+      // técnico antigo depois de desmarcar todo mundo).
+      if (designados.length === 0) {
+        fd.append('technicians', '')
+      } else {
+        designados.forEach((id) => fd.append('technicians', id))
+      }
       fd.append(
         'items',
         JSON.stringify(
@@ -1283,30 +1302,53 @@ export default function PedidoPage() {
           </h2>
 
           <div className="space-y-1">
-            <Label className="text-[10px] font-semibold">Quem entregou</Label>
+            <Label className="text-[10px] font-semibold">
+              Quem vai entregar / executar
+              {designados.length > 1 && (
+                <span className="ml-1 font-normal text-muted-foreground">
+                  ({designados.length} pessoas)
+                </span>
+              )}
+            </Label>
             {/*
-              Lista dos técnicos cadastrados: clicar escolhe a pessoa e já traz
-              a rubrica dela para o documento. Digitar à mão continua valendo
-              para quem não é da equipe (motorista terceirizado, por exemplo).
+              VÁRIAS PESSOAS (pedido do Felipe, 23/11/2026): "pode ser que eu
+              coloque mais de uma pessoa para ir executar o serviço ou entrega
+              de material". Agora é marcar e desmarcar — cada pessoa marcada
+              passa a ver este pedido quando entrar no app.
             */}
             <div className="flex flex-wrap gap-1">
-              {tecnicos.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => {
-                    setEntregadorId(t.id)
-                    setEntregador(t.name)
-                  }}
-                  className={`rounded-full border px-2 py-1 text-[10px] font-semibold transition ${
-                    entregadorId === t.id
-                      ? 'border-[#0B3D91] bg-[#0B3D91] text-white'
-                      : 'bg-white hover:border-[#0B3D91]/50'
-                  }`}
-                >
-                  {t.name.split(' ')[0]}
-                </button>
-              ))}
+              {tecnicos.map((t) => {
+                const marcado = designados.indexOf(t.id) >= 0
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => {
+                      const proximo = marcado
+                        ? designados.filter((x) => x !== t.id)
+                        : [...designados, t.id]
+                      setDesignados(proximo)
+                      // o primeiro marcado continua sendo "quem entregou"
+                      if (proximo.length > 0) {
+                        setEntregadorId(proximo[0])
+                        const primeiro = tecnicos.find((x) => x.id === proximo[0])
+                        if (primeiro) setEntregador(primeiro.name)
+                      } else {
+                        setEntregadorId('')
+                        setEntregador('')
+                      }
+                    }}
+                    className={`flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-semibold transition ${
+                      marcado
+                        ? 'border-[#0B3D91] bg-[#0B3D91] text-white'
+                        : 'bg-white hover:border-[#0B3D91]/50'
+                    }`}
+                  >
+                    {marcado && <CheckCircle2 className="h-2.5 w-2.5" />}
+                    {t.name.split(' ')[0]}
+                  </button>
+                )
+              })}
             </div>
             <Input
               value={entregador}
