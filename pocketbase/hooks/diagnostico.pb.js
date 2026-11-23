@@ -154,5 +154,19 @@ routerAdd('GET', '/backend/v1/diagnostico', (e) => {
     stock_movements: somaColecao('stock_movements'),
   }
 
+  // Histórico importado: soma só os que vieram da planilha
+  let histSoma = 0
+  let histQtd = 0
+  for (const t of trans) {
+    if (String(t.getString('legacy_row') || '').trim() === '') continue
+    histQtd++
+    histSoma += t.getFloat('quantity') * t.getFloat('unit_price')
+  }
+  resp.historico = {
+    quantidade: histQtd,
+    soma: Math.round(histSoma * 100) / 100,
+    diferenca_planilha: Math.round((histSoma - 789533.75) * 100) / 100,
+  }
+
   return e.json(200, resp)
 })
