@@ -50,6 +50,7 @@ import { toast } from 'sonner'
 import { useViewMode, ViewModeSelector } from '@/components/ViewModeSelector'
 import { ClienteRapidoDialog } from '@/components/ClienteRapidoDialog'
 import { useAuth } from '@/contexts/AuthContext'
+import { avisarSincronizacao } from '@/lib/onedriveSync'
 
 const FLUXO = [
   {
@@ -206,7 +207,7 @@ export default function OrcamentosPage() {
     if (itens.length === 0) return toast.error('Adicione pelo menos um item.')
     setSalvando(true)
     try {
-      await createQuote({
+      const rec: any = await createQuote({
         client: clienteId,
         date: new Date().toISOString(),
         items: itens,
@@ -215,6 +216,18 @@ export default function OrcamentosPage() {
         delivery_terms: 'Imediato / Agendado',
         validity_days: 15,
       })
+      /**
+       * BACKUP ONEDRIVE (pedido do Felipe, 23/11/2026): criação de orçamento
+       * avisa o assistente externo — com o numero do documento (gerado no
+       * createQuote) e o tipo 'orcamento', que manda o assistente arquivar na
+       * pasta de pedidos/orçamentos, separada da pasta das OS. O aviso é
+       * leve, não espera nada e falha silenciosamente.
+       */
+      try {
+        avisarSincronizacao(rec.id, Number(rec.number) || undefined, 'criacao', 'orcamento')
+      } catch {
+        /* sincronização nunca derruba a operação */
+      }
       toast.success('Orçamento criado.')
       setAberto(false)
       setItens([])
