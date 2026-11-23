@@ -66,6 +66,26 @@ routerAdd('GET', '/backend/v1/diagnostico', (e) => {
       created: t.getString('created'),
     })
   }
+  // Lista completa das 54 existentes, com cliente, para cruzar com a planilha
+  const detalhe = []
+  for (const t of trans) {
+    let nomeCli = ''
+    try {
+      nomeCli = $app.findRecordById('clients', t.getString('client')).getString('name')
+    } catch (_) {
+      nomeCli = '(?)'
+    }
+    detalhe.push({
+      id: t.id,
+      cliente: nomeCli,
+      data: String(t.getString('date') || '').slice(0, 10),
+      kind: t.getString('kind'),
+      descricao: String(t.getString('description') || '').slice(0, 50),
+      total: t.getFloat('total_price'),
+    })
+  }
+  resp.existentes = detalhe
+
   resp.amostra = amostra
 
   resp.transactions_por_tipo = porTipo
