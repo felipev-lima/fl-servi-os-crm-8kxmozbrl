@@ -31,6 +31,7 @@ import {
   Trash2,
   Loader2,
   FileSpreadsheet,
+  AlertTriangle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import ClientImportDialog from '@/components/ClientImportDialog'
@@ -179,17 +180,44 @@ export default function ClientsPage() {
     )
   })
 
+  /**
+   * Cadastro pendente: cliente criado na rua só com o nome.
+   *
+   * Regra do Felipe (23/11/2026): fica em VERMELHO até alguém abrir e
+   * completar CNPJ ou telefone. A marca cai sozinha pelo hook do servidor
+   * quando o cadastro é salvo completo — aqui só mostro o aviso.
+   */
+  const cadastroIncompleto = (client: Client) =>
+    Boolean((client as unknown as { pendente?: boolean }).pendente)
+
   // CARTÕES: o formato original desta tela, intacto.
   const cartaoCliente = (client: Client) => (
-    <Card key={client.id} className="hover:border-[#0B3D91]/40 transition shadow-sm">
+    <Card
+      key={client.id}
+      className={`hover:border-[#0B3D91]/40 transition shadow-sm ${
+        cadastroIncompleto(client) ? 'border-rose-300 bg-rose-50/40' : ''
+      }`}
+    >
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-[#0B3D91]/10 text-[#0B3D91] flex items-center justify-center font-bold text-xs shrink-0">
+            <div
+              className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
+                cadastroIncompleto(client)
+                  ? 'bg-rose-100 text-rose-600'
+                  : 'bg-[#0B3D91]/10 text-[#0B3D91]'
+              }`}
+            >
               <Building2 className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-bold text-sm text-foreground line-clamp-1">{client.name}</h3>
+              <h3
+                className={`font-bold text-sm line-clamp-1 ${
+                  cadastroIncompleto(client) ? 'text-rose-700' : 'text-foreground'
+                }`}
+              >
+                {client.name}
+              </h3>
               {client.nickname && (
                 <span className="block text-[10px] text-[#0B3D91] font-semibold uppercase">
                   {client.nickname}
@@ -198,6 +226,11 @@ export default function ClientsPage() {
               <span className="text-[10px] text-muted-foreground uppercase font-semibold">
                 {client.type || 'PJ'} {client.document ? `• ${client.document}` : ''}
               </span>
+              {cadastroIncompleto(client) && (
+                <span className="mt-1 inline-flex items-center gap-1 rounded bg-rose-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-rose-700">
+                  <AlertTriangle className="w-2.5 h-2.5" /> completar cadastro
+                </span>
+              )}
             </div>
           </div>
 
@@ -259,8 +292,8 @@ export default function ClientsPage() {
 
   // LISTA / COMPACTA: mesmos dados, em linhas.
   const linhaCliente = (client: Client) => ({
-    titulo: client.nickname || client.name,
-    subtitulo: client.name,
+    titulo: `${cadastroIncompleto(client) ? '● ' : ''}${client.nickname || client.name}`,
+    subtitulo: cadastroIncompleto(client) ? `${client.name} — CADASTRO INCOMPLETO` : client.name,
     detalhe: [
       client.phone,
       client.address

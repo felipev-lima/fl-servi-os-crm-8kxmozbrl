@@ -460,10 +460,53 @@ export default function OrcamentosPage() {
                         {c.nickname || c.name}
                       </span>
                       <span className="block text-[9px] text-muted-foreground">{c.name}</span>
+                      {/* o débito aparece já na busca, para o Felipe saber
+                          quanto o cliente deve antes de fechar o orçamento */}
+                      {Math.abs(Number(c.saldo) || 0) > 0.005 && (
+                        <span className="block text-[9px] font-bold text-rose-600">
+                          débito atual: {brl(Number(c.saldo) || 0)}
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
               )}
+
+              {/* DÉBITO DO CLIENTE ESCOLHIDO — pedido do Felipe em 23/11/2026:
+                  ao montar um orçamento ele precisa ver quanto o cliente já
+                  deve, para não vender por cima de uma dívida esquecida. */}
+              {clienteId &&
+                (() => {
+                  const escolhido = clientes.find((c) => c.id === clienteId)
+                  const saldo = Number(escolhido?.saldo) || 0
+                  if (!escolhido) return null
+                  return (
+                    <div
+                      className={`mt-1 flex items-center justify-between gap-2 rounded-md border px-2 py-1.5 ${
+                        saldo > 0.005
+                          ? 'border-rose-200 bg-rose-50'
+                          : saldo < -0.005
+                            ? 'border-emerald-200 bg-emerald-50'
+                            : 'border-slate-200 bg-slate-50'
+                      }`}
+                    >
+                      <span className="text-[10px] font-semibold uppercase text-muted-foreground">
+                        {saldo > 0.005 ? 'Débito em aberto' : saldo < -0.005 ? 'Crédito a favor' : 'Sem débito'}
+                      </span>
+                      <span
+                        className={`text-xs font-black ${
+                          saldo > 0.005
+                            ? 'text-rose-700'
+                            : saldo < -0.005
+                              ? 'text-emerald-700'
+                              : 'text-slate-600'
+                        }`}
+                      >
+                        {brl(Math.abs(saldo))}
+                      </span>
+                    </div>
+                  )
+                })()}
             </div>
 
             <div className="space-y-1">

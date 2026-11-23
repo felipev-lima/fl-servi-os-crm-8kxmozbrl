@@ -70,6 +70,7 @@ import {
   abrirWhatsapp,
   tokenDoLinkCliente,
 } from '@/lib/linkCliente'
+import { BadgeDollarSign } from 'lucide-react'
 import {
   Save,
   Printer,
@@ -301,6 +302,44 @@ export default function WorkOrderDetail() {
           numero: order.order_number || '',
           cliente: clienteDoCadastro?.name,
           url: link,
+        }),
+      })
+    } catch {
+      toast.error('Não foi possível copiar o link.', { duration: 6000 })
+    } finally {
+      setCopiandoLink(false)
+    }
+  }
+
+  /**
+   * LINK COM VALORES (só admin) — segunda variante do link público: mesmo
+   * documento com &v=1, que mostra itens, fotos E os valores/totais
+   * atualizados, para o cliente lançar na planilha de custo dele depois da
+   * finalização. O link normal (sem &v=1) continua cortando os preços.
+   */
+  const enviarLinkComValores = async () => {
+    if (!id || isNew) return
+    const token = tokenDoLinkCliente(order)
+    if (!token) {
+      toast.error('Esta OS ainda não tem link do cliente. Salve a OS e reabra.', {
+        duration: 8000,
+      })
+      return
+    }
+    const clienteDoCadastro = clients.find((c) => c.id === order.client)
+    const link = urlDoLinkCliente('os', id, token, true)
+    setCopiandoLink(true)
+    try {
+      await navigator.clipboard.writeText(link)
+      toast.success('Link com valores copiado! Abrindo o WhatsApp...', { duration: 4000 })
+      abrirWhatsapp({
+        telefone: clienteDoCadastro?.phone,
+        mensagem: mensagemWhatsapp({
+          tipo: 'os',
+          numero: order.order_number || '',
+          cliente: clienteDoCadastro?.name,
+          url: link,
+          comValores: true,
         }),
       })
     } catch {
@@ -1700,6 +1739,25 @@ ${
               <FileText className="w-4 h-4 shrink-0" />
               <span className="hidden sm:inline">Gerar Relatório PDF (V3)</span>
               <span className="sm:hidden">PDF</span>
+            </Button>
+          )}
+
+          {!isNew && isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={enviarLinkComValores}
+              disabled={copiandoLink}
+              className="flex-1 sm:flex-none gap-1.5 text-xs border-[#0B3D91]/40 text-[#0B3D91] hover:bg-[#0B3D91]/10 font-medium"
+              title="Copia o link desta OS COM os valores (itens, fotos e totais atualizados) e abre o WhatsApp — enviar ao cliente após a finalização; o link normal continua sem valores"
+            >
+              {copiandoLink ? (
+                <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
+              ) : (
+                <BadgeDollarSign className="w-4 h-4 shrink-0" />
+              )}
+              <span className="hidden sm:inline">Link com valores</span>
+              <span className="sm:hidden">Valores</span>
             </Button>
           )}
 
