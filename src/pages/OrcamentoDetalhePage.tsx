@@ -43,6 +43,7 @@ import {
   Wrench,
   Images,
   Link2,
+  BadgeDollarSign,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -70,6 +71,8 @@ export default function OrcamentoDetalhePage() {
 
   const [entregador, setEntregador] = useState('')
   const [cargo, setCargo] = useState('')
+  /** RECEBIDO POR: nome que a cliente digitou ao assinar pelo link público */
+  const [recebidoPor, setRecebidoPor] = useState('')
   const [assinaturaCliente, setAssinaturaCliente] = useState('')
   const [assinaturaEntregador, setAssinaturaEntregador] = useState('')
   /**
@@ -123,6 +126,43 @@ export default function OrcamentoDetalhePage() {
     }
   }
 
+  /**
+   * Variante "Link com valores" (só admin): o MESMO documento do link normal,
+   * agora com &v=1 — a rota pública devolve itens, fotos e OS VALORES/totais
+   * atualizados. A mensagem de WhatsApp muda o texto (é o link de CONFERÊNCIA
+   * de valores, pós-finalização). O link normal (sem valores) não muda nada.
+   */
+  const enviarLinkComValores = async () => {
+    if (!doc?.id) return
+    const token = tokenDoLinkCliente(doc)
+    if (!token) {
+      toast.error('Este documento ainda não tem link do cliente. Salve-o e reabra.', {
+        duration: 8000,
+      })
+      return
+    }
+    const link = urlDoLinkCliente('pedido', doc.id, token, true)
+    setCopiandoLink(true)
+    try {
+      await navigator.clipboard.writeText(link)
+      toast.success('Link com valores copiado! Abrindo o WhatsApp...', { duration: 4000 })
+      abrirWhatsapp({
+        telefone: doc.expand?.client?.phone,
+        mensagem: mensagemWhatsapp({
+          tipo: 'pedido',
+          numero: doc.number || doc.id.slice(-6).toUpperCase(),
+          cliente: doc.expand?.client?.name,
+          url: link,
+          comValores: true,
+        }),
+      })
+    } catch {
+      toast.error('Não foi possível copiar o link.', { duration: 6000 })
+    } finally {
+      setCopiandoLink(false)
+    }
+  }
+
   const carregar = async () => {
     if (!id) return
     setCarregando(true)
@@ -132,6 +172,9 @@ export default function OrcamentoDetalhePage() {
       setEmpresa(e)
       setEntregador(d.delivered_by_name || '')
       setCargo(d.delivered_by_role || '')
+      // RECEBIDO POR: nome digitado pela cliente no link público — campo
+      // próprio (received_by_name), separado do entregador do admin
+      setRecebidoPor((d as any).received_by_name || '')
       /**
        * ASSINATURA DO CLIENTE GRAVADA: a data vem da linha ASSINADO do
        * histórico (status_to = 'ASSINADO'), nunca inventada. Falha ao ler o
@@ -593,6 +636,22 @@ export default function OrcamentoDetalhePage() {
             <Truck className="h-3.5 w-3.5" /> Registrar entrega
           </Button>
         )}
+        {isAdmin && (
+          <Button
+            variant="outline"
+            onClick={enviarLinkComValores}
+            disabled={copiandoLink || salvando}
+            className="h-8 gap-1.5 text-[11px] border-[#0B3D91]/40 text-[#0B3D91] hover:bg-[#0B3D91]/10 font-medium"
+            title="Copia o link deste documento COM os valores (itens, fotos e totais atualizados) e abre o WhatsApp — enviar ao cliente após a finalização; o link normal continua sem valores"
+          >
+            {copiandoLink ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <BadgeDollarSign className="h-3.5 w-3.5" />
+            )}
+            Link com valores
+          </Button>
+        )}
         {(st === 'ENTREGUE' || st === 'PEDIDO') && (
           <Button
             variant="outline"
@@ -642,6 +701,9 @@ export default function OrcamentoDetalhePage() {
             <p className="flex items-center gap-1 font-bold text-emerald-800">
               <CheckCircle2 className="h-3 w-3" /> ASSINADO PELO CLIENTE
             </p>
+            {recebidoPor && (
+              <p className="text-[10px] font-semibold text-slate-800">Recebido por {recebidoPor}</p>
+            )}
             {assinadoEm && <p className="text-emerald-700">em {assinadoEm}</p>}
           </div>
         </div>
@@ -707,6 +769,11 @@ export default function OrcamentoDetalhePage() {
                     <p className="flex items-center gap-1 text-[10px] font-bold text-emerald-800">
                       <CheckCircle2 className="h-3 w-3" /> ASSINADO
                     </p>
+                    {recebidoPor && (
+                      <p className="text-[9px] font-semibold text-slate-800">
+                        Recebido por {recebidoPor}
+                      </p>
+                    )}
                     {assinadoEm && <p className="text-[9px] text-emerald-700">em {assinadoEm}</p>}
                     <p className="text-[8px] text-muted-foreground">
                       assinatura gravada — para re-assinar, use o quadro abaixo
