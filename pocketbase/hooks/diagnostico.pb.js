@@ -66,7 +66,10 @@ routerAdd('GET', '/backend/v1/diagnostico', (e) => {
       created: t.getString('created'),
     })
   }
-  // Lista completa das 54 existentes, com cliente, para cruzar com a planilha
+  // Lista completa das 54 existentes, com cliente, para cruzar com a planilha.
+  // Os nomes dos campos de valor NAO sao confiaveis de memoria: a colecao
+  // mostra `unit_price` e `quantity`, mas o valor total pode ter outro nome.
+  // Aqui leio o registro CRU (JSON) para descobrir o nome real.
   const detalhe = []
   for (const t of trans) {
     let nomeCli = ''
@@ -75,13 +78,46 @@ routerAdd('GET', '/backend/v1/diagnostico', (e) => {
     } catch (_) {
       nomeCli = '(?)'
     }
+    const cru = t
+    let chaves = []
+    let valorEncontrado = 0
+    try {
+      // Percorre os campos do registro para achar qualquer nome que pareca valor
+      for (const campo of cru.collection().fields) {
+        const nome = campo.name
+        if (
+          nome === 'id' ||
+          nome === 'client' ||
+          nome === 'date' ||
+          nome === 'kind' ||
+          nome === 'item_type' ||
+          nome === 'description' ||
+          nome === 'details' ||
+          nome === 'work_order_ref' ||
+          nome === 'quote_ref' ||
+          nome === 'sent_to_finance' ||
+          nome === 'sent_at' ||
+          nome === 'notes' ||
+          nome === 'legacy_row' ||
+          nome === 'created' ||
+          nome === 'updated'
+        )
+          continue
+        chaves.push(nome)
+        const v = cru.get(nome)
+        if (typeof v === 'number' && Math.abs(v) > Math.abs(valorEncontrado)) valorEncontrado = v
+      }
+    } catch (_) {
+      chaves = ['erro']
+    }
     detalhe.push({
       id: t.id,
       cliente: nomeCli,
       data: String(t.getString('date') || '').slice(0, 10),
       kind: t.getString('kind'),
       descricao: String(t.getString('description') || '').slice(0, 50),
-      total: t.getFloat('total_price'),
+      campos_de_valor: chaves,
+      valor_detectado: valorEncontrado,
     })
   }
   resp.existentes = detalhe
