@@ -136,12 +136,18 @@ export async function assinarDocumentoPublico(opts: {
   // vai como multipart/form-data. A JSVM do PocketBase não tem decodificador
   // base64 (o hook quebrava com "Object has no member 'base64Decode'") — o
   // servidor passa a receber o arquivo pronto e só grava.
+  //
+  // O arquivo TEM que ter nome: um Blob anônimo chega ao hook sem filename no
+  // multipart e o PocketBase não consegue gravá-lo ("open : no such file or
+  // directory" em produção). Por isso new File(...) com nome fixo em vez de
+  // Blob puro.
   const blob = await (await fetch(opts.assinaturaDataUrl)).blob()
+  const arquivo = new File([blob], 'assinatura.png', { type: 'image/png' })
   const fd = new FormData()
   fd.append('t', opts.token)
   fd.append('nome', opts.nome)
   fd.append('documento', opts.documento || '')
-  fd.append('assinatura', blob, 'assinatura-cliente.png')
+  fd.append('assinatura', arquivo, 'assinatura.png')
 
   const res = await fetch(url, { method: 'POST', body: fd })
   if (!res.ok) {

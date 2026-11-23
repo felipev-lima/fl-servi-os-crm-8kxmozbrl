@@ -35,8 +35,13 @@
  *  - o horário gravado é o do servidor (UTC);
  *  - NÃO EXISTE decodificação base64 na JSVM ($security.base64Decode lança
  *    "Object has no member"): a assinatura chega pronta como ARQUIVO multipart
- *    (decodificada no navegador) e o hook só lê e.findUploadedFiles('assinatura')
- *    + $filesystem.fileFromMultipart.
+ *    (decodificada no navegador) e o hook só lê e.findUploadedFiles('assinatura');
+ *  - o findUploadedFiles já devolve *filesystem.File* com .name/.originalName —
+ *    NÃO passar por $filesystem.fileFromMultipart (construtor interno que a
+ *    JSVM não preenche direito: deu "open : no such file or directory" na
+ *    gravação em produção); usar o File devolvido e, se o multipart vier sem
+ *    filename (Blob anônimo do iOS/Safari), o hook completa o nome para o
+ *    normalizeName do PocketBase gerar "assinatura_XXX.png" em vez de vazio.
  */
 
 // ---------------- GET: leitura pública enxuta ----------------
@@ -222,7 +227,10 @@ routerAdd('POST', '/backend/v1/cliente/{tipo}/{id}/assinar', (e) => {
   const corpo = e.requestInfo().body || {}
 
   // multipart/form-data: o arquivo da assinatura já vem decodificado do
-  // navegador ($security.base64Decode não existe na JSVM — bug em produção)
+  // navegador ($security.base64Decode não existe na JSVM — bug em produção).
+  // O findUploadedFiles já devolve filesystem.File pronto para o doc.set —
+  // o caminho antigo ($filesystem.fileFromMultipart) criava um File com nome
+  // vazio e a gravação falhava com "open : no such file or directory".
   let arquivos = []
   try {
     arquivos = e.findUploadedFiles('assinatura')
@@ -232,11 +240,22 @@ routerAdd('POST', '/backend/v1/cliente/{tipo}/{id}/assinar', (e) => {
   if (!arquivos || arquivos.length === 0) {
     return e.json(400, { error: 'Assine na tela antes de confirmar.' })
   }
-  let arquivo = null
-  try {
-    arquivo = $filesystem.fileFromMultipart(arquivos[0])
-  } catch (err) {
+  const arquivo = arquivos[0]
+  if (!arquivo || !arquivo.reader) {
     return e.json(400, { error: 'Arquivo da assinatura inválido.' })
+  }
+  // nome OBRIGATÓRIO para o PocketBase conseguir gravar o arquivo: se o
+  // multipart chegou sem filename (Blob anônimo — iOS/Safari), completa o nome;
+  // o próprio PocketBase acrescenta o sufixo aleatório e a extensão final
+  // (assinatura_XXXXXXXX.png)
+  if (!String(arquivo.name || '').trim()) {
+    try {
+      arquivo.name = 'assinatura.png'
+      arquivo.originalName = 'assinatura-cliente.png'
+    } catch (_) {}
+    if (!String(arquivo.name || '').trim()) {
+      return e.json(400, { error: 'Arquivo da assinatura sem nome.' })
+    }
   }
 
   // campos de texto do multipart: requestInfo().body traz os valores do form;
@@ -271,8 +290,6 @@ routerAdd('POST', '/backend/v1/cliente/{tipo}/{id}/assinar', (e) => {
   if (!token || !salvo || token !== salvo) {
     return e.json(404, { error: 'Documento não encontrado.' })
   }
-
-  // (a conversão do desenho em arquivo acontece no navegador — ver linkCliente.ts)
 
   // data legível sem depender de toLocaleString (ausente na JSVM);
   // o servidor grava em UTC — a tela de CRM ajusta o fuso ao exibir
