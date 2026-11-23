@@ -9,7 +9,13 @@
  */
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getQuote, updateQuote, createTransaction, getTransactionsByClient } from '@/services/crm'
+import {
+  getQuote,
+  updateQuote,
+  createTransaction,
+  getTransactionsByClient,
+  getHistoricoPedido,
+} from '@/services/crm'
 import { getEmpresa, urlArquivo, type Empresa } from '@/lib/empresa'
 import { getNextOrderNumber, createWorkOrder, addOrderMaterial } from '@/services/api'
 import { useAuth } from '@/contexts/AuthContext'
@@ -66,6 +72,12 @@ export default function OrcamentoDetalhePage() {
   const [cargo, setCargo] = useState('')
   const [assinaturaCliente, setAssinaturaCliente] = useState('')
   const [assinaturaEntregador, setAssinaturaEntregador] = useState('')
+  /**
+   * ASSINATURA DO CLIENTE JÁ GRAVADA (link público ou entrega anterior).
+   * Somente-leitura, com status ASSINADO e a data da linha ASSINADO do
+   * histórico (quote_history). O canvas de nova assinatura continua VAZIO.
+   */
+  const [assinadoEm, setAssinadoEm] = useState('')
   const [fotos, setFotos] = useState<File[]>([])
   const [mostrarEntrega, setMostrarEntrega] = useState(false)
   const [baixandoZip, setBaixandoZip] = useState(false)
@@ -120,6 +132,22 @@ export default function OrcamentoDetalhePage() {
       setEmpresa(e)
       setEntregador(d.delivered_by_name || '')
       setCargo(d.delivered_by_role || '')
+      /**
+       * ASSINATURA DO CLIENTE GRAVADA: a data vem da linha ASSINADO do
+       * histórico (status_to = 'ASSINADO'), nunca inventada. Falha ao ler o
+       * histórico é detalhe — não trava a tela.
+       */
+      if (d.signature_client) {
+        try {
+          const hist = await getHistoricoPedido(id)
+          const linha = (hist as any[]).find((h) => h.status_to === 'ASSINADO')
+          setAssinadoEm(linha ? dataBR(linha.created) : '')
+        } catch {
+          setAssinadoEm('')
+        }
+      } else {
+        setAssinadoEm('')
+      }
     } catch {
       toast.error('Documento não encontrado.')
       navegar('/orcamentos')
@@ -256,6 +284,10 @@ export default function OrcamentoDetalhePage() {
       toast.success('Entrega registrada.')
       setMostrarEntrega(false)
       setFotos([])
+      setAssinaturaCliente('')
+      setAssinaturaEntregador('')
+      // re-assinou por cima: a data nova é a da linha ASSINADO acabada de gravar
+      if (dc) setAssinadoEm(dataBR(new Date().toISOString()))
       void carregar()
     } catch (e: any) {
       toast.error(e?.message || 'Não foi possível registrar a entrega.')
@@ -593,6 +625,28 @@ export default function OrcamentoDetalhePage() {
         )}
       </div>
 
+      {/*
+        ASSINATURA GRAVADA (somente-leitura), à vista o tempo todo: vem do link
+        público ou de uma entrega anterior, com status ASSINADO e a data da
+        linha ASSINADO do histórico. O painel de nova assinatura continua com
+        o canvas VAZIO — assinar de novo grava por cima.
+      */}
+      {doc.signature_client && (
+        <div className="flex items-center gap-2 rounded-lg border border-emerald-300 bg-emerald-50 p-2 text-[11px]">
+          <img
+            src={`${pb.baseURL}/api/files/quotes/${doc.id}/${doc.signature_client}`}
+            alt="Assinatura do cliente gravada"
+            className="max-h-12 min-w-20 object-contain"
+          />
+          <div className="min-w-0">
+            <p className="flex items-center gap-1 font-bold text-emerald-800">
+              <CheckCircle2 className="h-3 w-3" /> ASSINADO PELO CLIENTE
+            </p>
+            {assinadoEm && <p className="text-emerald-700">em {assinadoEm}</p>}
+          </div>
+        </div>
+      )}
+
       {mostrarEntrega && (
         <Card className="border-indigo-300">
           <CardContent className="space-y-2 p-3">
@@ -636,6 +690,30 @@ export default function OrcamentoDetalhePage() {
             </div>
             <div className="space-y-1">
               <Label className="text-[10px]">Assinatura do cliente (recebimento)</Label>
+              {/*
+                ASSINATURA GRAVADA (somente-leitura): vem do link público ou de
+                uma entrega anterior, com status ASSINADO e a data do histórico.
+                O canvas abaixo continua VAZIO — assinar de novo grava por cima
+                (a anterior fica no histórico).
+              */}
+              {doc.signature_client && (
+                <div className="flex items-center gap-2 rounded-lg border border-emerald-300 bg-emerald-50 p-2">
+                  <img
+                    src={`${pb.baseURL}/api/files/quotes/${doc.id}/${doc.signature_client}`}
+                    alt="Assinatura do cliente gravada"
+                    className="max-h-16 min-w-24 object-contain"
+                  />
+                  <div className="min-w-0">
+                    <p className="flex items-center gap-1 text-[10px] font-bold text-emerald-800">
+                      <CheckCircle2 className="h-3 w-3" /> ASSINADO
+                    </p>
+                    {assinadoEm && <p className="text-[9px] text-emerald-700">em {assinadoEm}</p>}
+                    <p className="text-[8px] text-muted-foreground">
+                      assinatura gravada — para re-assinar, use o quadro abaixo
+                    </p>
+                  </div>
+                </div>
+              )}
               <SignaturePad
                 onSave={setAssinaturaCliente}
                 onCanvasReady={(c) => (canvasCliente.current = c)}

@@ -194,6 +194,13 @@ export default function WorkOrderDetail() {
 
   const [signatureDataUrl, setSignatureDataUrl] = useState<string>('')
   const [statusChangeNotes, setStatusChangeNotes] = useState('')
+  /**
+   * ASSINATURA DO CLIENTE JÁ GRAVADA (link público ou atendimento anterior).
+   * Somente-leitura: aparece com status ASSINADO e a data da linha ASSINADO
+   * do histórico (order_history). O canvas de nova assinatura continua VAZIO.
+   */
+  const [sigClienteGravada, setSigClienteGravada] = useState<string>('')
+  const [assinadoEm, setAssinadoEm] = useState<string>('')
 
   // Checklist de itens pendentes da OS (campo JSON `checklist`): o técnico
   // lança o que falta fazer, marca como concluído e salva junto com a OS.
@@ -526,6 +533,25 @@ export default function WorkOrderDetail() {
       setOrderPhotos(photos)
       setOrderHistory(hist)
 
+      /**
+       * ASSINATURA DO CLIENTE GRAVADA: exibição em somente-leitura.
+       *
+       * O canvas de nova assinatura continua NUNCA pré-preenchido (regra de
+       * 21/11). O que mudou: se a OS já tem assinatura do cliente (ex.: o
+       * cliente assinou pelo link público), ela aparece como registro com
+       * status ASSINADO e a data da linha ASSINADO do histórico — em vez de
+       * nem aparecer, como se nada tivesse sido assinado.
+       */
+      const sc = (o as any).signature_image
+      if (sc) {
+        setSigClienteGravada(getFileUrl('work_orders', orderId, sc))
+        const linha = hist.find((h) => h.status_to === 'ASSINADO')
+        setAssinadoEm(linha ? new Date(linha.created).toLocaleDateString('pt-BR') : '')
+      } else {
+        setSigClienteGravada('')
+        setAssinadoEm('')
+      }
+
       // O preco e gravado no material da OS no momento em que ele e lancado.
       // Se o preco do produto mudar depois (o admin preencheu o preco de um
       // produto que estava zerado), a OS ficaria com o valor velho. Aqui a
@@ -631,6 +657,10 @@ export default function WorkOrderDetail() {
             ? statusChangeNotes || `Status alterado de ${statusAnterior} para ${statusNovo}`
             : statusChangeNotes || undefined,
         )
+
+        // re-assinatura gravada por cima: o registro somente-leitura já mostra a nova
+        const novoSig = (updated as any).signature_image
+        if (novoSig) setSigClienteGravada(getFileUrl('work_orders', id, novoSig))
 
         toast.success(
           mudouStatus
@@ -2926,12 +2956,34 @@ ${
                   </div>
                 </div>
 
+                {/*
+                  ASSINATURA GRAVADA (somente-leitura):vem do link público ou de
+                  um atendimento anterior, com status ASSINADO e a data da linha
+                  ASSINADO do histórico. O canvas abaixo continua VAZIO — assinar
+                  nele de novo grava por cima (a anterior fica no histórico).
+                */}
+                {sigClienteGravada && (
+                  <div className="flex items-center gap-2 rounded-lg border border-emerald-300 bg-emerald-50 p-2">
+                    <img
+                      src={sigClienteGravada}
+                      alt="Assinatura do cliente gravada"
+                      className="max-h-16 min-w-24 object-contain"
+                    />
+                    <div className="min-w-0">
+                      <p className="flex items-center gap-1 text-[11px] font-bold text-emerald-800">
+                        <CheckCircle2 className="h-3.5 w-3.5" /> ASSINADO
+                      </p>
+                      {assinadoEm && (
+                        <p className="text-[11px] text-emerald-700">em {assinadoEm}</p>
+                      )}
+                      <p className="text-[10px] text-muted-foreground">
+                        assinatura gravada — para re-assinar, use o quadro abaixo
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <SignaturePad
-                  initialImage={
-                    order.signature_image
-                      ? getFileUrl('work_orders', order.id || '', order.signature_image)
-                      : undefined
-                  }
                   onSave={(dataUrl) => {
                     setSignatureDataUrl(dataUrl)
                   }}

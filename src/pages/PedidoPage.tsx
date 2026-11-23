@@ -34,6 +34,7 @@ import {
   totalDoDocumento,
   getClientes,
   registrarHistoricoPedido,
+  getHistoricoPedido,
 } from '@/services/crm'
 import { getEmpresa, type Empresa } from '@/lib/empresa'
 import type { Material } from '@/types/flservicos'
@@ -125,6 +126,16 @@ export default function PedidoPage() {
   /** desenho capturado, para ESTAMPAR no talão (não só marcar "assinado") */
   const [sigCliente, setSigCliente] = useState('')
   const [sigEntregador, setSigEntregador] = useState('')
+  /**
+   * ASSINATURA DO CLIENTE JÁ GRAVADA (link público ou entrega anterior).
+   *
+   * É só leitura: aparece com status ASSINADO e a data da linha ASSINADO do
+   * histórico. O canvas de nova assinatura continua VAZIO — re-assinar grava
+   * por cima e a anterior permanece no histórico.
+   */
+  const [sigClienteGravada, setSigClienteGravada] = useState('')
+  /** data (do histórico) em que o cliente assinou */
+  const [assinadoEm, setAssinadoEm] = useState('')
   const [fotos, setFotos] = useState<File[]>([])
   const [salvoId, setSalvoId] = useState<string>('')
   /** registro do pedido tal como carregado do banco (tem o client_link_token) */
@@ -286,6 +297,29 @@ export default function PedidoPage() {
           const se = urlSig((q as any).signature_deliverer)
           if (se) setSigEntregador(se)
           setSigCliente('')
+          /**
+           * ASSINATURA DO CLIENTE GRAVADA: mostra em somente-leitura.
+           *
+           * A regra de 21/11 continua — o canvas NUNCA nasce pré-preenchido.
+           * O que mudou: se o documento já tem assinatura (ex.: o cliente
+           * assinou pelo link público), ela é EXIBIDA como registro, com
+           * status ASSINADO e a data vinda da linha ASSINADO do histórico —
+           * em vez de aparecer "pendente" como se nada tivesse acontecido.
+           */
+          const sc = (q as any).signature_client
+          if (sc) {
+            setSigClienteGravada(urlSig(sc))
+            try {
+              const hist = await getHistoricoPedido(q.id)
+              const linha = (hist as any[]).find((h) => h.status_to === 'ASSINADO')
+              setAssinadoEm(linha ? dataBR(linha.created) : '')
+            } catch {
+              setAssinadoEm('') // histórico é detalhe: falha não trava a tela
+            }
+          } else {
+            setSigClienteGravada('')
+            setAssinadoEm('')
+          }
           setAssinouCliente(false)
           setItens(
             (q.items || []).map((i) => ({
@@ -568,6 +602,9 @@ export default function PedidoPage() {
 
       setSalvoId((r as any).id)
       setQuoteAtual(r as any)
+      // re-assinatura gravada por cima: o registro somente-leitura já mostra a nova
+      const novoSig = (r as any).signature_client
+      if (novoSig) setSigClienteGravada(getFileUrl('quotes', (r as any).id, novoSig))
       // as fotos recém-anexadas viram "já salvas" na hora, sem reabrir o pedido
       setFotosSalvas(((r as any).photos || []) as string[])
       setFotos([])
@@ -1253,6 +1290,29 @@ export default function PedidoPage() {
               <Label className="text-[10px] font-semibold">
                 Assinatura do cliente (recebimento)
               </Label>
+              {/*
+                ASSINATURA GRAVADA (somente-leitura): vem do link público ou de
+                uma entrega anterior. O canvas abaixo continua VAZIO — assinar
+                aqui de novo grava por cima (a anterior fica no histórico).
+              */}
+              {sigClienteGravada && (
+                <div className="flex items-center gap-2 rounded-lg border border-emerald-300 bg-emerald-50 p-2">
+                  <img
+                    src={sigClienteGravada}
+                    alt="Assinatura do cliente gravada"
+                    className="max-h-16 min-w-24 object-contain"
+                  />
+                  <div className="min-w-0">
+                    <p className="flex items-center gap-1 text-[9px] font-bold text-emerald-800">
+                      <CheckCircle2 className="h-3 w-3" /> ASSINADO
+                    </p>
+                    {assinadoEm && <p className="text-[9px] text-emerald-700">em {assinadoEm}</p>}
+                    <p className="text-[8px] text-muted-foreground">
+                      assinatura gravada — para re-assinar, use o campo abaixo
+                    </p>
+                  </div>
+                </div>
+              )}
               <div className="rounded-lg border bg-white p-1">
                 <SignaturePad
                   onSave={() => setAssinouCliente(true)}
@@ -1261,7 +1321,7 @@ export default function PedidoPage() {
               </div>
               {assinouCliente ? (
                 <p className="text-[9px] text-emerald-700">✓ assinado</p>
-              ) : (
+              ) : sigClienteGravada ? null : (
                 <p className="flex items-center gap-1 text-[9px] text-amber-700">
                   <AlertTriangle className="h-2.5 w-2.5" /> pendente
                 </p>
@@ -1584,8 +1644,12 @@ export default function PedidoPage() {
               </div>
               <div className="text-center">
                 <div className="flex h-14 items-end justify-center">
-                  {sigCliente ? (
-                    <img src={sigCliente} alt="" className="max-h-14 object-contain" />
+                  {sigCliente || sigClienteGravada ? (
+                    <img
+                      src={sigCliente || sigClienteGravada}
+                      alt=""
+                      className="max-h-14 object-contain"
+                    />
                   ) : null}
                 </div>
                 <div className="border-t border-slate-500 pt-1">
