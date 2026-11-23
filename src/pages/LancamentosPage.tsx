@@ -47,6 +47,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useViewMode, ViewModeSelector } from '@/components/ViewModeSelector'
+import { ClienteRapidoDialog } from '@/components/ClienteRapidoDialog'
 import { useAuth } from '@/contexts/AuthContext'
 
 const POR_PAGINA = 40
@@ -66,6 +67,7 @@ export default function LancamentosPage() {
   // formulário
   const [aberto, setAberto] = useState(false)
   const [clienteId, setClienteId] = useState('')
+  const [novoCliente, setNovoCliente] = useState(false)
   const [buscaCliente, setBuscaCliente] = useState('')
   const [tipo, setTipo] = useState<TransactionKind>('SERVICO')
   const [descricao, setDescricao] = useState('')
@@ -476,7 +478,18 @@ export default function LancamentosPage() {
 
           <div className="space-y-2.5">
             <div className="space-y-1">
-              <Label className="text-xs font-semibold">Cliente</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-xs font-semibold">Cliente</Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => setNovoCliente(true)}
+                  className="h-7 gap-1 bg-[#0B3D91] px-2 text-[11px] font-bold text-white hover:bg-[#0B3D91]/90"
+                  title="Cadastrar um cliente novo agora"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Novo cliente
+                </Button>
+              </div>
               <Input
                 value={buscaCliente}
                 onChange={(e) => {
@@ -631,6 +644,28 @@ export default function LancamentosPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Cadastro rápido: cria o cliente sem sair do lançamento. */}
+      <ClienteRapidoDialog
+        open={novoCliente}
+        onOpenChange={setNovoCliente}
+        onCriado={(c) => {
+          setResumos((prev) => [
+            {
+              ...c,
+              saldo: 0,
+              total_capital: 0,
+              total_consumo: 0,
+              total_servico: 0,
+              total_dinheiro: 0,
+            } as unknown as ClientSummary,
+            ...prev,
+          ])
+          setClienteId(c.id)
+          setBuscaCliente(c.nickname || c.name)
+          setNovoCliente(false)
+        }}
+      />
     </div>
   )
 }

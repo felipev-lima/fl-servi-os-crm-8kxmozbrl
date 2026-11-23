@@ -45,6 +45,7 @@ import { enderecoCompleto, linkMapa, temEndereco } from '@/lib/local'
 import { prepararFoto } from '@/lib/imagem'
 import { SignaturePad } from '@/components/SignaturePad'
 import { ProdutoRapidoDialog } from '@/components/ProdutoRapidoDialog'
+import { ClienteRapidoDialog } from '@/components/ClienteRapidoDialog'
 import { FLUXO_PEDIDO, configStatus } from '@/lib/pedidoStatus'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -116,6 +117,7 @@ export default function PedidoPage() {
   const [salvando, setSalvando] = useState(false)
 
   const [clienteId, setClienteId] = useState('')
+  const [novoCliente, setNovoCliente] = useState(false)
   const [data, setData] = useState(new Date().toISOString().slice(0, 10))
   const [itens, setItens] = useState<ItemLocal[]>([])
   const [obs, setObs] = useState('')
@@ -1008,7 +1010,18 @@ export default function PedidoPage() {
             <User className="h-3.5 w-3.5" /> Cliente
           </h2>
           <div className="space-y-1">
-            <Label className="text-[10px] font-semibold">Cliente *</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label className="text-[10px] font-semibold">Cliente *</Label>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setNovoCliente(true)}
+                className="h-7 gap-1 bg-[#0B3D91] px-2 text-[11px] font-bold text-white hover:bg-[#0B3D91]/90"
+                title="Cadastrar um cliente novo agora"
+              >
+                <Plus className="h-3.5 w-3.5" /> Novo cliente
+              </Button>
+            </div>
             {/*
               BUSCA POR PALAVRA (pedido do Felipe, 20/11/2026).
 
@@ -1789,6 +1802,18 @@ export default function PedidoPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Cadastro rápido: cria o cliente sem sair do pedido. */}
+      <ClienteRapidoDialog
+        open={novoCliente}
+        onOpenChange={setNovoCliente}
+        onCriado={(c) => {
+          setClientes((prev) => [c as never, ...prev])
+          setClienteId(c.id)
+          setBuscaCliente(c.nickname || c.name)
+          setNovoCliente(false)
+        }}
+      />
     </div>
   )
 }

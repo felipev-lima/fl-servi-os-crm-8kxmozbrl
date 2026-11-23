@@ -48,6 +48,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useViewMode, ViewModeSelector } from '@/components/ViewModeSelector'
+import { ClienteRapidoDialog } from '@/components/ClienteRapidoDialog'
 import { useAuth } from '@/contexts/AuthContext'
 
 const FLUXO = [
@@ -91,6 +92,7 @@ export default function OrcamentosPage() {
   const [aberto, setAberto] = useState(false)
   const [clienteId, setClienteId] = useState('')
   const [buscaCliente, setBuscaCliente] = useState('')
+  const [novoCliente, setNovoCliente] = useState(false)
   const [itens, setItens] = useState<QuoteItem[]>([])
   const [buscaProduto, setBuscaProduto] = useState('')
   const [salvando, setSalvando] = useState(false)
@@ -434,7 +436,18 @@ export default function OrcamentosPage() {
 
           <div className="space-y-3">
             <div className="space-y-1">
-              <Label className="text-xs font-semibold">Cliente</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-xs font-semibold">Cliente</Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => setNovoCliente(true)}
+                  className="h-7 gap-1 bg-[#0B3D91] px-2 text-[11px] font-bold text-white hover:bg-[#0B3D91]/90"
+                  title="Cadastrar um cliente novo agora"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Novo cliente
+                </Button>
+              </div>
               <Input
                 value={buscaCliente}
                 onChange={(e) => {
@@ -491,7 +504,11 @@ export default function OrcamentosPage() {
                       }`}
                     >
                       <span className="text-[10px] font-semibold uppercase text-muted-foreground">
-                        {saldo > 0.005 ? 'Débito em aberto' : saldo < -0.005 ? 'Crédito a favor' : 'Sem débito'}
+                        {saldo > 0.005
+                          ? 'Débito em aberto'
+                          : saldo < -0.005
+                            ? 'Crédito a favor'
+                            : 'Sem débito'}
                       </span>
                       <span
                         className={`text-xs font-black ${
@@ -653,6 +670,28 @@ export default function OrcamentosPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Cadastro rápido: cria o cliente sem sair do orçamento. */}
+      <ClienteRapidoDialog
+        open={novoCliente}
+        onOpenChange={setNovoCliente}
+        onCriado={(c) => {
+          setClientes((prev) => [
+            {
+              ...c,
+              saldo: 0,
+              total_capital: 0,
+              total_consumo: 0,
+              total_servico: 0,
+              total_dinheiro: 0,
+            } as unknown as ClientSummary,
+            ...prev,
+          ])
+          setClienteId(c.id)
+          setBuscaCliente(c.nickname || c.name)
+          setNovoCliente(false)
+        }}
+      />
     </div>
   )
 }
