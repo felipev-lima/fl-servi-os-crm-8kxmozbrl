@@ -44,6 +44,28 @@ routerAdd('GET', '/backend/v1/diagnostico', (e) => {
       if (!ultima || d > ultima) ultima = d
     }
   }
+  // amostra bruta dos 5 primeiros, para ver o que realmente está gravado
+  const amostra = []
+  for (let i = 0; i < Math.min(5, trans.length); i++) {
+    const t = trans[i]
+    amostra.push({
+      id: t.id,
+      client: String(t.getString('client') || '').slice(0, 15),
+      date: t.getString('date'),
+      kind: t.getString('kind'),
+      item_type: t.getString('item_type'),
+      description: String(t.getString('description') || '').slice(0, 40),
+      quantity: t.getFloat('quantity'),
+      unit_price: t.getFloat('unit_price'),
+      tem_campo_total: String(t.get('total_price') === undefined ? 'nao' : 'sim'),
+      legacy_row: t.getString('legacy_row'),
+      sent_to_finance: t.getString('sent_to_finance'),
+      notes: String(t.getString('notes') || '').slice(0, 50),
+      created: t.getString('created'),
+    })
+  }
+  resp.amostra = amostra
+
   resp.transactions_por_tipo = porTipo
   resp.transactions_soma = Math.round(soma * 100) / 100
   resp.transactions_com_legacy_row = comLegacy
