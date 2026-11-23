@@ -21,6 +21,7 @@ import {
   Download,
   PenTool,
   BadgeCheck,
+  CheckCircle2,
   RefreshCw,
   Wrench,
   ClipboardList,
@@ -269,6 +270,52 @@ export default function PaginaPublicaCliente() {
           <h2 className="mb-2 flex items-center gap-1.5 text-sm font-black text-[#0B3D91]">
             <PenTool className="h-4 w-4" /> Confirmação de recebimento
           </h2>
+          {/*
+            ASSINATURA GRAVADA (somente-leitura): quando o documento já foi
+            assinado pelo link (ou na entrega), mostra QUEM assinou, a imagem
+            gravada, o selo ASSINADO e a data da linha ASSINADO do histórico —
+            igual ao bloco do Pedido no CRM. O formulário continua logo
+            abaixo: assinar de novo grava por cima, a anterior fica no
+            histórico e o canvas NUNCA nasce pré-preenchido.
+          */}
+          {jaAssinado && (doc.assinatura_url || doc.assinado_por || doc.assinado_em) && (
+            <div className="mb-3 rounded-lg border border-emerald-300 bg-emerald-50 p-3">
+              <div className="flex items-start gap-3">
+                {doc.assinatura_url ? (
+                  <img
+                    src={doc.assinatura_url}
+                    alt="Assinatura do cliente gravada"
+                    className="max-h-20 min-w-32 rounded border border-emerald-200 bg-white object-contain"
+                  />
+                ) : (
+                  <div className="flex h-20 w-32 items-center justify-center rounded border border-emerald-200 bg-white text-[10px] text-slate-400">
+                    assinatura não exibida
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="flex items-center gap-1 text-[11px] font-black text-emerald-800">
+                    <CheckCircle2 className="h-4 w-4" /> ASSINADO
+                  </p>
+                  {doc.assinado_por && (
+                    <p className="mt-0.5 truncate text-[11px] font-semibold text-slate-800">
+                      Recebido por {doc.assinado_por}
+                    </p>
+                  )}
+                  {doc.assinado_doc && (
+                    <p className="text-[10px] text-slate-500">CPF/CNPJ: {doc.assinado_doc}</p>
+                  )}
+                  {doc.assinado_em && (
+                    <p className="text-[10px] text-emerald-700">
+                      Assinado em {new Date(doc.assinado_em).toLocaleString('pt-BR')}
+                    </p>
+                  )}
+                  <p className="mt-1 text-[9px] text-muted-foreground">
+                    assinatura gravada — para re-assinar, use o formulário abaixo
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
           <p className="mb-3 text-[11px] leading-relaxed text-slate-500">
             Assine abaixo para confirmar que recebeu os materiais/serviços deste documento.
           </p>

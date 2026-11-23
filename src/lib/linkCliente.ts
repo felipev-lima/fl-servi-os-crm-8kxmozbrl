@@ -96,6 +96,8 @@ export interface DocumentoPublico {
   cliente: { name: string; document: string; phone: string }
   itens: ItemPublico[]
   fotos: FotoPublica[]
+  /** rótulo do CPF/CNPJ de quem recebeu (só na OS — quote não grava) */
+  assinado_doc: string
   assinatura_url: string
   assinado_em: string
   assinado_por: string

@@ -213,7 +213,15 @@ routerAdd('GET', '/backend/v1/cliente/{tipo}/{id}', (e) => {
     fotos,
     assinatura_url: assinaturaUrl,
     assinado_em: assinadoEm,
-    assinado_por: doc.getString('client_signer_name') || '',
+    // CPF/CNPJ de quem recebeu (só a OS guarda no documento)
+    assinado_doc: tipo === 'os' ? doc.getString('client_signer_doc') || '' : '',
+    // nome de quem recebeu: na OS fica em client_signer_name; no Pedido o
+    // hook de assinatura grava em delivered_by_name (client_signer_name só
+    // existe em work_orders — no quote viria vazio e o nome sumiria da tela)
+    assinado_por:
+      tipo === 'os'
+        ? doc.getString('client_signer_name') || ''
+        : doc.getString('delivered_by_name') || '',
   })
 })
 
