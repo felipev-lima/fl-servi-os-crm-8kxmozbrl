@@ -11,11 +11,11 @@
  *    fotos e assinatura, SEM nenhum campo de valor. É a leitura viva: chamada
  *    toda vez que o cliente abre o link, devolve sempre a versão atualizada
  *    (item/foto novo lançado no CRM já aparece no mesmo link).
- *  - POST /backend/v1/cliente/{tipo}/{id}/assinar → recebe { t, nome, documento,
- *    assinatura(dataURL png) }, grava a assinatura no documento (signature_client
- *    no quote / signature_image na work_order) e registra no histórico
- *    (quote_history / order_history). NUNCA APAGA: o restante do documento e as
- *    fotos originais ficam intactos.
+ *  - POST /backend/v1/cliente/{tipo}/{id}/assinar → recebe multipart/form-data
+ *    com { t, nome, documento, assinatura(arquivo png) }, grava a assinatura no
+ *    documento (signature_client no quote / signature_image na work_order) e
+ *    registra no histórico (quote_history / order_history). NUNCA APAGA: o
+ *    restante do documento e as fotos originais ficam intactos.
  *
  * O token é validado contra o campo client_link_token do próprio documento —
  * sem ele a rota responde 404 (não 403, para não confirmar existência).
@@ -32,7 +32,11 @@
  *    lança na JSVM e, engolido pelo try/catch, devolve token vazio (404);
  *  - o sort de findRecordsByFilter usa só colunas nativas (quotes não tem `created`);
  *  - findRecordsByFilter recebe o filtro pronto (sem binds `{:id}`);
- *  - o horário gravado é o do servidor (UTC).
+ *  - o horário gravado é o do servidor (UTC);
+ *  - NÃO EXISTE decodificação base64 na JSVM ($security.base64Decode lança
+ *    "Object has no member"): a assinatura chega pronta como ARQUIVO multipart
+ *    (decodificada no navegador) e o hook só lê e.findUploadedFiles('assinatura')
+ *    + $filesystem.fileFromMultipart.
  */
 
 // ---------------- GET: leitura pública enxuta ----------------
@@ -217,18 +221,38 @@ routerAdd('POST', '/backend/v1/cliente/{tipo}/{id}/assinar', (e) => {
   const id = e.request.pathValue('id')
   const corpo = e.requestInfo().body || {}
 
-  const token = String(corpo.t || '')
-  const nome = String(corpo.nome || '')
-    .trim()
-    .slice(0, 120)
-  const documento = String(corpo.documento || '')
-    .trim()
-    .slice(0, 40)
-  const assinatura = String(corpo.assinatura || '')
-
-  if (!assinatura.startsWith('data:image/png;base64,')) {
+  // multipart/form-data: o arquivo da assinatura já vem decodificado do
+  // navegador ($security.base64Decode não existe na JSVM — bug em produção)
+  let arquivos = []
+  try {
+    arquivos = e.findUploadedFiles('assinatura')
+  } catch (_) {
+    arquivos = []
+  }
+  if (!arquivos || arquivos.length === 0) {
     return e.json(400, { error: 'Assine na tela antes de confirmar.' })
   }
+  let arquivo = null
+  try {
+    arquivo = $filesystem.fileFromMultipart(arquivos[0])
+  } catch (err) {
+    return e.json(400, { error: 'Arquivo da assinatura inválido.' })
+  }
+
+  // campos de texto do multipart: requestInfo().body traz os valores do form;
+  // se algum faltar, cai em e.request.formValue (mesma requisição)
+  const campo = (chave) => {
+    let v = String(corpo[chave] || '')
+    if (v) return v
+    try {
+      v = String(e.request.formValue(chave) || '')
+    } catch (_) {}
+    return v
+  }
+  const token = campo('t')
+  const nome = campo('nome').trim().slice(0, 120)
+  const documento = campo('documento').trim().slice(0, 40)
+
   if (!nome) {
     return e.json(400, { error: 'Informe quem está recebendo.' })
   }
@@ -248,8 +272,7 @@ routerAdd('POST', '/backend/v1/cliente/{tipo}/{id}/assinar', (e) => {
     return e.json(404, { error: 'Documento não encontrado.' })
   }
 
-  const bytes = $security.base64Decode(assinatura.split(',')[1])
-  const arquivo = filesystem.NewFileFromBytes(bytes, 'assinatura-cliente.png')
+  // (a conversão do desenho em arquivo acontece no navegador — ver linkCliente.ts)
 
   // data legível sem depender de toLocaleString (ausente na JSVM);
   // o servidor grava em UTC — a tela de CRM ajusta o fuso ao exibir

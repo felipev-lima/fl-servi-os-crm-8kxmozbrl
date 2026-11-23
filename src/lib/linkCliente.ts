@@ -131,16 +131,19 @@ export async function assinarDocumentoPublico(opts: {
   assinaturaDataUrl: string
 }): Promise<void> {
   const url = `${basePublica()}/backend/v1/cliente/${opts.tipo}/${opts.id}/assinar`
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      t: opts.token,
-      nome: opts.nome,
-      documento: opts.documento || '',
-      assinatura: opts.assinaturaDataUrl,
-    }),
-  })
+
+  // Decodificação AQUI, no navegador: o dataURL do canvas vira arquivo real e
+  // vai como multipart/form-data. A JSVM do PocketBase não tem decodificador
+  // base64 (o hook quebrava com "Object has no member 'base64Decode'") — o
+  // servidor passa a receber o arquivo pronto e só grava.
+  const blob = await (await fetch(opts.assinaturaDataUrl)).blob()
+  const fd = new FormData()
+  fd.append('t', opts.token)
+  fd.append('nome', opts.nome)
+  fd.append('documento', opts.documento || '')
+  fd.append('assinatura', blob, 'assinatura-cliente.png')
+
+  const res = await fetch(url, { method: 'POST', body: fd })
   if (!res.ok) {
     const corpo = await res.json().catch(() => ({}))
     throw new Error((corpo as any)?.error || 'Não foi possível gravar a assinatura.')

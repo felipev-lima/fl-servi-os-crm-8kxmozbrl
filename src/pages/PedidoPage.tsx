@@ -508,7 +508,12 @@ export default function PedidoPage() {
       const fd = new FormData()
       fd.append('client', clienteId)
       fd.append('date', `${data} 12:00:00.000Z`)
-      fd.append('status', salvoId ? 'ENTREGUE' : 'PEDIDO')
+      /**
+       * REABERTO MANTÉM O STATUS (correção): antes re-salvar forçava 'ENTREGUE',
+       * rebaixando um pedido já FATURADO de volta na esteira. Agora o status
+       * atual é preservado (o financeiro não é tocado).
+       */
+      fd.append('status', salvoId ? statusAtual || 'ENTREGUE' : 'PEDIDO')
       fd.append('notes', obs)
       fd.append('delivered_by_name', entregador)
       fd.append(
@@ -547,15 +552,25 @@ export default function PedidoPage() {
        *
        * O certo é `preparada.arquivo`.
        */
+      /**
+       * FOTOS NO RE-SALVAMENTO (correção): no update o campo vai como `photos+`
+       * — o PocketBase só faz APPEND com o "+". Sem ele, cada re-salvamento
+       * SUBSTITUÍA o campo inteiro e apagava as fotos já gravadas do pedido
+       * (regra do projeto: nada é apagado). No create não existe append.
+       */
+      const campoFotos = salvoId ? 'photos+' : 'photos'
       for (const f of fotos) {
         const preparada = await prepararFoto(f)
-        fd.append('photos', preparada.arquivo, preparada.arquivo.name || 'foto.jpg')
+        fd.append(campoFotos, preparada.arquivo, preparada.arquivo.name || 'foto.jpg')
       }
 
       const r = salvoId ? await updateQuote(salvoId, fd as any) : await createQuote(fd as any)
 
       setSalvoId((r as any).id)
       setQuoteAtual(r as any)
+      // as fotos recém-anexadas viram "já salvas" na hora, sem reabrir o pedido
+      setFotosSalvas(((r as any).photos || []) as string[])
+      setFotos([])
       toast.success(salvoId ? 'Pedido atualizado.' : 'Pedido criado.')
       return (r as any).id
     } catch (e: any) {
@@ -785,6 +800,19 @@ export default function PedidoPage() {
           </p>
         </div>
         <div className="flex gap-1.5">
+          {/*
+            SALVAR EM PRIMEIRO (relato do Felipe): entre seis botões do topo ele
+            ficava por último e se perdia no celular; agora é o primeiro, na cor
+            sólida da marca, como o salvar em destaque da OS.
+          */}
+          <Button
+            onClick={salvar}
+            disabled={salvando}
+            className="h-9 gap-1.5 bg-[#0B3D91] text-xs font-semibold text-white hover:bg-[#0B3D91]/90"
+          >
+            {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Salvar
+          </Button>
           <Button variant="outline" size="sm" onClick={imprimir} className="h-9 gap-1.5 text-xs">
             <Printer className="h-4 w-4" /> PDF
           </Button>
@@ -878,14 +906,6 @@ export default function PedidoPage() {
               <span className="sm:hidden">Migrar</span>
             </Button>
           )}
-          <Button
-            onClick={salvar}
-            disabled={salvando}
-            className="h-9 gap-1.5 bg-[#0B3D91] text-xs font-semibold text-white hover:bg-[#0B3D91]/90"
-          >
-            {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Salvar
-          </Button>
         </div>
       </div>
 
@@ -1369,9 +1389,30 @@ export default function PedidoPage() {
               </>
             )}
             {fotos.length > 0 && (
-              <p className="text-[9px] text-muted-foreground">
-                {fotos.map((f) => f.name).join(', ')}
-              </p>
+              <>
+                <p className="text-[9px] text-muted-foreground">
+                  {fotos.map((f) => f.name).join(', ')}
+                </p>
+                {/*
+                  CONFIRMAR AS FOTOS ANEXADAS (relato do Felipe): faltava o
+                  passo que GRAVA a foto na tela — este botão salva o pedido
+                  com elas (append, nada é apagado) sem depender de achar o
+                  "Salvar" do topo.
+                */}
+                <Button
+                  type="button"
+                  onClick={salvar}
+                  disabled={salvando}
+                  className="h-8 w-full gap-1.5 bg-[#0B3D91] text-[11px] font-semibold text-white hover:bg-[#0B3D91]/90"
+                >
+                  {salvando ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Save className="h-3.5 w-3.5" />
+                  )}
+                  Salvar {fotos.length} foto(s) no pedido
+                </Button>
+              </>
             )}
           </div>
 
