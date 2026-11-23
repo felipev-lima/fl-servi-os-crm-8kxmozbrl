@@ -67,6 +67,9 @@ routerAdd('POST', '/backend/v1/criar-clientes', (e) => {
     obs.push('Criado na importação do histórico financeiro (aba ' + String(c.aba) + ')')
     reg.set('notes', obs.join(' | '))
     reg.set('type', doc.length === 11 ? 'PF' : 'PJ')
+    // Pendente quando só tem o nome: é a regra do Felipe (23/11/2026).
+    const fone = String(c.telefone || '').replace(/[^0-9]/g, '')
+    reg.set('pendente', doc.length < 11 && fone.length < 10)
 
     try {
       $app.save(reg)

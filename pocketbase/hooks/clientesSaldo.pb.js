@@ -47,6 +47,7 @@ routerAdd('GET', '/backend/v1/clientes-saldo', (e) => {
       observacoes: r.getString('notes'),
       saldo: Math.round(s * 100) / 100,
       lancamentos: qtd[r.id] || 0,
+      pendente: r.getBool('pendente'),
     })
   }
 

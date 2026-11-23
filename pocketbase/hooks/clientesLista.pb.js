@@ -34,6 +34,7 @@ routerAdd('GET', '/backend/v1/clientes', (e) => {
       ie: r.getString('ie'),
       im: r.getString('im'),
       observacoes: r.getString('notes'),
+      pendente: r.getBool('pendente'),
       atualizado_em: r.getString('updated'),
     })
   }
