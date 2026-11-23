@@ -15,7 +15,7 @@ routerAdd('GET', '/backend/v1/lancamentos-cliente', (e) => {
     throw new ForbiddenError('Acesso não autorizado.')
   }
 
-  const idsParam = String(e.request.queryParam('ids') || '').trim()
+  const idsParam = String(e.request.url.query().get('ids') || '').trim()
   if (!idsParam) throw new BadRequestError('Informe ids=id1,id2,...')
   const ids = idsParam
     .split(',')
