@@ -113,13 +113,20 @@ export async function updateUser(
   }
 }
 
-/** Redefine a senha de um usuário (administrador). */
+/**
+ * Redefine a senha de um usuário (administrador).
+ *
+ * A API padrão do PocketBase exige a senha antiga (`oldPassword: Cannot be blank`),
+ * então o update direto na coleção falha. A rota `admin-set-password` grava a
+ * senha no servidor, sem a senha antiga, e só para administradores.
+ */
 export async function resetUserPassword(id: string, password: string): Promise<ManagedUser> {
   try {
-    const record = await pb.collection('users').update(id, {
-      password,
-      passwordConfirm: password,
+    await pb.send('/backend/v1/admin-set-password', {
+      method: 'POST',
+      body: { userId: id, newPassword: password },
     })
+    const record = await pb.collection('users').getOne(id)
     return toUser(record)
   } catch (err) {
     throw new Error(erroAmigavel(err, 'Erro ao redefinir senha.'))
