@@ -38,6 +38,7 @@ import LucroPage from './pages/LucroPage'
 import FaturamentoPage from './pages/FaturamentoPage'
 import AliquotasPage from './pages/AliquotasPage'
 import TecnicoPage from './pages/TecnicoPage'
+import ClienteFinanceiroPage from './pages/ClienteFinanceiroPage'
 import PaginaPublicaCliente from './pages/ClienteLinkPage'
 import NotFound from './pages/NotFound'
 
@@ -60,6 +61,10 @@ const App = () => (
             <Route path="/ordens" element={<WorkOrderList />} />
             <Route path="/ordens/:id" element={<WorkOrderDetail />} />
             <Route path="/clientes" element={<ClientsPage />} />
+            {/* Ficha do cliente com o extrato EDITÁVEL na própria linha.
+                Pedido do Felipe (23/11/2026): "que o CRM em si seja a minha
+                planilha de Excel que eu fazia fora". */}
+            <Route path="/clientes/:id" element={<ClienteFinanceiroPage />} />
             <Route path="/tecnicos" element={<TechniciansPage />} />
             <Route path="/materiais" element={<MaterialsPage />} />
             <Route path="/listas-material" element={<MaterialKitsPage />} />

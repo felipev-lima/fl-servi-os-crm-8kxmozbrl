@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { getClients, createClient, updateClient, deleteClient } from '@/services/api'
 import { Client } from '@/types/flservicos'
@@ -211,13 +212,18 @@ export default function ClientsPage() {
               <Building2 className="w-4 h-4" />
             </div>
             <div>
-              <h3
-                className={`font-bold text-sm line-clamp-1 ${
-                  cadastroIncompleto(client) ? 'text-rose-700' : 'text-foreground'
-                }`}
-              >
-                {client.name}
-              </h3>
+              {/* Clicar no nome abre a ficha com o extrato editável
+                  (pedido do Felipe, 23/11/2026): a lista serve para achar,
+                  a ficha é onde se corrige. */}
+              <Link to={`/clientes/${client.id}`} className="block hover:underline">
+                <h3
+                  className={`font-bold text-sm line-clamp-1 ${
+                    cadastroIncompleto(client) ? 'text-rose-700' : 'text-foreground'
+                  }`}
+                >
+                  {client.name}
+                </h3>
+              </Link>
               {client.nickname && (
                 <span className="block text-[10px] text-[#0B3D91] font-semibold uppercase">
                   {client.nickname}
@@ -292,7 +298,13 @@ export default function ClientsPage() {
 
   // LISTA / COMPACTA: mesmos dados, em linhas.
   const linhaCliente = (client: Client) => ({
-    titulo: `${cadastroIncompleto(client) ? '● ' : ''}${client.nickname || client.name}`,
+    // o título vira link para a ficha com o extrato editável
+    titulo: (
+      <Link to={`/clientes/${client.id}`} className="hover:underline">
+        {cadastroIncompleto(client) ? '● ' : ''}
+        {client.nickname || client.name}
+      </Link>
+    ),
     subtitulo: cadastroIncompleto(client) ? `${client.name} — CADASTRO INCOMPLETO` : client.name,
     detalhe: [
       client.phone,
