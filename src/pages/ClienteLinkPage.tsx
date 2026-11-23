@@ -42,6 +42,10 @@ export default function PaginaPublicaCliente() {
   const { tipo, id } = useParams()
   const [params] = useSearchParams()
   const token = params.get('t') || ''
+  // variante "Link com valores": a URL chega com &v=1 e o parâmetro TEM que
+  // ser repassado à leitura — sem isso o servidor responde como link normal
+  // e a tela abre sem preços, mesmo no link com valores.
+  const comValores = params.get('v') === '1'
 
   const [doc, setDoc] = useState<DocumentoPublico | null>(null)
   const [carregando, setCarregando] = useState(true)
@@ -62,7 +66,7 @@ export default function PaginaPublicaCliente() {
       return
     }
     try {
-      const d = await lerDocumentoPublico(tipo as 'os' | 'pedido', id, token)
+      const d = await lerDocumentoPublico(tipo as 'os' | 'pedido', id, token, comValores)
       // as URLs de arquivo do hook podem vir relativas: o prefixo do
       // PocketBase é conhecido aqui no cliente (pb.baseURL)
       const pbBase = pb.baseURL.replace(/\/$/, '')
@@ -80,7 +84,7 @@ export default function PaginaPublicaCliente() {
     } finally {
       setCarregando(false)
     }
-  }, [tipo, id, token])
+  }, [tipo, id, token, comValores])
 
   useEffect(() => {
     void carregar()
@@ -220,6 +224,11 @@ export default function PaginaPublicaCliente() {
                     <span className="rounded bg-slate-100 px-2 py-0.5 font-mono text-xs font-bold text-[#0B3D91]">
                       {Number(it.quantidade || 0)}
                     </span>
+                    {doc.com_valores && it.preco_unitario !== undefined && (
+                      <p className="mt-0.5 text-[10px] text-slate-500">
+                        {fmtBRL(Number(it.preco_unitario || 0))} / {it.unidade || 'un'}
+                      </p>
+                    )}
                     {doc.com_valores && it.total !== undefined && (
                       <p className="mt-0.5 font-mono text-xs font-bold text-slate-800">
                         {fmtBRL(Number(it.total || 0))}

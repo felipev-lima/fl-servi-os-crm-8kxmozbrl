@@ -142,13 +142,20 @@ function basePublica(): string {
   return pb.baseURL.replace(/\/$/, '')
 }
 
-/** Lê o documento pela rota pública — chamada toda vez que o link abre. */
+/** Lê o documento pela rota pública — chamada toda vez que o link abre.
+ *
+ * `comValores` repassa a variante "Link com valores" (&v=1): sem isso o
+ * servidor responde como link normal e a tela abre SEM preço nenhum, mesmo
+ * quando o cliente abriu o link com valores.
+ */
 export async function lerDocumentoPublico(
   tipo: 'os' | 'pedido',
   id: string,
   token: string,
+  comValores?: boolean,
 ): Promise<DocumentoPublico> {
-  const url = `${basePublica()}/backend/v1/cliente/${tipo}/${id}?t=${encodeURIComponent(token)}`
+  let url = `${basePublica()}/backend/v1/cliente/${tipo}/${id}?t=${encodeURIComponent(token)}`
+  if (comValores) url += '&v=1'
   const res = await fetch(url)
   if (!res.ok) {
     const corpo = await res.json().catch(() => ({}))
