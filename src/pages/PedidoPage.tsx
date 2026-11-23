@@ -57,6 +57,7 @@ import {
   Trash2,
   Save,
   Printer,
+  BadgeDollarSign,
   Camera,
   Search,
   ShoppingCart,
@@ -123,6 +124,8 @@ export default function PedidoPage() {
   const [tecnicos, setTecnicos] = useState<any[]>([])
   const [assinouCliente, setAssinouCliente] = useState(false)
   const [assinouEntregador, setAssinouEntregador] = useState(false)
+  /** RECEBIDO POR: nome que a cliente digitou ao assinar pelo link público */
+  const [recebidoPor, setRecebidoPor] = useState('')
   /** desenho capturado, para ESTAMPAR no talão (não só marcar "assinado") */
   const [sigCliente, setSigCliente] = useState('')
   const [sigEntregador, setSigEntregador] = useState('')
@@ -156,6 +159,10 @@ export default function PedidoPage() {
   const linkDoCliente = salvoId
     ? urlDoLinkCliente('pedido', salvoId, tokenDoLinkCliente(quoteAtual))
     : ''
+  /** variante "Link com valores" (só admin): mesmo documento com &v=1 */
+  const linkComValores = salvoId
+    ? urlDoLinkCliente('pedido', salvoId, tokenDoLinkCliente(quoteAtual), true)
+    : ''
 
   /** Copia o link e abre o WhatsApp com a mensagem pronta (telefone do cadastro). */
   const enviarLinkCliente = async () => {
@@ -174,6 +181,33 @@ export default function PedidoPage() {
           numero: numero || salvoId.slice(-6).toUpperCase(),
           cliente: cliente?.name,
           url: linkDoCliente,
+        }),
+      })
+    } catch {
+      toast.error('Não foi possível copiar o link.', { duration: 6000 })
+    } finally {
+      setCopiandoLink(false)
+    }
+  }
+
+  /** Igual ao enviarLinkCliente, mas com o link que mostra preços e totais. */
+  const enviarLinkComValores = async () => {
+    if (!linkComValores) {
+      toast.error('Salve o pedido antes de enviar o link ao cliente.')
+      return
+    }
+    setCopiandoLink(true)
+    try {
+      await navigator.clipboard.writeText(linkComValores)
+      toast.success('Link com valores copiado! Abrindo o WhatsApp...', { duration: 4000 })
+      abrirWhatsapp({
+        telefone: cliente?.phone,
+        mensagem: mensagemWhatsapp({
+          tipo: 'pedido',
+          numero: numero || salvoId.slice(-6).toUpperCase(),
+          cliente: cliente?.name,
+          url: linkComValores,
+          comValores: true,
         }),
       })
     } catch {
@@ -279,6 +313,9 @@ export default function PedidoPage() {
           setData((q.date || '').slice(0, 10) || new Date().toISOString().slice(0, 10))
           setObs(q.notes || '')
           setEntregador(q.delivered_by_name || '')
+          // RECEBIDO POR: nome digitado pela cliente no link público — campo
+          // próprio (received_by_name), separado do entregador do admin
+          setRecebidoPor((q as any).received_by_name || '')
           setNumero(q.number ? String(q.number) : '')
           setStatusAtual(q.status || 'PEDIDO')
           // FOTOS JÁ SALVAS: reabre o pedido e elas continuam lá, para
@@ -853,6 +890,24 @@ export default function PedidoPage() {
           <Button variant="outline" size="sm" onClick={imprimir} className="h-9 gap-1.5 text-xs">
             <Printer className="h-4 w-4" /> PDF
           </Button>
+          {!ehNovo && isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={enviarLinkComValores}
+              disabled={copiandoLink || salvando}
+              className="h-9 gap-1.5 text-xs border-[#0B3D91]/40 text-[#0B3D91] hover:bg-[#0B3D91]/10 font-medium"
+              title="Copia o link deste pedido COM os valores (itens, fotos e totais atualizados) e abre o WhatsApp — enviar ao cliente após a finalização; o link normal continua sem valores"
+            >
+              {copiandoLink ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <BadgeDollarSign className="h-4 w-4" />
+              )}
+              <span className="hidden sm:inline">Link com valores</span>
+              <span className="sm:hidden">Valores</span>
+            </Button>
+          )}
           {!ehNovo && (
             <Button
               variant="outline"
@@ -1249,6 +1304,19 @@ export default function PedidoPage() {
               placeholder="Ou digite o nome de quem entregou"
               className="h-9 text-xs"
             />
+            {/*
+              RECEBIDO POR (campo próprio received_by_name): o nome que a
+              cliente digitou ao assinar pelo link público. É SÓ LEITURA —
+              quem preenche é o cliente no link; gravar por aqui apagaria o
+              nome dela (era o bug do pedido nº 4: os dois brigavam pelo
+              mesmo delivered_by_name).
+            */}
+            {recebidoPor && (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1.5">
+                <p className="text-[9px] font-bold uppercase text-emerald-800">Recebido por</p>
+                <p className="text-xs font-semibold text-slate-800">{recebidoPor}</p>
+              </div>
+            )}
           </div>
 
           <div className="grid gap-2 sm:grid-cols-2">
@@ -1306,6 +1374,11 @@ export default function PedidoPage() {
                     <p className="flex items-center gap-1 text-[9px] font-bold text-emerald-800">
                       <CheckCircle2 className="h-3 w-3" /> ASSINADO
                     </p>
+                    {recebidoPor && (
+                      <p className="text-[9px] font-semibold text-slate-800">
+                        Recebido por {recebidoPor}
+                      </p>
+                    )}
                     {assinadoEm && <p className="text-[9px] text-emerald-700">em {assinadoEm}</p>}
                     <p className="text-[8px] text-muted-foreground">
                       assinatura gravada — para re-assinar, use o campo abaixo

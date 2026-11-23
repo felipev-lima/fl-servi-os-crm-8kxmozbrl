@@ -22,10 +22,22 @@ export function tokenDoLinkCliente(doc: any): string {
   return String(doc?.client_link_token || '')
 }
 
-/** URL pública do documento: /cliente/:tipo/:id?t=TOKEN */
-export function urlDoLinkCliente(tipo: 'os' | 'pedido', id: string, token: string): string {
+/**
+ * URL pública do documento: /cliente/:tipo/:id?t=TOKEN
+ *
+ * `comValores` (variante "Link com valores", só admin): acrescenta &v=1 —
+ * o hook devolve os mesmos itens/fotos MAS com preços e total. O link normal
+ * (sem a flag) continua sem valor nenhum.
+ */
+export function urlDoLinkCliente(
+  tipo: 'os' | 'pedido',
+  id: string,
+  token: string,
+  comValores?: boolean,
+): string {
   const origem = typeof window !== 'undefined' ? window.location.origin : ''
-  return `${origem}/cliente/${tipo}/${id}?t=${encodeURIComponent(token)}`
+  const url = `${origem}/cliente/${tipo}/${id}?t=${encodeURIComponent(token)}`
+  return comValores ? `${url}&v=1` : url
 }
 
 /** Números só ficam usáveis no wa.me se saírem com dígitos, DDI incluído. */
@@ -44,15 +56,27 @@ export function telefoneWhatsapp(fone?: string): string {
   return d
 }
 
-/** Mensagem pronta que vai no wa.me junto do link. */
+/** Mensagem pronta que vai no wa.me junto do link.
+ * `comValores` muda o texto: é o link de CONFERÊNCIA de valores, enviado
+ * depois da finalização para o cliente lançar na planilha de custo dele.
+ */
 export function mensagemWhatsapp(opts: {
   tipo: 'os' | 'pedido'
   numero: string | number
   cliente?: string
   url: string
+  comValores?: boolean
 }): string {
   const doc = opts.tipo === 'os' ? 'OS' : 'Pedido'
   const quem = opts.cliente ? ` de ${opts.cliente}` : ''
+  if (opts.comValores) {
+    return (
+      `*${doc} nº ${opts.numero}*${quem} — link com valores\n\n` +
+      'Segue o link para conferir os materiais/serviços, as fotos e OS VALORES ' +
+      'deste documento (para lançar na sua planilha de custo):\n' +
+      opts.url
+    )
+  }
   return (
     `*${doc} nº ${opts.numero}*${quem}\n\n` +
     'Confira os materiais/serviços e as fotos, baixe as fotos se precisar e ' +
@@ -79,6 +103,9 @@ export interface ItemPublico {
   quantidade: number
   unidade: string
   tipo: string // rótulo PRODUTO/SERVIÇO — SEM valor nenhum
+  /** presentes SÓ na variante com valores (?v=1) */
+  preco_unitario?: number
+  total?: number
 }
 
 export interface FotoPublica {
@@ -94,13 +121,20 @@ export interface DocumentoPublico {
   status: string
   atualizado_em: string
   cliente: { name: string; document: string; phone: string }
+  /** true quando o link é a variante com valores (?v=1) */
+  com_valores?: boolean
   itens: ItemPublico[]
   fotos: FotoPublica[]
   /** rótulo do CPF/CNPJ de quem recebeu (só na OS — quote não grava) */
   assinado_doc: string
   assinatura_url: string
   assinado_em: string
+  /** RECEBIDO POR — nome digitado pela cliente no link (campo próprio) */
   assinado_por: string
+  /** QUEM ENTREGOU — campo do admin, separado do recebedor */
+  entregador?: string
+  /** total geral — só na variante com valores (?v=1) */
+  total?: number
 }
 
 function basePublica(): string {

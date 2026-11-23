@@ -1,16 +1,24 @@
 /**
- * Link exclusivo do cliente por documento (Pedido e OS) — rotas públicas.
+ * Link exclusivo do cliente por documento (Pedido, OS e Orçamento) — rotas públicas.
  *
  * Pedido do Felipe: "Crie um link exclusivo por pedido e por OS, sem login,
  * que o cliente abre pelo WhatsApp: vê materiais/serviços com quantidades e
  * fotos SEM valores, baixa o ZIP das fotos e pode ASSINAR a confirmação de
  * recebimento na tela."
  *
+ * VARIANTE "LINK COM VALORES" (pedido do Felipe): o mesmo documento tem um
+ * SEGUNDO link, com ?v=1 na URL, que mostra os MESMOS itens, fotos e assinatura
+ * MAS com os preços e o total — para o cliente conferir quanto deu o pedido
+ * depois da finalização e lançar na planilha de custo dele. O link normal
+ * (sem ?v=1) continua SEM valor nenhum: se a flag não vier, o recorte de
+ * preço é aplicado como sempre.
+ *
  * O QUE AS ROTAS FAZEM:
- *  - GET  /backend/v1/cliente/{tipo}/{id}?t=TOKEN → documento "enxuto": itens,
- *    fotos e assinatura, SEM nenhum campo de valor. É a leitura viva: chamada
- *    toda vez que o cliente abre o link, devolve sempre a versão atualizada
- *    (item/foto novo lançado no CRM já aparece no mesmo link).
+ *  - GET  /backend/v1/cliente/{tipo}/{id}?t=TOKEN[&v=1] → documento "enxuto":
+ *    itens, fotos e assinatura, SEM nenhum campo de valor (com ?v=1, itens
+ *    ganham preço/total e o documento ganha o total geral). É a leitura viva:
+ *    chamada toda vez que o cliente abre o link, devolve sempre a versão
+ *    atualizada (item/foto novo lançado no CRM já aparece no mesmo link).
  *  - POST /backend/v1/cliente/{tipo}/{id}/assinar → recebe multipart/form-data
  *    com { t, nome, documento, assinatura(arquivo png) }, grava a assinatura no
  *    documento (signature_client no quote / signature_image na work_order) e
@@ -20,8 +28,11 @@
  * O token é validado contra o campo client_link_token do próprio documento —
  * sem ele a rota responde 404 (não 403, para não confirmar existência).
  *
- * NENHUM VALOR sai por aqui: os itens são recortados campo a campo, e o JSON
- * bruto do documento nunca é devolvido.
+ * RECEBIDO POR (campo próprio received_by_name): a assinatura pública grava o
+ * nome digitado pela cliente NELE — nunca mais em delivered_by_name ("Quem
+ * entregou"), que é do admin (bug do pedido nº 4: "Renata" apagava "Luciana
+ * Lima"). Na OS o recebedor continua em client_signer_name (campo histórico
+ * dela); o received_by_name fica como padrão novo nas duas coleções.
  *
  * DETALHES DA JSVM (todos comprovados por hooks que já rodam em produção):
  *  - callbacks rodam fora do escopo do módulo: TODA a lógica vive DENTRO de
@@ -52,21 +63,27 @@ routerAdd('GET', '/backend/v1/cliente/{tipo}/{id}', (e) => {
   const tipo = e.request.pathValue('tipo')
   const id = e.request.pathValue('id')
 
-  // ?t=TOKEN — pela requestInfo: rawQuery() lança na JSVM e o try/catch engole,
-  // virando token vazio (era a causa do 404 mesmo com token correto)
+  // ?t=TOKEN e ?v=1 (variante com valores) — pela requestInfo: rawQuery()
+  // lança na JSVM e o try/catch engole, virando token vazio (era a causa do
+  // 404 mesmo com token correto)
   let token = ''
+  let mostraValores = false
   try {
-    token = String((e.requestInfo().query || {}).t || '')
+    const q = e.requestInfo().query || {}
+    token = String(q.t || '')
+    mostraValores = String(q.v || '') === '1'
   } catch (_) {}
 
-  if (tipo !== 'os' && tipo !== 'pedido') {
+  if (tipo !== 'os' && tipo !== 'pedido' && tipo !== 'orcamento') {
     return e.json(404, { error: 'Documento não encontrado.' })
   }
 
   // carrega o documento e valida o token contra o próprio registro
+  let colecaoDoc = 'quotes'
+  if (tipo === 'os') colecaoDoc = 'work_orders'
   let doc = null
   try {
-    doc = $app.findRecordById(tipo === 'os' ? 'work_orders' : 'quotes', id)
+    doc = $app.findRecordById(colecaoDoc, id)
   } catch (_) {
     return e.json(404, { error: 'Documento não encontrado.' })
   }
@@ -95,8 +112,9 @@ routerAdd('GET', '/backend/v1/cliente/{tipo}/{id}', (e) => {
     } catch (_) {}
   }
 
-  // ---- itens SEM valor nenhum (recorte campo a campo) ----
+  // ---- itens (recorte campo a campo; com valores só se ?v=1) ----
   const itens = []
+  let total = 0
   if (tipo === 'os') {
     const materiais = $app.findRecordsByFilter(
       'order_materials',
@@ -111,17 +129,38 @@ routerAdd('GET', '/backend/v1/cliente/{tipo}/{id}', (e) => {
         const mat = $app.findRecordById('materials', m.getString('material'))
         descricao = mat.getString('name')
       } catch (_) {}
-      itens.push({
+      const quantidade = m.getFloat('quantity')
+      const unitario = m.getFloat('unit_price')
+      const subtotal = quantidade * unitario
+      total += subtotal
+      const item = {
         descricao,
-        quantidade: m.getFloat('quantity'),
+        quantidade,
         unidade: m.getString('unit') || 'UN',
         tipo: m.getString('kind') === 'SERVICO' ? 'SERVICO' : 'PRODUTO',
-      })
+      }
+      if (mostraValores) {
+        item.preco_unitario = unitario
+        item.total = subtotal
+      }
+      itens.push(item)
     }
     // o texto da OS entra como a linha do serviço
     const desc = doc.getString('description')
     if (desc) {
-      itens.unshift({ descricao: desc, quantidade: 1, unidade: 'serviço', tipo: 'SERVICO' })
+      const maoDeObra = doc.getFloat('service_value')
+      total += maoDeObra
+      const linha = {
+        descricao: desc,
+        quantidade: 1,
+        unidade: 'serviço',
+        tipo: 'SERVICO',
+      }
+      if (mostraValores) {
+        linha.preco_unitario = maoDeObra
+        linha.total = maoDeObra
+      }
+      itens.unshift(linha)
     }
   } else {
     let brutos = null
@@ -131,13 +170,22 @@ routerAdd('GET', '/backend/v1/cliente/{tipo}/{id}', (e) => {
     if (Array.isArray(brutos)) {
       for (const it of brutos) {
         if (!it || typeof it !== 'object') continue
-        itens.push({
+        const quantidade = Number(it.quantity || 0)
+        const unitario = Number(it.unit_price || 0)
+        const subtotal = quantidade * unitario
+        total += subtotal
+        const item = {
           descricao: String(it.description || it.name || ''),
-          quantidade: Number(it.quantity || 0),
+          quantidade,
           unidade: String(it.unit || 'UN'),
           // tipo entra só como rótulo PRODUTO/SERVIÇO — sem valor nenhum
           tipo: it.kind === 'SERVICO' ? 'SERVICO' : 'PRODUTO',
-        })
+        }
+        if (mostraValores) {
+          item.preco_unitario = unitario
+          item.total = subtotal
+        }
+        itens.push(item)
       }
     }
   }
@@ -195,12 +243,26 @@ routerAdd('GET', '/backend/v1/cliente/{tipo}/{id}', (e) => {
   // data da assinatura: vem do histórico (status_to = ASSINADO)
   let assinadoEm = ''
   try {
-    const colecao = tipo === 'os' ? 'order_history' : 'quote_history'
-    const campo = tipo === 'os' ? 'work_order' : 'quote'
-    const filtro = campo + " = '" + doc.id + "' && status_to = 'ASSINADO'"
-    const linhas = $app.findRecordsByFilter(colecao, filtro, '-created', 1, 0)
+    const colecaoHist = tipo === 'os' ? 'order_history' : 'quote_history'
+    const campoHist = tipo === 'os' ? 'work_order' : 'quote'
+    const filtro = campoHist + " = '" + doc.id + "' && status_to = 'ASSINADO'"
+    const linhas = $app.findRecordsByFilter(colecaoHist, filtro, '-created', 1, 0)
     if (linhas.length > 0) assinadoEm = linhas[0].getString('created')
   } catch (_) {}
+
+  // nome de quem recebeu: na OS fica em client_signer_name; no Pedido tem
+  // campo PRÓPRIO (received_by_name) gravado pela assinatura pública — separado
+  // do entregador (delivered_by_name). Retrocompatível: se o campo novo ainda
+  // não existir numa coleção, devolve vazio sem quebrar a rota.
+  let recebidoPor = ''
+  try {
+    recebidoPor =
+      tipo === 'os'
+        ? doc.getString('client_signer_name') || doc.getString('received_by_name') || ''
+        : doc.getString('received_by_name') || ''
+  } catch (_) {
+    recebidoPor = ''
+  }
 
   return e.json(200, {
     tipo,
@@ -209,19 +271,25 @@ routerAdd('GET', '/backend/v1/cliente/{tipo}/{id}', (e) => {
     status: doc.getString('status'),
     atualizado_em: doc.getString('updated'),
     cliente,
+    com_valores: mostraValores,
     itens,
     fotos,
     assinatura_url: assinaturaUrl,
     assinado_em: assinadoEm,
     // CPF/CNPJ de quem recebeu (só a OS guarda no documento)
     assinado_doc: tipo === 'os' ? doc.getString('client_signer_doc') || '' : '',
-    // nome de quem recebeu: na OS fica em client_signer_name; no Pedido o
-    // hook de assinatura grava em delivered_by_name (client_signer_name só
-    // existe em work_orders — no quote viria vazio e o nome sumiria da tela)
-    assinado_por:
-      tipo === 'os'
-        ? doc.getString('client_signer_name') || ''
-        : doc.getString('delivered_by_name') || '',
+    // RECEBIDO POR — nome digitado no link público, campo próprio do recebedor
+    assinado_por: recebidoPor,
+    // QUEM ENTREGOU (campo do admin) — a assinatura pública nunca mexe nele
+    entregador: (() => {
+      try {
+        return doc.getString('delivered_by_name') || ''
+      } catch (_) {
+        return ''
+      }
+    })(),
+    // total geral — só na variante com valores (?v=1); no link normal é 0
+    total: mostraValores ? total : 0,
   })
 })
 
@@ -284,13 +352,15 @@ routerAdd('POST', '/backend/v1/cliente/{tipo}/{id}/assinar', (e) => {
     return e.json(400, { error: 'Informe quem está recebendo.' })
   }
 
-  if (tipo !== 'os' && tipo !== 'pedido') {
+  if (tipo !== 'os' && tipo !== 'pedido' && tipo !== 'orcamento') {
     return e.json(404, { error: 'Documento não encontrado.' })
   }
 
+  let colecaoDoc = 'quotes'
+  if (tipo === 'os') colecaoDoc = 'work_orders'
   let doc = null
   try {
-    doc = $app.findRecordById(tipo === 'os' ? 'work_orders' : 'quotes', id)
+    doc = $app.findRecordById(colecaoDoc, id)
   } catch (_) {
     return e.json(404, { error: 'Documento não encontrado.' })
   }
@@ -314,11 +384,16 @@ routerAdd('POST', '/backend/v1/cliente/{tipo}/{id}/assinar', (e) => {
     ('0' + agora.getMinutes()).slice(-2)
   const nota = `Cliente confirmou o recebimento pelo link em ${quando} — assinado por ${nome.toUpperCase()}${documento ? ` (doc. ${documento})` : ''}.`
 
-  // grava POR CIMA apenas o campo da assinatura — nada no documento é apagado
+  // grava POR CIMA apenas o campo da assinatura e o RECEBIDO POR — nada no
+  // documento é apagado. O delivered_by_name ("Quem entregou") NUNCA é tocado
+  // aqui: é campo do admin, a assinatura pública grava em received_by_name.
   if (tipo === 'os') {
     doc.set('signature_image', arquivo)
     doc.set('client_signer_name', nome)
     if (documento) doc.set('client_signer_doc', documento)
+    try {
+      doc.set('received_by_name', nome)
+    } catch (_) {}
     $app.save(doc)
 
     const hist = new Record($app.findCollectionByNameOrId('order_history'))
@@ -331,7 +406,9 @@ routerAdd('POST', '/backend/v1/cliente/{tipo}/{id}/assinar', (e) => {
     $app.save(hist)
   } else {
     doc.set('signature_client', arquivo)
-    doc.set('delivered_by_name', nome)
+    try {
+      doc.set('received_by_name', nome)
+    } catch (_) {}
     $app.save(doc)
 
     const hist = new Record($app.findCollectionByNameOrId('quote_history'))

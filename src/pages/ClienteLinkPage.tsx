@@ -27,6 +27,7 @@ import {
   ClipboardList,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { BadgeDollarSign } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { SignaturePad } from '@/components/SignaturePad'
 import {
@@ -157,6 +158,8 @@ export default function PaginaPublicaCliente() {
 
   const jaAssinado = Boolean(doc.assinado_em || doc.assinatura_url)
   const etiquetaDoc = doc.tipo === 'os' ? 'Ordem de Serviço' : 'Pedido'
+  const fmtBRL = (n: number) =>
+    Number(n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
@@ -191,7 +194,7 @@ export default function PaginaPublicaCliente() {
           </div>
         )}
 
-        {/* itens — SEM valor nenhum */}
+        {/* itens — SEM valor no link normal; COM preços e total no ?v=1 */}
         <section className="rounded-xl border bg-white p-4 shadow-sm">
           <h2 className="mb-2 flex items-center gap-1.5 text-sm font-black text-[#0B3D91]">
             <ClipboardList className="h-4 w-4" /> Materiais e serviços
@@ -213,12 +216,29 @@ export default function PaginaPublicaCliente() {
                       <p className="text-[10px] text-slate-400">unidade: {it.unidade}</p>
                     )}
                   </div>
-                  <span className="shrink-0 rounded bg-slate-100 px-2 py-0.5 font-mono text-xs font-bold text-[#0B3D91]">
-                    {Number(it.quantidade || 0)}
-                  </span>
+                  <div className="shrink-0 text-right">
+                    <span className="rounded bg-slate-100 px-2 py-0.5 font-mono text-xs font-bold text-[#0B3D91]">
+                      {Number(it.quantidade || 0)}
+                    </span>
+                    {doc.com_valores && it.total !== undefined && (
+                      <p className="mt-0.5 font-mono text-xs font-bold text-slate-800">
+                        {fmtBRL(Number(it.total || 0))}
+                      </p>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>
+          )}
+          {doc.com_valores && (
+            <div className="mt-3 flex items-center justify-between rounded-lg bg-[#0B3D91] px-3 py-2 text-white">
+              <span className="flex items-center gap-1.5 text-xs font-bold uppercase">
+                <BadgeDollarSign className="h-4 w-4" /> Total
+              </span>
+              <span className="font-mono text-base font-black">
+                {fmtBRL(Number(doc.total || 0))}
+              </span>
+            </div>
           )}
         </section>
 
