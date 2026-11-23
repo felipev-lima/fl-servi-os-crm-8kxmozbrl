@@ -371,8 +371,9 @@ export async function deleteWorkOrder(id: string): Promise<boolean> {
   }
   const ok = await pb.collection('work_orders').delete(id)
   // Avisa que a OS foi EXCLUÍDA: o assistente apaga a pasta no OneDrive,
-  // para o arquivo não ficar órfão lá.
-  avisarSincronizacao(id, numero, 'exclusao')
+  // para o arquivo não ficar órfão lá. Tipo 'os' — é o que manda o
+  // assistente mexer na pasta das OS, não na de pedidos/orçamentos.
+  avisarSincronizacao(id, numero, 'exclusao', 'os')
   return ok
 }
 

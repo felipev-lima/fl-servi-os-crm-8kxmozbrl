@@ -75,6 +75,7 @@ import {
 } from 'lucide-react'
 import { migrarPedidoParaOS, importarFotosOSParaPedido } from '@/services/migracao'
 import { baixarFotosZip, compartilharFotosZip, type FotoParaZip } from '@/lib/fotosZip'
+import { avisarSincronizacao } from '@/lib/onedriveSync'
 import { toast } from 'sonner'
 import {
   urlDoLinkCliente,
@@ -667,6 +668,23 @@ export default function PedidoPage() {
       setFotosSalvas(((r as any).photos || []) as string[])
       setFotos([])
       toast.success(salvoId ? 'Pedido atualizado.' : 'Pedido criado.')
+      /**
+       * BACKUP ONEDRIVE (pedido do Felipe, 23/11/2026): todo salvamento do
+       * pedido avisa o assistente externo — com o numero do documento e o
+       * motivo ('criacao' na primeira vez, 'edicao' depois). É o aviso que
+       * faz a ficha E AS FOTOS subirem para a pasta de pedidos no OneDrive.
+       * O aviso é leve, não espera nada e falha silenciosamente.
+       */
+      try {
+        avisarSincronizacao(
+          (r as any).id,
+          Number((r as any).number) || undefined,
+          salvoId ? 'edicao' : 'criacao',
+          'pedido',
+        )
+      } catch {
+        /* sincronização nunca derruba a operação */
+      }
       return (r as any).id
     } catch (e: any) {
       /**

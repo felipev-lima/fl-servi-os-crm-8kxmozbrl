@@ -18,6 +18,7 @@ import type {
   ClientSummary,
 } from '@/types/crm'
 import type { Client } from '@/types/flservicos'
+import { avisarSincronizacao } from '@/lib/onedriveSync'
 
 // ---------------- RESUMO POR CLIENTE (view) ----------------
 
@@ -132,7 +133,25 @@ export async function createQuote(dados: Partial<Quote> | FormData) {
   } else if (!dados.number) {
     dados.number = await getNextQuoteNumber()
   }
-  return pb.collection('quotes').create(dados as any)
+  const rec = (await pb.collection('quotes').create(dados as any)) as any
+  /**
+   * BACKUP ONEDRIVE (pedido do Felipe, 23/11/2026): pedidos e orçamentos vão
+   * para o OneDrive como as OS já iam. O sinal tem o numero do documento e o
+   * tipo 'pedido'/'orcamento' — é o tipo que manda o assistente arquivar na
+   * pasta PRÓPRIA de pedidos/orçamentos, não na pasta das OS. Falha aqui é
+   * detalhe: o documento já está salvo no banco.
+   */
+  try {
+    avisarSincronizacao(
+      rec.id,
+      Number(rec.number) || undefined,
+      'criacao',
+      String(rec.status) === 'ORCAMENTO' ? 'orcamento' : 'pedido',
+    )
+  } catch {
+    /* sincronização nunca derruba a operação */
+  }
+  return rec
 }
 
 /** Registra uma linha no histórico do pedido (não quebra o fluxo se falhar) */
@@ -169,11 +188,45 @@ export async function getHistoricoPedido(quoteId: string) {
 }
 
 export async function updateQuote(id: string, dados: Partial<Quote> | FormData) {
-  return pb.collection('quotes').update(id, dados as any)
+  const rec = (await pb.collection('quotes').update(id, dados as any)) as any
+  /**
+   * BACKUP ONEDRIVE: mesma ideia do create — avisa edição/troca de status/
+   * anexo de fotos, com o numero do documento, para o assistente reenviar a
+   * ficha e as fotos para a pasta certa.
+   */
+  try {
+    avisarSincronizacao(
+      id,
+      Number(rec.number) || undefined,
+      'edicao',
+      String(rec.status) === 'ORCAMENTO' ? 'orcamento' : 'pedido',
+    )
+  } catch {
+    /* sincronização nunca derruba a operação */
+  }
+  return rec
 }
 
 export async function deleteQuote(id: string) {
-  return pb.collection('quotes').delete(id)
+  // Antes de apagar, pega o número para o aviso ao assistente conseguir
+  // localizar o registro no OneDrive — MESMO CAMINHO da exclusão de OS.
+  let numero: number | undefined
+  let orcamento = false
+  try {
+    const rec = (await pb.collection('quotes').getOne(id)) as any
+    numero = Number(rec.number) || undefined
+    orcamento = String(rec.status) === 'ORCAMENTO'
+  } catch {
+    /* segue sem o número */
+  }
+  const ok = await pb.collection('quotes').delete(id)
+  try {
+    // tipo certo para o assistente achar a pasta (pedido ou orcamento)
+    avisarSincronizacao(id, numero, 'exclusao', orcamento ? 'orcamento' : 'pedido')
+  } catch {
+    /* sincronização nunca derruba a operação */
+  }
+  return ok
 }
 
 /** Total de um documento, calculado dos itens */
