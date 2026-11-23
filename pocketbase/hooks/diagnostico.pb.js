@@ -29,14 +29,16 @@ routerAdd('GET', '/backend/v1/diagnostico', (e) => {
   let primeira = ''
   let ultima = ''
   for (const t of trans) {
-    const k = t.getString('kind')
+    const k = t.getString('kind') || '(vazio)'
+    // O campo de valor desta coleção é `total_price` (não `amount`).
+    const v = t.getFloat('total_price') || t.getFloat('quantity') * t.getFloat('unit_price') || 0
     if (porTipo[k] === undefined) porTipo[k] = 0
-    porTipo[k] += t.getFloat('total_price')
-    soma += t.getFloat('total_price')
+    porTipo[k] += v
+    soma += v
     const leg = String(t.getString('legacy_row') || '').trim()
     if (leg) {
       comLegacy++
-      somaLegacy += t.getFloat('total_price')
+      somaLegacy += v
     }
     const d = t.getString('date')
     if (d) {
