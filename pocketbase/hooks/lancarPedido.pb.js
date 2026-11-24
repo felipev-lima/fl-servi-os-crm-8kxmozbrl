@@ -11,60 +11,19 @@
  * impossível funcionar pela tela.
  *
  * SOLUÇÃO: este hook roda NO SERVIDOR, no mesmo instante da gravação, igual ao
- * `lancarOSFinanceiro.pb.js` que já funciona para as OS. Ninguém precisa
- * clicar em nada além de LANÇADO.
+ * `lancarOSFinanceiro.pb.js` que já funciona para as OS.
  *
- * O QUE GERA:
- *  - uma linha por item do pedido, com o tipo de cada um (CAPITAL, CONSUMO ou
- *    SERVIÇO) — o mesmo critério do financeiro;
- *  - nada quando a quantidade ou o preço é zero (não cobra o que não existe).
+ * ⚠️ TUDO DENTRO DO CALLBACK. O JSVM do PocketBase executa cada callback numa
+ * VM separada e NÃO enxerga funções declaradas no topo do arquivo — declarar
+ * `function lerItens()` fora dava "Hook scoping error". Por isso a leitura dos
+ * itens é feita inline, dentro do próprio `onRecordUpdate`.
  *
  * SEGURANÇA (dinheiro não admite teste):
  *  1. Só age quando o status VIRA 'LANCADO' nesta gravação.
  *  2. Não duplica: se já existe lançamento com `quote_ref = PEDIDO-<n>`,
  *     não cria nada. Marcar duas vezes não cobra dobrado.
  *  3. Erro nunca derruba o salvamento — vai para o log.
- *
- * OS ITENS: o campo `items` do pedido é gravado como texto JSON que chega
- * ao servidor como array de bytes UTF-8. Este hook entende os três formatos
- * (objetos, bytes e string) para não depender de como a tela gravou.
  */
-
-/** Converte o campo `items` em lista de objetos, seja qual for o formato. */
-function lerItens(bruto) {
-  if (!bruto) return []
-
-  // a) já é lista de objetos (o caso normal)
-  if (Array.isArray(bruto) && bruto.length > 0 && typeof bruto[0] === 'object') {
-    return bruto
-  }
-
-  // b) array de bytes UTF-8 (é assim que o PocketBase devolve JSON em campo
-  //    de texto quando o cliente gravou como string)
-  if (Array.isArray(bruto) && bruto.length > 1) {
-    try {
-      const bytes = bruto.map((n) => Number(n) & 0xff)
-      const texto = String.fromCharCode.apply(null, bytes)
-      const v = JSON.parse(decodeURIComponent(escape(texto)))
-      if (Array.isArray(v)) return v
-    } catch (_) {
-      /* tenta o próximo formato */
-    }
-  }
-
-  // c) string JSON
-  if (typeof bruto === 'string') {
-    try {
-      const v = JSON.parse(bruto)
-      if (Array.isArray(v)) return v
-    } catch (_) {
-      /* desiste */
-    }
-  }
-
-  return []
-}
-
 onRecordUpdate((e) => {
   e.next()
 
@@ -96,7 +55,33 @@ onRecordUpdate((e) => {
       return
     }
 
-    const itens = lerItens(e.record.get('items'))
+    // ---- leitura dos itens, inline (o JSVM não herda funções do topo) ----
+    const bruto = e.record.get('items')
+    let itens = []
+
+    // a) já é lista de objetos (o caso normal)
+    if (Array.isArray(bruto) && bruto.length > 0 && typeof bruto[0] === 'object') {
+      itens = bruto
+    } else if (Array.isArray(bruto) && bruto.length > 1) {
+      // b) array de bytes UTF-8
+      try {
+        const bytes = bruto.map((n) => Number(n) & 0xff)
+        const texto = String.fromCharCode.apply(null, bytes)
+        const v = JSON.parse(decodeURIComponent(escape(texto)))
+        if (Array.isArray(v)) itens = v
+      } catch (_) {
+        /* tenta o próximo formato */
+      }
+    } else if (typeof bruto === 'string') {
+      // c) string JSON
+      try {
+        const v = JSON.parse(bruto)
+        if (Array.isArray(v)) itens = v
+      } catch (_) {
+        /* desiste */
+      }
+    }
+
     if (itens.length === 0) {
       console.log('[lancar-pedido] ' + ref + ' sem itens legíveis — nada criado')
       return
