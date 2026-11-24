@@ -76,11 +76,27 @@ export const ExtratoClienteDialog: React.FC<Props> = ({ client, onClose }) => {
   const gerar = async () => {
     setGerando(true)
     try {
-      // 1) lançamentos do cliente, do mais antigo para o mais recente
-      const lancamentos = (await pb.collection('transactions').getFullList({
+      /**
+       * 1) LANÇAMENTOS DO CLIENTE, do mais antigo para o mais recente.
+       *
+       * ⚠ `sort: 'date,created'` NÃO funciona: o PocketBase devolve
+       * 400 "Something went wrong while processing your request". Ele aceita
+       * um campo por vez, não uma lista com vírgula. Era esse o erro que
+       * impedia o extrato de abrir.
+       *
+       * Ordenamos só por `date` no servidor e desempatamos por `created` aqui,
+       * no navegador — o resultado é o mesmo e não depende do banco.
+       */
+      const brutos = (await pb.collection('transactions').getFullList({
         filter: `client = "${client.id}"`,
-        sort: 'date,created',
+        sort: 'date',
       })) as unknown as Lancamento[]
+      const lancamentos = [...brutos].sort((a, b) => {
+        const da = String(a.date || '')
+        const db = String(b.date || '')
+        if (da !== db) return da < db ? -1 : 1
+        return 0
+      })
 
       if (lancamentos.length === 0) {
         toast.info('Este cliente não tem lançamentos no histórico.')
