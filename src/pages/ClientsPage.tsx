@@ -376,6 +376,22 @@ export default function ClientsPage() {
     })(),
     extras: isTechnician ? (
       <div className="flex items-center gap-1 shrink-0">
+        {/*
+          EXTRATO EM PDF TAMBÉM NO CELULAR (bug relatado pelo Felipe,
+          24/11/2026: "no celular não apareceu esse botão de PDF").
+          A tela tem três modos — cartões, compacta e lista. O botão só havia
+          sido colocado no modo cartões, que é o do computador. No telefone abre
+          no modo compacto, e ali não existia.
+        */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setExtratoDe(client)}
+          className="h-7 w-7 p-0"
+          title="Extrato de débito em PDF"
+        >
+          <FileText className="w-3.5 h-3.5 text-[#0F6A3A]" />
+        </Button>
         <Button
           variant="ghost"
           size="sm"
