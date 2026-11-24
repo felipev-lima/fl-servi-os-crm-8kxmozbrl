@@ -60,6 +60,14 @@ routerAdd('GET', '/backend/v1/documentos-arquivar', (e) => {
      * próprio registro.
      */
     const bruto = q.get('items')
+    // diagnóstico cru: o que exatamente está no campo
+    let cruTipo = typeof bruto
+    let cruAmostra = ''
+    try {
+      cruAmostra = JSON.stringify(bruto).slice(0, 400)
+    } catch (_) {
+      cruAmostra = String(bruto).slice(0, 400)
+    }
     const ids = Array.isArray(bruto) ? bruto : []
     const itens = []
     for (const itemId of ids) {
@@ -81,10 +89,11 @@ routerAdd('GET', '/backend/v1/documentos-arquivar', (e) => {
       })
     }
     const debugItens = {
-      tipo: Array.isArray(bruto) ? 'array-de-ids' : typeof bruto,
+      tipo: Array.isArray(bruto) ? 'array-de-ids' : cruTipo,
       tamanho: ids.length,
       primeiro_id: ids.length > 0 ? String(ids[0]) : '',
       resolvidos: itens.filter((i) => i.valor > 0).length,
+      cru: cruAmostra,
     }
 
     const status = q.getString('status')
