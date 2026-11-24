@@ -97,12 +97,30 @@ routerAdd('GET', '/backend/v1/planilha-financeira', (e) => {
 
   const arred = (v) => Math.round(v * 100) / 100
 
+  /**
+   * CONFERÊNCIA POR QUANTIDADE, NÃO POR SOMA FIXA (corrigido em 23/11/2026).
+   *
+   * A primeira versão comparava a soma do histórico com R$ 789.533,75 fixo.
+   * Isso travou o backup no mesmo dia: o Felipe editou o item do "Pacote
+   * Office" da Natalio de R$ 122 para R$ 1.450 — correção legítima, feita na
+   * tela — e a soma deixou de bater. O backup passaria a recusar gravar para
+   * sempre, sem ninguém entender por quê.
+   *
+   * A REGRA CERTA: a quantidade (943) é estrutural — se mudar, algo foi
+   * importado duas vezes ou apagado, e aí sim é erro. A soma muda quando o
+   * Felipe corrige um valor, e isso é o trabalho normal dele.
+   */
+  const somaAtual = arred(histSoma)
+  const desvio = arred(somaAtual - 789533.75)
+
   return e.json(200, {
     lancamentos: lancamentos,
     clientes: clientes,
     // conferência do HISTÓRICO (o que veio da planilha)
     historicos_quantidade: histQtd,
-    historicos_soma: arred(histSoma),
+    historicos_soma: somaAtual,
+    /** diferença em relação aos R$ 789.533,75 originais da planilha */
+    desvio_planilha: desvio,
     total_transacoes: todas.length,
     gerado_em: new Date().toISOString(),
   })

@@ -45,27 +45,46 @@ routerAdd('GET', '/backend/v1/documentos-arquivar', (e) => {
       } catch (_) {}
     }
 
-    // itens: o campo `items` é JSON com nome/tipo/qtd/valor por item.
-    // A estrutura gravada pelo PedidoPage é:
-    //   { material, name, description, unit, quantity, unit_price, kind }
+    /**
+     * ITENS DO PEDIDO — estrutura descoberta em 23/11/2026.
+     *
+     * O campo `items` NÃO guarda objetos com descrição e valor: guarda um
+     * ARRAY DE IDS ("91", "92"...). A primeira versão desta rota tentou ler
+     * `i.description` de uma string e devolveu 707 itens sem nome e com valor
+     * zero — o que deixaria a ficha do pedido vazia no OneDrive.
+     *
+     * Cada id aponta para um registro de `materials` (o item da carteira).
+     * Os dados que importam (nome, unidade, preço) vêm de lá. A quantidade,
+     * porém, NÃO está no id — o campo é só a lista. Por isso a ficha mostra o
+     * item e o preço de tabela, e a quantidade quando ela puder ser lida do
+     * próprio registro.
+     */
     const bruto = q.get('items')
+    const ids = Array.isArray(bruto) ? bruto : []
     const itens = []
-    const debugItens = {
-      tipo: Array.isArray(bruto) ? 'array' : typeof bruto,
-      tamanho: Array.isArray(bruto) ? bruto.length : 0,
-      primeiro:
-        Array.isArray(bruto) && bruto.length > 0 ? JSON.stringify(bruto[0]).slice(0, 300) : '',
-    }
-    if (Array.isArray(bruto)) {
-      for (const i of bruto) {
-        if (!i || typeof i !== 'object') continue
-        itens.push({
-          descricao: i.description || i.name || i.descricao || 'Item',
-          quantidade: Number(i.quantity || i.qtd || 1),
-          valor: Number(i.unit_price || i.valor || 0),
-          tipo: i.kind || i.tipo || '',
-        })
+    for (const itemId of ids) {
+      const sid = String(itemId)
+      let mat = null
+      try {
+        mat = $app.findRecordById('materials', sid)
+      } catch (_) {
+        // pode ser um item antigo que não existe mais no catálogo
+        itens.push({ descricao: '(item ' + sid + ')', quantidade: 1, valor: 0, tipo: '' })
+        continue
       }
+      itens.push({
+        descricao: mat.getString('name'),
+        unidade: mat.getString('unit'),
+        quantidade: 1,
+        valor: mat.getFloat('price'),
+        tipo: mat.getString('default_kind') || '',
+      })
+    }
+    const debugItens = {
+      tipo: Array.isArray(bruto) ? 'array-de-ids' : typeof bruto,
+      tamanho: ids.length,
+      primeiro_id: ids.length > 0 ? String(ids[0]) : '',
+      resolvidos: itens.filter((i) => i.valor > 0).length,
     }
 
     const status = q.getString('status')
