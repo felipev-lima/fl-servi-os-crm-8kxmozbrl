@@ -39,6 +39,7 @@ import FaturamentoPage from './pages/FaturamentoPage'
 import AliquotasPage from './pages/AliquotasPage'
 import TecnicoPage from './pages/TecnicoPage'
 import ClienteFinanceiroPage from './pages/ClienteFinanceiroPage'
+import DarBaixaPage from './pages/DarBaixaPage'
 import PaginaPublicaCliente from './pages/ClienteLinkPage'
 import NotFound from './pages/NotFound'
 
@@ -65,6 +66,9 @@ const App = () => (
                 Pedido do Felipe (23/11/2026): "que o CRM em si seja a minha
                 planilha de Excel que eu fazia fora". */}
             <Route path="/clientes/:id" element={<ClienteFinanceiroPage />} />
+            {/* Dar baixa item por item: mostra o que o cliente deve de
+                serviço, consumo e capital, e quita o item escolhido. */}
+            <Route path="/clientes/:id/dar-baixa" element={<DarBaixaPage />} />
             <Route path="/tecnicos" element={<TechniciansPage />} />
             <Route path="/materiais" element={<MaterialsPage />} />
             <Route path="/listas-material" element={<MaterialKitsPage />} />

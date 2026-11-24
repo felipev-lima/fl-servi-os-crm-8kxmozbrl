@@ -286,13 +286,24 @@ export default function ClienteFinanceiroPage() {
           </div>
         </div>
         {isAdmin && (
-          <Button
-            size="sm"
-            className="h-8 gap-1 bg-[#0B3D91] text-[11px] font-bold text-white hover:bg-[#0B3D91]/90"
-            onClick={() => setNovoAberto(true)}
-          >
-            <Plus className="h-3.5 w-3.5" /> Lançamento
-          </Button>
+          <div className="flex flex-col items-end gap-1">
+            <Button
+              size="sm"
+              className="h-8 gap-1 bg-emerald-700 text-[11px] font-bold text-white hover:bg-emerald-800"
+              onClick={() => navigate(`/clientes/${id}/dar-baixa`)}
+              title="Receber pagamento e quitar itens"
+            >
+              <Wallet className="h-3.5 w-3.5" /> Dar baixa
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 gap-1 text-[10px] font-bold"
+              onClick={() => setNovoAberto(true)}
+            >
+              <Plus className="h-3 w-3" /> Lançamento
+            </Button>
+          </div>
         )}
       </div>
 
