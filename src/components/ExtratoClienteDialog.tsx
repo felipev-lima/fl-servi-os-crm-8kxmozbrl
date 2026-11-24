@@ -252,8 +252,10 @@ export const ExtratoClienteDialog: React.FC<Props> = ({ client, onClose }) => {
       toast.success('Extrato salvo nos downloads.')
       onClose()
     } catch (err: any) {
-      console.error(err)
-      toast.error('Não foi possível gerar o extrato. Tente novamente.')
+      console.error('EXTRATO ERRO:', err)
+      // Mostra o motivo real: um "tente novamente" genérico esconde a causa e
+      // não permite ao Felipe nem a mim saber o que consertar.
+      toast.error(`Não foi possível gerar o extrato: ${err?.message || err || 'erro desconhecido'}`)
     } finally {
       setGerando(false)
     }
