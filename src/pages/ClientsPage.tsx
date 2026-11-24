@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { getClients, createClient, updateClient, deleteClient } from '@/services/api'
+import { getClientsSummary } from '@/services/crm'
+import type { ClientSummary } from '@/types/crm'
+import { brl } from '@/types/crm'
 import { Client } from '@/types/flservicos'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -74,8 +77,20 @@ export default function ClientsPage() {
   const loadClients = async () => {
     setLoading(true)
     try {
-      const data = await getClients()
-      setClients(data)
+      /**
+       * DUAS LEITURAS EM PARALELO (pedido do Felipe, 23/11/2026):
+       *   - `getClients` traz o cadastro;
+       *   - `getClientsSummary` traz o saldo de cada um.
+       * Junto, a lista mostra o débito ao lado do nome, sem abrir cliente por
+       * cliente. Se o resumo falhar, a lista ainda abre — só sem o valor.
+       */
+      const [data, resumos] = await Promise.all([
+        getClients(),
+        getClientsSummary().catch(() => [] as ClientSummary[]),
+      ])
+      const saldoPorId = new Map<string, number>()
+      for (const r of resumos) saldoPorId.set(r.id, Number(r.saldo || 0))
+      setClients(data.map((c) => ({ ...c, saldo: saldoPorId.get(c.id) ?? 0 }) as unknown as Client))
     } catch (err) {
       toast.error('Erro ao carregar clientes.')
     } finally {
@@ -232,6 +247,23 @@ export default function ClientsPage() {
               <span className="text-[10px] text-muted-foreground uppercase font-semibold">
                 {client.type || 'PJ'} {client.document ? `• ${client.document}` : ''}
               </span>
+              {/* DÉBITO NA LISTA (pedido do Felipe, 23/11/2026): "ali
+                  aparecer na frente o débito daquele cliente". Antes só
+                  aparecia dentro da ficha, e ele precisava abrir um por um. */}
+              {(() => {
+                const saldo = Number((client as unknown as { saldo?: number }).saldo ?? 0)
+                if (Math.abs(saldo) < 0.005) return null
+                return (
+                  <span
+                    className={`mt-0.5 block text-[11px] font-black ${
+                      saldo > 0 ? 'text-rose-700' : 'text-emerald-700'
+                    }`}
+                  >
+                    {saldo > 0 ? 'deve ' : 'crédito '}
+                    {brl(Math.abs(saldo))}
+                  </span>
+                )
+              })()}
               {cadastroIncompleto(client) && (
                 <span className="mt-1 inline-flex items-center gap-1 rounded bg-rose-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-rose-700">
                   <AlertTriangle className="w-2.5 h-2.5" /> completar cadastro
@@ -314,7 +346,13 @@ export default function ClientsPage() {
     ]
       .filter(Boolean)
       .join(' • '),
-    badge: `${client.type || 'PJ'}${client.document ? ` • ${client.document}` : ''}`,
+    badge: (() => {
+      const saldo = Number((client as unknown as { saldo?: number }).saldo ?? 0)
+      const doc = `${client.type || 'PJ'}${client.document ? ` • ${client.document}` : ''}`
+      // débito ao lado do nome também no modo lista/compacta
+      if (Math.abs(saldo) < 0.005) return doc
+      return saldo > 0 ? `${doc} · deve ${brl(saldo)}` : `${doc} · crédito ${brl(Math.abs(saldo))}`
+    })(),
     extras: isTechnician ? (
       <div className="flex items-center gap-1 shrink-0">
         <Button

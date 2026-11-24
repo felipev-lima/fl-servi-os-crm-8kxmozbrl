@@ -16,9 +16,21 @@
 /// GET /backend/v1/saldo-por-tipo?cliente=<id>
 /// header: X-Arquivador-Secret
 routerAdd('GET', '/backend/v1/saldo-por-tipo', (e) => {
+  /**
+   * DUAS FORMAS DE ENTRAR (corrigido em 23/11/2026):
+   *   1. segredo de serviço — usado pela automação e pelo assistente;
+   *   2. sessão de usuário admin — usada pela TELA no navegador.
+   *
+   * A tela antes só mandava o segredo, e o navegador não tem esse segredo:
+   * a rota recusava e a página mostrava "Não foi possível abrir o cliente".
+   * Agora a sessão autenticada de admin também vale.
+   */
   const esperado = $secrets.get('ARQUIVADOR_SECRET') || ''
   const enviado = String(e.request.header.get('X-Arquivador-Secret') || '')
-  if (esperado === '' || enviado !== esperado) {
+  const porSegredo = esperado !== '' && enviado === esperado
+  const porSessao =
+    e.auth && ['admin', 'superadmin', 'consulta'].indexOf(e.auth.getString('role')) >= 0
+  if (!porSegredo && !porSessao) {
     throw new ForbiddenError('Acesso não autorizado.')
   }
 

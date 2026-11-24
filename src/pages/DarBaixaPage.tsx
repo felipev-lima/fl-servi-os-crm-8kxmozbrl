@@ -70,6 +70,21 @@ const ROTULO: Record<string, string> = {
   CAPITAL: 'Capital',
 }
 
+/**
+ * Quantos dias desde a data de compra.
+ *
+ * Serve para o Felipe ver "há quanto tempo o cliente deve isso" na própria
+ * linha, sem precisar calcular de cabeça. Data inválida devolve 0.
+ */
+function diasDesde(data: string): number {
+  const m = String(data || '').match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (!m) return 0
+  const d = new Date(`${m[1]}-${m[2]}-${m[3]}T12:00:00`)
+  const hoje = new Date()
+  const diff = Math.floor((hoje.getTime() - d.getTime()) / 86400000)
+  return diff > 0 ? diff : 0
+}
+
 export default function DarBaixaPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -92,10 +107,24 @@ export default function DarBaixaPage() {
     if (!id) return
     setCarregando(true)
     try {
+      /**
+       * `pb.send` já leva a sessão do usuário no header Authorization. A rota
+       * aceita sessão de admin OU o segredo de serviço — foi corrigido em
+       * 23/11/2026, quando a tela mostrava "Não foi possível abrir o cliente"
+       * porque só o segredo era aceito e o navegador não o tem.
+       */
       const r: any = await pb.send(`/backend/v1/saldo-por-tipo?cliente=${id}`, { method: 'GET' })
+      if (!r || !Array.isArray(r.itens)) {
+        throw new Error('Resposta inesperada do servidor.')
+      }
       setDados(r)
     } catch (e: any) {
-      toast.error(e?.message || 'Não foi possível carregar o saldo.')
+      console.error('saldo-por-tipo falhou', e)
+      toast.error(
+        e?.status === 403
+          ? 'Sem permissão para ver o saldo deste cliente.'
+          : e?.message || 'Não foi possível carregar o saldo.',
+      )
     } finally {
       setCarregando(false)
     }
@@ -105,19 +134,49 @@ export default function DarBaixaPage() {
     void carregar()
   }, [carregar])
 
-  /** itens agrupados por tipo, só os que têm algo em aberto */
+  /**
+   * ORDEM DOS GRUPOS (pedido do Felipe, 23/11/2026): "gostaria que deixasse um
+   * botão para separar por prioridades... eu quero que o serviço seja
+   * prioridade, mas aí o consumo e o capital fiquem logo abaixo. A minha
+   * sequência é capital, consumo e serviço."
+   *
+   * IMPORTANTE: o botão só MUDA A ORDEM — nenhum item desaparece da tela. Ele
+   * quer ver a planilha inteira, organizada, não filtrada. Por isso os grupos
+   * com saldo continuam todos aparecendo, só em sequência diferente.
+   */
+  const [prioridade, setPrioridade] = useState<'CAPITAL' | 'CONSUMO' | 'SERVICO'>('CAPITAL')
+
+  /** dentro do grupo: por data (mais antigo primeiro) ou por valor */
+  const [ordemItens, setOrdemItens] = useState<'data' | 'valor'>('data')
+
   const grupos = useMemo(() => {
     if (!dados) return []
-    const ordem = ['SERVICO', 'CONSUMO', 'CAPITAL']
+    // o tipo escolhido vai primeiro; os outros seguem na ordem natural
+    const resto = (['CAPITAL', 'CONSUMO', 'SERVICO'] as const).filter((k) => k !== prioridade)
+    const ordem = [prioridade, ...resto]
     return ordem
-      .map((k) => ({
-        tipo: k,
-        rotulo: ROTULO[k],
-        saldo: k === 'SERVICO' ? dados.servico : k === 'CONSUMO' ? dados.consumo : dados.capital,
-        itens: dados.itens.filter((i) => i.kind === k && i.em_aberto > 0.005),
-      }))
+      .map((k) => {
+        const itens = dados.itens
+          .filter((i) => i.kind === k && i.em_aberto > 0.005)
+          .slice()
+          .sort((a, b) =>
+            ordemItens === 'valor'
+              ? b.em_aberto - a.em_aberto
+              : a.data < b.data
+                ? -1
+                : a.data > b.data
+                  ? 1
+                  : 0,
+          )
+        return {
+          tipo: k,
+          rotulo: ROTULO[k],
+          saldo: k === 'SERVICO' ? dados.servico : k === 'CONSUMO' ? dados.consumo : dados.capital,
+          itens,
+        }
+      })
       .filter((g) => g.itens.length > 0)
-  }, [dados])
+  }, [dados, prioridade, ordemItens])
 
   const itemEscolhido = useMemo(
     () => dados?.itens.find((i) => i.id === itemId) || null,
@@ -278,6 +337,50 @@ export default function DarBaixaPage() {
           antigos.
         </p>
       )}
+
+      {/* ordem dos grupos — NÃO esconde nada, só reordena */}
+      <div className="rounded-lg border bg-card p-2">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[10px] font-bold uppercase text-muted-foreground">
+            Ver primeiro:
+          </span>
+          {(['CAPITAL', 'CONSUMO', 'SERVICO'] as const).map((k) => (
+            <Button
+              key={k}
+              type="button"
+              size="sm"
+              variant={prioridade === k ? 'default' : 'outline'}
+              onClick={() => setPrioridade(k)}
+              className={`h-7 text-[10px] ${prioridade === k ? 'bg-slate-900 text-white' : ''}`}
+            >
+              {ROTULO[k]}
+            </Button>
+          ))}
+          <div className="flex-1" />
+          <span className="text-[10px] font-bold uppercase text-muted-foreground">Dentro:</span>
+          <Button
+            type="button"
+            size="sm"
+            variant={ordemItens === 'data' ? 'default' : 'outline'}
+            onClick={() => setOrdemItens('data')}
+            className={`h-7 text-[10px] ${ordemItens === 'data' ? 'bg-slate-900 text-white' : ''}`}
+          >
+            Data
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={ordemItens === 'valor' ? 'default' : 'outline'}
+            onClick={() => setOrdemItens('valor')}
+            className={`h-7 text-[10px] ${ordemItens === 'valor' ? 'bg-slate-900 text-white' : ''}`}
+          >
+            Valor
+          </Button>
+        </div>
+        <p className="mt-1 text-[9px] text-muted-foreground">
+          A ordem muda, mas todos os itens continuam na tela.
+        </p>
+      </div>
 
       {isAdmin && !nadaEmAberto && (
         <Button
