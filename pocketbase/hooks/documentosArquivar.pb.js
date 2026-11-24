@@ -45,11 +45,20 @@ routerAdd('GET', '/backend/v1/documentos-arquivar', (e) => {
       } catch (_) {}
     }
 
-    // itens: o campo `items` é JSON com nome/tipo/qtd/valor por item
+    // itens: o campo `items` é JSON com nome/tipo/qtd/valor por item.
+    // A estrutura gravada pelo PedidoPage é:
+    //   { material, name, description, unit, quantity, unit_price, kind }
     const bruto = q.get('items')
     const itens = []
+    const debugItens = {
+      tipo: Array.isArray(bruto) ? 'array' : typeof bruto,
+      tamanho: Array.isArray(bruto) ? bruto.length : 0,
+      primeiro:
+        Array.isArray(bruto) && bruto.length > 0 ? JSON.stringify(bruto[0]).slice(0, 300) : '',
+    }
     if (Array.isArray(bruto)) {
       for (const i of bruto) {
+        if (!i || typeof i !== 'object') continue
         itens.push({
           descricao: i.description || i.name || i.descricao || 'Item',
           quantidade: Number(i.quantity || i.qtd || 1),
@@ -75,6 +84,7 @@ routerAdd('GET', '/backend/v1/documentos-arquivar', (e) => {
         atualizado: String(q.getString('updated') || ''),
       },
       itens: itens,
+      debug_itens: debugItens,
     })
   }
 
