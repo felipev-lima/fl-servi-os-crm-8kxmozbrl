@@ -1,171 +1,149 @@
-///
-/// Lança no financeiro os itens de um PEDIDO/ORÇAMENTO.
-///
-/// POR QUE EXISTE: o pedido, ao virar LANÇADO, não gerava lançamento nenhum.
-/// A OS gera (hook lancarOSFinanceiro), o pedido não — e o Felipe deu baixa de
-/// um pedido da Tarcísio em 24/11/2026 e o débito não apareceu no cliente.
-///
-/// COMO LÊ OS ITENS (descoberto em 24/11/2026): o campo `items` do pedido
-/// guarda um ARRAY DE BYTES UTF-8, não objetos. Decodificado, é o JSON com
-/// material, name, quantity, unit_price e kind. Sem a decodificação, todo
-/// item sai com valor zero.
-///
-/// NÃO DUPLICA: se já existe lançamento com `quote_ref = PEDIDO-<n>`, não cria
-/// outro. Assim dá para clicar duas vezes sem cobrar dobrado.
-///
-/// POST /backend/v1/lancar-pedido
-/// header: X-Arquivador-Secret
-/// body: { quote_id, pago? }
-///   `pago` (opcional): valor já recebido, lançado como DINHEIRO negativo.
-routerAdd('POST', '/backend/v1/lancar-pedido', (e) => {
-  const esperado = $secrets.get('ARQUIVADOR_SECRET') || ''
-  const enviado = String(e.request.header.get('X-Arquivador-Secret') || '')
-  if (esperado === '' || enviado !== esperado) {
-    throw new ForbiddenError('Acesso não autorizado.')
-  }
+/**
+ * LANÇAMENTO AUTOMÁTICO DO PEDIDO NO FINANCEIRO (hook de servidor).
+ *
+ * PROBLEMA (24/11/2026): o Felipe marcou o pedido da Esméria como LANÇADO e o
+ * débito de R$ 1.599,20 (4 cartuchos de toner) NÃO apareceu no financeiro
+ * dela. Os pedidos da Tarcísio também não.
+ *
+ * CAUSA: existia uma rota `POST /backend/v1/lancar-pedido` que fazia o serviço,
+ * mas NADA no sistema a chamava. A tela só mudava o status e pronto. A rota
+ * ainda exigia um segredo de servidor que o navegador não tem — ou seja, era
+ * impossível funcionar pela tela.
+ *
+ * SOLUÇÃO: este hook roda NO SERVIDOR, no mesmo instante da gravação, igual ao
+ * `lancarOSFinanceiro.pb.js` que já funciona para as OS. Ninguém precisa
+ * clicar em nada além de LANÇADO.
+ *
+ * O QUE GERA:
+ *  - uma linha por item do pedido, com o tipo de cada um (CAPITAL, CONSUMO ou
+ *    SERVIÇO) — o mesmo critério do financeiro;
+ *  - nada quando a quantidade ou o preço é zero (não cobra o que não existe).
+ *
+ * SEGURANÇA (dinheiro não admite teste):
+ *  1. Só age quando o status VIRA 'LANCADO' nesta gravação.
+ *  2. Não duplica: se já existe lançamento com `quote_ref = PEDIDO-<n>`,
+ *     não cria nada. Marcar duas vezes não cobra dobrado.
+ *  3. Erro nunca derruba o salvamento — vai para o log.
+ *
+ * OS ITENS: o campo `items` do pedido é gravado como texto JSON que chega
+ * ao servidor como array de bytes UTF-8. Este hook entende os três formatos
+ * (objetos, bytes e string) para não depender de como a tela gravou.
+ */
 
-  const body = e.requestInfo().body || {}
-  const quoteId = String(body.quote_id || '').trim()
-  if (!quoteId) throw new BadRequestError('Informe quote_id.')
+/** Converte o campo `items` em lista de objetos, seja qual for o formato. */
+function lerItens(bruto) {
+  if (!bruto) return []
 
-  let q = null
-  try {
-    q = $app.findRecordById('quotes', quoteId)
-  } catch (_) {
-    throw new NotFoundError('Pedido não encontrado.')
-  }
-
-  const cliente = String(q.getString('client') || '')
-  if (!cliente) throw new BadRequestError('O pedido não tem cliente.')
-
-  const numero = Number(q.getFloat('number')) || 0
-  const ref = 'PEDIDO-' + String(numero)
-  const data = String(q.getString('date') || new Date().toISOString()).slice(0, 10)
-
-  // já lançado? não duplica
-  const jaTem = $app.findRecordsByFilter('transactions', 'quote_ref = "' + ref + '"', '', 1, 0)
-  if (jaTem.length > 0) {
-    return e.json(200, {
-      ok: true,
-      ja_lancado: true,
-      mensagem: 'Este pedido já tinha lançamento (' + ref + '). Nada foi criado.',
-      referencia: ref,
-    })
-  }
-
-  // ---------- decodificar os itens ----------
-  const bruto = q.get('items')
-  let lista = []
-  let formato = 'desconhecido'
-
+  // a) já é lista de objetos (o caso normal)
   if (Array.isArray(bruto) && bruto.length > 0 && typeof bruto[0] === 'object') {
-    lista = bruto
-    formato = 'objetos'
-  } else if (Array.isArray(bruto) && bruto.length > 1) {
+    return bruto
+  }
+
+  // b) array de bytes UTF-8 (é assim que o PocketBase devolve JSON em campo
+  //    de texto quando o cliente gravou como string)
+  if (Array.isArray(bruto) && bruto.length > 1) {
     try {
       const bytes = bruto.map((n) => Number(n) & 0xff)
       const texto = String.fromCharCode.apply(null, bytes)
-      const decodificado = decodeURIComponent(escape(texto))
-      const v = JSON.parse(decodificado)
-      if (Array.isArray(v)) {
-        lista = v
-        formato = 'bytes-utf8'
-      }
-    } catch (_) {}
-  } else if (typeof bruto === 'string') {
+      const v = JSON.parse(decodeURIComponent(escape(texto)))
+      if (Array.isArray(v)) return v
+    } catch (_) {
+      /* tenta o próximo formato */
+    }
+  }
+
+  // c) string JSON
+  if (typeof bruto === 'string') {
     try {
       const v = JSON.parse(bruto)
-      if (Array.isArray(v)) {
-        lista = v
-        formato = 'string-json'
-      }
-    } catch (_) {}
+      if (Array.isArray(v)) return v
+    } catch (_) {
+      /* desiste */
+    }
   }
 
-  if (lista.length === 0) {
-    throw new BadRequestError(
-      'Não consegui ler os itens deste pedido (formato ' + typeof bruto + '). Nada foi lançado.',
+  return []
+}
+
+onRecordUpdate((e) => {
+  e.next()
+
+  try {
+    const orig = e.record.original()
+    const antes = orig ? String(orig.getString('status') || '') : ''
+    const agora = String(e.record.getString('status') || '')
+
+    // 1) só quando VIRA lançado nesta gravação
+    if (agora !== 'LANCADO' || antes === 'LANCADO') return
+
+    const numero = Number(e.record.getFloat('number')) || 0
+    if (!numero) {
+      console.log('[lancar-pedido] pedido sem número — ignorado')
+      return
+    }
+    const ref = 'PEDIDO-' + String(numero)
+
+    // 2) já lançado antes? não duplica
+    const jaTem = $app.findRecordsByFilter('transactions', 'quote_ref = "' + ref + '"', '', 1, 0)
+    if (jaTem.length > 0) {
+      console.log('[lancar-pedido] ' + ref + ' já tem lançamento — nada criado')
+      return
+    }
+
+    const cliente = String(e.record.getString('client') || '')
+    if (!cliente) {
+      console.log('[lancar-pedido] ' + ref + ' sem cliente — nada criado')
+      return
+    }
+
+    const itens = lerItens(e.record.get('items'))
+    if (itens.length === 0) {
+      console.log('[lancar-pedido] ' + ref + ' sem itens legíveis — nada criado')
+      return
+    }
+
+    const data = String(e.record.getString('date') || new Date().toISOString()).slice(0, 10)
+    const colTx = $app.findCollectionByNameOrId('transactions')
+    let criados = 0
+    let total = 0
+
+    for (const i of itens) {
+      if (!i || typeof i !== 'object') continue
+      const qtd = Number(i.quantity || 0)
+      const preco = Number(i.unit_price || 0)
+      // 3) quantidade e preço precisam existir para virar cobrança
+      if (qtd <= 0 || preco <= 0) continue
+
+      const k = String(i.kind || 'CONSUMO').toUpperCase()
+      const kind = k === 'CAPITAL' || k === 'SERVICO' || k === 'CONSUMO' ? k : 'CONSUMO'
+
+      const t = new Record(colTx)
+      t.set('client', cliente)
+      t.set('date', data + ' 12:00:00.000Z')
+      t.set('kind', kind)
+      t.set('item_type', kind === 'SERVICO' ? 'SERVICO' : 'PRODUTO')
+      t.set('description', String(i.name || i.description || 'Item do pedido').slice(0, 300))
+      t.set('quantity', qtd)
+      t.set('unit_price', preco)
+      t.set('quote_ref', ref)
+      t.set('sent_to_finance', 'PENDENTE')
+      t.set('notes', 'Lançado do pedido ' + numero)
+      $app.save(t)
+
+      criados += 1
+      total += qtd * preco
+    }
+
+    console.log(
+      '[lancar-pedido] ' +
+        ref +
+        ' lançado — ' +
+        criados +
+        ' item(ns), total ' +
+        Math.round(total * 100) / 100,
     )
+  } catch (err) {
+    // 4) nunca derruba o salvamento do pedido
+    console.log('[lancar-pedido] falhou: ' + err)
   }
-
-  const colTx = $app.findCollectionByNameOrId('transactions')
-  const criados = []
-  let totalPedido = 0
-
-  for (const i of lista) {
-    if (!i || typeof i !== 'object') continue
-    const qtd = Number(i.quantity || 1)
-    const preco = Number(i.unit_price || 0)
-    if (qtd <= 0 || preco <= 0) continue
-
-    const kindBruto = String(i.kind || 'CONSUMO').toUpperCase()
-    const kind =
-      kindBruto === 'CAPITAL' || kindBruto === 'SERVICO' || kindBruto === 'CONSUMO'
-        ? kindBruto
-        : 'CONSUMO'
-
-    const t = new Record(colTx)
-    t.set('client', cliente)
-    t.set('date', data + ' 12:00:00.000Z')
-    t.set('kind', kind)
-    t.set('item_type', kind === 'SERVICO' ? 'SERVICO' : 'PRODUTO')
-    t.set('description', String(i.name || i.description || 'Item do pedido').slice(0, 300))
-    t.set('quantity', qtd)
-    t.set('unit_price', preco)
-    t.set('quote_ref', ref)
-    t.set('sent_to_finance', 'ENVIADA')
-    t.set('notes', 'Lançado do pedido ' + numero + ' em ' + data)
-    $app.save(t)
-    totalPedido += qtd * preco
-    criados.push({
-      descricao: i.name || i.description,
-      qtd: qtd,
-      valor: preco,
-      kind: kind,
-    })
-  }
-
-  // ---------- pagamento já recebido (opcional) ----------
-  let pago = Number(body.pago || 0)
-  if (pago > 0) {
-    const t = new Record(colTx)
-    t.set('client', cliente)
-    t.set('date', data + ' 12:00:00.000Z')
-    t.set('kind', 'DINHEIRO')
-    t.set('item_type', 'SERVICO')
-    t.set('description', 'Pagamento recebido - Pedido ' + numero)
-    t.set('quantity', 1)
-    t.set('unit_price', -Math.abs(pago))
-    t.set('quote_ref', ref)
-    t.set('sent_to_finance', 'ENVIADA')
-    $app.save(t)
-  }
-
-  const arred = (v) => Math.round(v * 100) / 100
-
-  $app
-    .logger()
-    .info(
-      'pedido lancado no financeiro',
-      'pedido',
-      numero,
-      'cliente',
-      cliente,
-      'itens',
-      criados.length,
-      'total',
-      arred(totalPedido),
-      'formato',
-      formato,
-    )
-
-  return e.json(200, {
-    ok: true,
-    referencia: ref,
-    formato_lido: formato,
-    itens_lancados: criados.length,
-    itens: criados,
-    total: arred(totalPedido),
-    pago: arred(pago),
-  })
-})
+}, 'quotes')

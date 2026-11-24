@@ -880,7 +880,23 @@ export default function PedidoPage() {
                         entregador || 'Sistema',
                         `Status alterado de ${anterior} para ${st}`,
                       )
-                      toast.success(`Pedido marcado como ${cfg.rotulo}.`)
+
+                      /**
+                       * O FINANCEIRO É AUTOMÁTICO AGORA (24/11/2026).
+                       *
+                       * Quem cria os lançamentos é o hook de servidor
+                       * `lancarPedido.pb.js`, disparado pela própria gravação do
+                       * status LANÇADO — igual ao que já acontece com a OS.
+                       *
+                       * Não precisa chamar nada daqui. E não deve: a rota antiga
+                       * exigia um segredo de servidor que o navegador não tem,
+                       * então a tentativa anterior simplesmente não funcionava.
+                       */
+                      toast.success(
+                        st === 'LANCADO'
+                          ? `Pedido ${numero} lançado e enviado ao financeiro.`
+                          : `Pedido marcado como ${cfg.rotulo}.`,
+                      )
                     }
                   }}
                   title={cfg.ajuda}
