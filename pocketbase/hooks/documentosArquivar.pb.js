@@ -59,24 +59,89 @@ routerAdd('GET', '/backend/v1/documentos-arquivar', (e) => {
      * item e o preço de tabela, e a quantidade quando ela puder ser lida do
      * próprio registro.
      */
+    /**
+     * ITENS DO PEDIDO — CAUSA RAIZ DESCOBERTA EM 24/11/2026.
+     *
+     * O campo `items` é JSON, mas o conteúdo foi gravado como uma LISTA DE
+     * BYTES UTF-8, não como objetos. Exemplo do que está no banco:
+     *   [91, 123, 34, 109, 97, 116, 101, 114, 105, 97, 108, 34, ...]
+     * que em UTF-8 é a string:
+     *   [{"material":"ba09bu3zugtk06c","name":"GABINETE ...","quantity":1,
+     *     "unit_price":7890,"kind":"CAPITAL"}, ...]
+     *
+     * Ou seja: NADA SE PERDEU. Os produtos, quantidades e preços estão
+     * intactos — só precisam ser decodificados. As leituras anteriores
+     * (minha rota e a tela) tratavam cada número como se fosse um id de
+     * material, e por isso apareciam 379 "itens" sem nome e valor zero.
+     *
+     * Esta função tenta, nesta ordem:
+     *   1. array de objetos  → o formato que a tela grava na memória;
+     *   2. array de bytes    → o formato que está no banco;
+     *   3. string JSON       → formato alternativo.
+     */
     const bruto = q.get('items')
-    // diagnóstico cru: o que exatamente está no campo
-    let cruTipo = typeof bruto
-    let cruAmostra = ''
-    try {
-      cruAmostra = JSON.stringify(bruto).slice(0, 400)
-    } catch (_) {
-      cruAmostra = String(bruto).slice(0, 400)
+    let listaItens = []
+    let formato = 'desconhecido'
+
+    const tentarJson = (texto) => {
+      try {
+        const v = JSON.parse(texto)
+        return Array.isArray(v) ? v : null
+      } catch (_) {
+        return null
+      }
     }
-    const ids = Array.isArray(bruto) ? bruto : []
+
+    if (Array.isArray(bruto) && bruto.length > 0 && typeof bruto[0] === 'object') {
+      listaItens = bruto
+      formato = 'objetos'
+    } else if (Array.isArray(bruto) && bruto.length > 1) {
+      // tenta decodificar como bytes UTF-8
+      try {
+        const bytes = bruto.map((n) => Number(n) & 0xff)
+        const texto = String.fromCharCode.apply(null, bytes)
+        // recompor acentos: os bytes são UTF-8 crus
+        const decodificado = decodeURIComponent(escape(texto))
+        const v = tentarJson(decodificado)
+        if (v) {
+          listaItens = v
+          formato = 'bytes-utf8'
+        }
+      } catch (_) {
+        /* segue para a proxima tentativa */
+      }
+      if (listaItens.length === 0) {
+        // pode ser array de ids de material (pedido antigo)
+        formato = 'ids-de-material'
+      }
+    } else if (typeof bruto === 'string') {
+      const v = tentarJson(bruto)
+      if (v) {
+        listaItens = v
+        formato = 'string-json'
+      }
+    }
+
+    const ids = listaItens.length === 0 && Array.isArray(bruto) ? bruto : []
     const itens = []
+    // 1) itens completos (objetos já decodificados)
+    for (const i of listaItens) {
+      if (!i || typeof i !== 'object') continue
+      itens.push({
+        descricao: i.name || i.description || '(sem nome)',
+        unidade: i.unit || i.unidade || '',
+        quantidade: Number(i.quantity || i.qtd || 1),
+        valor: Number(i.unit_price || i.valor || 0),
+        tipo: i.kind || i.tipo || '',
+      })
+    }
+    // 2) fallback: lista de ids de material (pedidos antigos)
     for (const itemId of ids) {
       const sid = String(itemId)
       let mat = null
       try {
         mat = $app.findRecordById('materials', sid)
       } catch (_) {
-        // pode ser um item antigo que não existe mais no catálogo
         itens.push({ descricao: '(item ' + sid + ')', quantidade: 1, valor: 0, tipo: '' })
         continue
       }
@@ -89,11 +154,10 @@ routerAdd('GET', '/backend/v1/documentos-arquivar', (e) => {
       })
     }
     const debugItens = {
-      tipo: Array.isArray(bruto) ? 'array-de-ids' : cruTipo,
-      tamanho: ids.length,
-      primeiro_id: ids.length > 0 ? String(ids[0]) : '',
-      resolvidos: itens.filter((i) => i.valor > 0).length,
-      cru: cruAmostra,
+      formato: formato,
+      tamanho: itens.length,
+      com_valor: itens.filter((i) => i.valor > 0).length,
+      total: Math.round(itens.reduce((s, i) => s + i.quantidade * i.valor, 0) * 100) / 100,
     }
 
     const status = q.getString('status')
