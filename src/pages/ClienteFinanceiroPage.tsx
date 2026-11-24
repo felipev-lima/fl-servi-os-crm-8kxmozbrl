@@ -62,8 +62,10 @@ import {
   X,
   AlertTriangle,
   Wallet,
+  FileText,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { ExtratoClienteDialog } from '@/components/ExtratoClienteDialog'
 
 /** Data do banco ("2026-11-13 12:00:00.000Z") para o campo <input type=date> */
 function dataParaInput(valor?: string): string {
@@ -98,6 +100,8 @@ export default function ClienteFinanceiroPage() {
 
   /** formulário de lançamento novo */
   const [novoAberto, setNovoAberto] = useState(false)
+  /** Extrato em PDF aberto a partir desta ficha (24/11/2026) */
+  const [extratoAberto, setExtratoAberto] = useState(false)
   const [novo, setNovo] = useState({
     date: new Date().toISOString().slice(0, 10),
     kind: 'SERVICO' as TransactionKind,
@@ -294,6 +298,20 @@ export default function ClienteFinanceiroPage() {
               title="Receber pagamento e quitar itens"
             >
               <Wallet className="h-3.5 w-3.5" /> Dar baixa
+            </Button>
+            {/*
+              EXTRATO EM PDF AQUI, NA FICHA DO CLIENTE (24/11/2026).
+              O Felipe abre o cliente por AQUI — não pela lista. O botão estava
+              só na lista de clientes, e por isso ele dizia "não aparece".
+            */}
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 gap-1 text-[10px] font-bold text-[#0F6A3A] border-[#0F6A3A]/40 hover:bg-[#0F6A3A]/10"
+              onClick={() => setExtratoAberto(true)}
+              title="Extrato de débito em PDF"
+            >
+              <FileText className="h-3 w-3" /> Extrato PDF
             </Button>
             <Button
               size="sm"
@@ -680,6 +698,11 @@ export default function ClienteFinanceiroPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Extrato de débito em PDF desta ficha */}
+      {extratoAberto && cliente && (
+        <ExtratoClienteDialog client={cliente} onClose={() => setExtratoAberto(false)} />
+      )}
     </div>
   )
 }
