@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-24T00:11:04.281Z",
+  "generatedAt": "2026-11-24T02:52:25.304Z",
   "collections": [
     {
       "name": "users",
@@ -1379,9 +1379,16 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "payment_transaction",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "transactions"
         }
       ],
-      "indexes": []
+      "indexes": ["CREATE INDEX idx_bills_payment ON bills (payment_transaction)"]
     },
     {
       "name": "settings",

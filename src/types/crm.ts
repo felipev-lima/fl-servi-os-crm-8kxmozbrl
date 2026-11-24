@@ -102,6 +102,8 @@ export interface Bill {
   status?: BillStatus
   receipt?: string
   notes?: string
+  /** Lançamento do financeiro gerado na baixa — preenchido = já baixada uma vez */
+  payment_transaction?: string
   created: string
 }
 

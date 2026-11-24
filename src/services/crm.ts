@@ -254,6 +254,99 @@ export async function deleteBill(id: string) {
   return pb.collection('bills').delete(id)
 }
 
+/**
+ * BAIXA DE PAGAMENTO (C1) — marca a conta como PAGA e lança no financeiro.
+ *
+ * Como o lançamento entra (mesma regra da base, que já custou caro): kind =
+ * DINHEIRO com o valor NEGATIVO em unit_price e quantity 1 — é o que abate do
+ * caixa, igual à baixa de cliente (DarBaixaPage) e à rota lancar-pagamento.
+ *
+ * UMA ÚNICA VEZ: a conta fica presa ao lançamento pelo campo
+ * `payment_transaction`. Se ele já está preenchido, a baixa é ignorada — baixar
+ * duas vezes não duplica lançamento. O campo não tem cascadeDelete, então apagar
+ * o lançamento não apaga a conta.
+ *
+ * REGRA DA BASE RESPEITADA: nenhum lançamento existente é lido para alteração —
+ * só se cria um novo. Os 946 herdados da FL ficam intocados.
+ *
+ * O `client` do lançamento é obrigatório na coleção. Como uma conta de
+ * fornecedor não pertence a cliente nenhum, usa-se o cliente "CONTA DA EMPRESA"
+ * (criado uma única vez, sem tocar nos existentes) — é lá que a despesa aparece
+ * no financeiro, e é ele que mantém o saldo dos clientes de verdade limpo.
+ */
+export async function pagarBill(conta: Bill, dataPagamento: string) {
+  // já baixada com lançamento: não repete
+  if ((conta as any).payment_transaction) {
+    return { repetida: true as const, transaction: null }
+  }
+
+  // trava de corrida: relê o estado atual do banco antes de decidir
+  const atual = (await pb.collection('bills').getOne(conta.id)) as any
+  if (atual.payment_transaction) {
+    return { repetida: true as const, transaction: null }
+  }
+
+  // cliente "CONTA DA EMPRESA" — a despesa da empresa não é de um cliente
+  let clienteEmpresaId = ''
+  try {
+    const achado = await pb.collection('clients').getList(1, 1, {
+      filter: `nickname = "CONTA DA EMPRESA"`,
+    })
+    clienteEmpresaId = achado.items[0]?.id || ''
+  } catch {
+    /* segue para criar */
+  }
+  if (!clienteEmpresaId) {
+    const criado = await pb.collection('clients').create({
+      name: 'CONTA DA EMPRESA',
+      nickname: 'CONTA DA EMPRESA',
+      type: 'EMPRESA',
+    })
+    clienteEmpresaId = criado.id
+  }
+
+  const descricao = `PAGAMENTO FORNECEDOR - ${conta.supplier}${conta.description ? ` (${conta.description})` : ''}`
+  const lancamento = (await pb.collection('transactions').create({
+    client: clienteEmpresaId,
+    date: `${dataPagamento} 12:00:00.000Z`,
+    kind: 'DINHEIRO',
+    item_type: 'SERVICO',
+    description: descricao.slice(0, 200),
+    details: `Baixa da conta a pagar${conta.category ? ` - ${conta.category}` : ''}`,
+    quantity: 1,
+    unit_price: -Math.abs(Number(conta.amount)),
+    sent_to_finance: 'ENVIADA',
+    sent_at: new Date().toISOString(),
+    notes: `CONTA A PAGAR id=${conta.id}`,
+  })) as any
+
+  await pb.collection('bills').update(conta.id, {
+    status: 'PAGA',
+    paid_at: new Date().toISOString(),
+    payment_transaction: lancamento.id,
+  })
+
+  return { repetida: false as const, transaction: lancamento }
+}
+
+/** Desfaz a baixa: apaga o lançamento gerado e volta a conta para ABERTA. */
+export async function reabrirBill(conta: Bill) {
+  const atual = (await pb.collection('bills').getOne(conta.id)) as any
+  const lancamentoId = String(atual.payment_transaction || '')
+  if (lancamentoId) {
+    try {
+      await pb.collection('transactions').delete(lancamentoId)
+    } catch {
+      /* lançamento já não existe — segue */
+    }
+  }
+  await pb.collection('bills').update(conta.id, {
+    status: 'ABERTA',
+    paid_at: '',
+    payment_transaction: '',
+  })
+}
+
 // ---------------- CLASSIFICAÇÃO DO PRODUTO ----------------
 
 /**

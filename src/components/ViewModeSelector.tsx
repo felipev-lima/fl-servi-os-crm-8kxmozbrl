@@ -100,7 +100,8 @@ export function ViewModeSelector({
 
 /** Os dados de uma linha, extraídos do registro por cada tela. */
 export interface LinhaVisao {
-  titulo: string
+  /** texto do título, ou um elemento (ex.: título com link) */
+  titulo: ReactNode
   subtitulo?: string
   detalhe?: string
   badge?: string

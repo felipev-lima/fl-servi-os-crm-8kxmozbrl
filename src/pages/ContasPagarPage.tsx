@@ -6,7 +6,14 @@
  * aluguel, energia, salario e imposto, com vencimento e baixa.
  */
 import { useEffect, useMemo, useState } from 'react'
-import { getBills, createBill, updateBill, deleteBill } from '@/services/crm'
+import {
+  getBills,
+  createBill,
+  updateBill,
+  deleteBill,
+  pagarBill,
+  reabrirBill,
+} from '@/services/crm'
 import type { Bill, BillCategory } from '@/types/crm'
 import { brl, dataBR } from '@/types/crm'
 import { Card, CardContent } from '@/components/ui/card'
@@ -47,6 +54,8 @@ export default function ContasPagarPage() {
   const [categoria, setCategoria] = useState<BillCategory>('FORNECEDOR')
   const [valor, setValor] = useState('')
   const [vencimento, setVencimento] = useState(() => new Date().toISOString().slice(0, 10))
+  /** Data usada no lançamento do financeiro quando a conta é paga */
+  const [dataBaixa, setDataBaixa] = useState(() => new Date().toISOString().slice(0, 10))
 
   const carregar = async () => {
     setCarregando(true)
@@ -115,14 +124,33 @@ export default function ContasPagarPage() {
   }
 
   const pagar = async (c: Bill) => {
-    await updateBill(c.id, { status: 'PAGA', paid_at: new Date().toISOString() })
-    toast.success('Conta marcada como paga.')
-    void carregar()
+    try {
+      const { repetida } = await pagarBill(c, dataBaixa)
+      if (repetida) {
+        toast.info('Esta conta já estava paga — lançamento não duplicado.')
+      } else {
+        toast.success('Conta paga. Lançamento gerado no financeiro (saída).')
+      }
+      void carregar()
+    } catch (e: any) {
+      toast.error(e?.message || 'Não foi possível dar a baixa.')
+    }
   }
 
   const reabrir = async (c: Bill) => {
-    await updateBill(c.id, { status: 'ABERTA', paid_at: '' })
-    void carregar()
+    if (
+      !confirm(
+        `Reabrir a conta de ${c.supplier}? O lançamento gerado pela baixa também será excluído.`,
+      )
+    )
+      return
+    try {
+      await reabrirBill(c)
+      toast.success('Conta reaberta e lançamento removido.')
+      void carregar()
+    } catch (e: any) {
+      toast.error(e?.message || 'Não foi possível reabrir.')
+    }
   }
 
   const excluir = async (c: Bill) => {
@@ -230,7 +258,16 @@ export default function ContasPagarPage() {
                       {brl(Number(c.amount))}
                     </span>
                   </div>
-                  <div className="flex gap-1 border-t pt-1">
+                  <div className="flex items-center gap-1 border-t pt-1">
+                    {!paga && (
+                      <input
+                        type="date"
+                        value={dataBaixa}
+                        onChange={(e) => setDataBaixa(e.target.value)}
+                        aria-label="Data do pagamento"
+                        className="h-6 w-[112px] shrink-0 rounded-md border border-input bg-background px-1.5 text-[9px]"
+                      />
+                    )}
                     <Button
                       size="sm"
                       variant="outline"
