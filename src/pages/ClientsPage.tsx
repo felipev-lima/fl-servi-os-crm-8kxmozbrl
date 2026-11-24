@@ -35,10 +35,12 @@ import {
   Trash2,
   Loader2,
   FileSpreadsheet,
+  FileText,
   AlertTriangle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import ClientImportDialog from '@/components/ClientImportDialog'
+import { ExtratoClienteDialog } from '@/components/ExtratoClienteDialog'
 import { CAMPO_ALTO, uc } from '@/lib/texto'
 import { semAcento } from '@/lib/busca'
 import { ListagemModos, useViewMode, ViewModeSelector } from '@/components/ViewModeSelector'
@@ -53,6 +55,11 @@ export default function ClientsPage() {
   // Dialog Form
   const [openDialog, setOpenDialog] = useState(false)
   const [editingClient, setEditingClient] = useState<Client | null>(null)
+  /**
+   * Cliente cujo EXTRATO está sendo gerado (pedido do Felipe, 24/11/2026).
+   * Fica em estado próprio para não conflitar com o formulário de cadastro.
+   */
+  const [extratoDe, setExtratoDe] = useState<Client | null>(null)
   const [formData, setFormData] = useState<Partial<Client>>({
     name: '',
     nickname: '',
@@ -274,6 +281,20 @@ export default function ClientsPage() {
 
           {isTechnician && (
             <div className="flex items-center gap-1">
+              {/*
+                EXTRATO EM PDF (pedido do Felipe, 24/11/2026).
+                Antes ele precisava abrir a OS ou a planilha para saber quanto o
+                cliente devia. Aqui gera o documento pronto para enviar.
+              */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setExtratoDe(client)}
+                className="h-7 w-7 p-0"
+                title="Extrato de débito em PDF"
+              >
+                <FileText className="w-3.5 h-3.5 text-[#0F6A3A]" />
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"
@@ -615,6 +636,9 @@ export default function ClientsPage() {
         existingClients={clients}
         onImported={loadClients}
       />
+
+      {/* Extrato de débito do cliente em PDF (24/11/2026) */}
+      {extratoDe && <ExtratoClienteDialog client={extratoDe} onClose={() => setExtratoDe(null)} />}
     </div>
   )
 }
