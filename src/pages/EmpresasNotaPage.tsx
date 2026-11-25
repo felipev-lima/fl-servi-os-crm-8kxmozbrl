@@ -75,7 +75,7 @@ export default function EmpresasNotaPage() {
       setLista(r as unknown as EmpresaNota[])
     } catch (e: any) {
       // coleção pode não existir ainda (migration pendente)
-      if (String(e?.status) === 404) setLista([])
+      if (String(e?.status) === '404') setLista([])
       else toast.error('Não foi possível carregar as empresas.')
     } finally {
       setCarregando(false)

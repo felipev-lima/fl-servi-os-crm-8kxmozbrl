@@ -11,8 +11,11 @@
  *
  * Nada aqui altera a geração de OS: é um caminho novo, paralelo.
  */
+import ExcelJS from 'exceljs'
 import type { LinhaPlanilha, TipoItem } from '@/lib/planilhaOrcamento'
 import { tipoDoItem, montarAba } from '@/lib/planilhaOrcamento'
+import { totalDaLinha } from '@/types/crm'
+import type { Quote } from '@/types/crm'
 
 const MAIUSCULA = (v: string) => String(v || '').toLocaleUpperCase('pt-BR')
 
@@ -63,11 +66,40 @@ export function linhasDoQuote(quote: any): LinhaPlanilha[] {
  * Gera o .xlsx de um ou mais pedidos/orçamentos, uma aba por documento,
  * reusando o layout exato da planilha de OS.
  */
+/** Total do documento = soma de quantidade × valor unitário dos itens. */
+export function totalDoQuote(q: Quote): number {
+  return (q.items || []).reduce((s, it) => s + totalDaLinha(it), 0)
+}
+
+/** Copia texto para a área de transferência; false quando o navegador bloqueia. */
+export async function copiarTexto(texto: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(texto)
+    return true
+  } catch {
+    // fallback: execCommand ainda funciona onde o Clipboard API é negado (http)
+    try {
+      const ta = document.createElement('textarea')
+      ta.value = texto
+      ta.setAttribute('readonly', '')
+      ta.style.position = 'fixed'
+      ta.style.left = '-9999px'
+      document.body.appendChild(ta)
+      ta.select()
+      const ok = document.execCommand('copy')
+      ta.remove()
+      return ok
+    } catch {
+      return false
+    }
+  }
+}
+
 export async function gerarPlanilhaQuotes(
   quotes: any[],
   prefixo: 'PEDIDO' | 'ORCAMENTO',
 ): Promise<{ blob: Blob; nome: string }> {
-  const wb = new (await import('exceljs')).Workbook()
+  const wb = new ExcelJS.Workbook()
   wb.creator = 'FL SERVIÇOS CRM'
 
   for (const q of quotes) {
