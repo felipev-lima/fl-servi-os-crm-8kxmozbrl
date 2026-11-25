@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import pb from '@/lib/pocketbase/client'
 import { brl, dataBR } from '@/types/crm'
 import { Button } from '@/components/ui/button'
@@ -78,6 +78,76 @@ export const RecebimentoLoteDialog: React.FC<Props> = ({
   const [obs, setObs] = useState('')
   const [salvando, setSalvando] = useState(false)
 
+  /**
+   * EMPRESA EMISSORA + AVISO DE NOTA REPETIDA (pedido do Felipe, 25/11/2026).
+   *
+   * Ele tem sete empresas e pode emitir a nota por qualquer uma delas. O número
+   * pode se repetir entre empresas diferentes, então quem identifica a nota é a
+   * combinação EMPRESA + NÚMERO.
+   *
+   * Aqui só AVISAMOS quando a combinação já existe — nunca bloqueamos. Ele disse
+   * claramente: "pode gravar como informação mas não proibir".
+   */
+  const [empresas, setEmpresas] = useState<
+    { id: string; nome_curto: string; razao_social: string }[]
+  >([])
+  const [empresaId, setEmpresaId] = useState('')
+  const [avisoRepetida, setAvisoRepetida] = useState('')
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const lista = await pb.collection('empresas_nota').getFullList({
+          filter: 'ativa = true',
+          sort: 'nome_curto',
+        })
+        const mapeadas = lista.map((e: any) => ({
+          id: e.id,
+          nome_curto: String(e.nome_curto || ''),
+          razao_social: String(e.razao_social || ''),
+        }))
+        setEmpresas(mapeadas)
+        // se só existe uma, já vem escolhida
+        if (mapeadas.length === 1) setEmpresaId(mapeadas[0].id)
+      } catch (_) {
+        /* sem cadastro de empresas ainda: o campo fica vazio e não trava */
+      }
+    })()
+  }, [])
+
+  /** Confere se a combinação empresa + número já foi usada em outro recebimento. */
+  useEffect(() => {
+    let cancelado = false
+    const numero = nota.trim()
+    if (!numero || !empresaId) {
+      setAvisoRepetida('')
+      return
+    }
+    const t = setTimeout(() => {
+      void (async () => {
+        try {
+          const filtro = `nf_numero = "${numero.replace(/"/g, '')}" && empresa_nota = "${empresaId}"`
+          const achou = await pb.collection('transactions').getList(1, 1, { filter: filtro })
+          if (cancelado) return
+          if (achou.totalItems > 0) {
+            const nome = empresas.find((e) => e.id === empresaId)?.nome_curto || 'esta empresa'
+            setAvisoRepetida(
+              `A nota ${numero} já foi registrada por ${nome}. Pode continuar — o sistema só está avisando.`,
+            )
+          } else {
+            setAvisoRepetida('')
+          }
+        } catch (_) {
+          if (!cancelado) setAvisoRepetida('')
+        }
+      })()
+    }, 500)
+    return () => {
+      cancelado = true
+      clearTimeout(t)
+    }
+  }, [nota, empresaId, empresas])
+
   const abertos = useMemo(() => itens.filter((i) => !i.quitado && i.em_aberto > 0.005), [itens])
 
   const marcadosLista = useMemo(
@@ -147,8 +217,8 @@ export const RecebimentoLoteDialog: React.FC<Props> = ({
           date: `${data} 12:00:00.000Z`,
           kind: 'DINHEIRO',
           item_type: 'SERVICO',
-          description: nota.trim()
-            ? `RECEBIMENTO NF ${nota.trim()} - ${item.descricao.slice(0, 50)}`
+          description: nfNumero
+            ? `RECEBIMENTO NF ${nfNumero} - ${item.descricao.slice(0, 50)}`
             : `RECEBIMENTO - ${item.descricao.slice(0, 60)}`,
           details: rodape.slice(0, 500),
           quantity: 1,
@@ -156,6 +226,7 @@ export const RecebimentoLoteDialog: React.FC<Props> = ({
           sent_to_finance: 'ENVIADA',
           settles: item.id,
           notes: rodape.slice(0, 300),
+          ...dadosNota,
         } as never)
       }
 
@@ -167,14 +238,15 @@ export const RecebimentoLoteDialog: React.FC<Props> = ({
           date: `${data} 12:00:00.000Z`,
           kind: 'DINHEIRO',
           item_type: 'SERVICO',
-          description: nota.trim()
-            ? `CRÉDITO A FAVOR - NF ${nota.trim()} (excedente)`
+          description: nfNumero
+            ? `CRÉDITO A FAVOR - NF ${nfNumero} (excedente)`
             : 'CRÉDITO A FAVOR - excedente do recebimento em lote',
           details: rodape.slice(0, 500),
           quantity: 1,
           unit_price: -Math.abs(restante),
           sent_to_finance: 'ENVIADA',
           notes: rodape.slice(0, 300),
+          ...dadosNota,
         } as never)
       }
 
@@ -299,6 +371,29 @@ export const RecebimentoLoteDialog: React.FC<Props> = ({
             </div>
           )}
 
+          <div>
+            <Label className="text-[10px] font-bold text-slate-600">
+              Empresa que emitiu a nota
+            </Label>
+            <select
+              value={empresaId}
+              onChange={(e) => setEmpresaId(e.target.value)}
+              className="h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
+            >
+              <option value="">— não informar —</option>
+              {empresas.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.nome_curto}
+                </option>
+              ))}
+            </select>
+            {empresas.length === 0 && (
+              <p className="mt-0.5 text-[9px] text-amber-700">
+                Nenhuma empresa cadastrada. Cadastre em Empresas → Nota fiscal.
+              </p>
+            )}
+          </div>
+
           <div className="grid grid-cols-2 gap-2">
             <div>
               <Label className="text-[10px] font-bold text-slate-600">Nº da nota fiscal</Label>
@@ -320,6 +415,13 @@ export const RecebimentoLoteDialog: React.FC<Props> = ({
               />
             </div>
           </div>
+
+          {avisoRepetida && (
+            <p className="rounded-md bg-amber-50 px-2 py-1.5 text-[10px] leading-snug text-amber-800">
+              <AlertTriangle className="mr-1 inline h-3 w-3" />
+              {avisoRepetida}
+            </p>
+          )}
 
           <div className="grid grid-cols-2 gap-2">
             <div>

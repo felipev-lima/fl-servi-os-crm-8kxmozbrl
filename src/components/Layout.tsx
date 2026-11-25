@@ -116,6 +116,7 @@ export default function Layout() {
     { name: 'Faturamento', href: '/faturamento', icon: BarChart3, adminOnly: true },
     { name: 'Pedidos', href: '/pedidos', icon: ShoppingCart, adminOnly: false },
     { name: 'Nota fiscal', href: '/nota-fiscal', icon: FileBadge, adminOnly: true },
+    { name: 'Empresas emissoras', href: '/empresas-nota', icon: Building2, adminOnly: true },
     { name: 'Alíquotas', href: '/aliquotas', icon: Percent, adminOnly: true },
     { name: 'Manutenções Futuras', href: '/manutencoes', icon: CalendarDays, adminOnly: true },
     { name: 'Planilha', href: '/planilha', icon: FileSpreadsheet, adminOnly: true },
