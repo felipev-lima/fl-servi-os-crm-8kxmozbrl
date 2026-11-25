@@ -37,6 +37,8 @@ import PedidoPage from './pages/PedidoPage'
 import PedidosPage from './pages/PedidosPage'
 import ComissoesPage from './pages/ComissoesPage'
 import LucroPage from './pages/LucroPage'
+import MargemOSPage from './pages/MargemOSPage'
+import DrePage from './pages/DrePage'
 import FaturamentoPage from './pages/FaturamentoPage'
 import AliquotasPage from './pages/AliquotasPage'
 import TecnicoPage from './pages/TecnicoPage'
@@ -100,6 +102,8 @@ const App = () => (
             <Route path="/pedido/:id" element={<PedidoPage />} />
             <Route path="/comissoes" element={<ComissoesPage />} />
             <Route path="/lucro" element={<LucroPage />} />
+            <Route path="/margem-os" element={<MargemOSPage />} />
+            <Route path="/dre" element={<DrePage />} />
             <Route path="/faturamento" element={<FaturamentoPage />} />
             <Route path="/aliquotas" element={<AliquotasPage />} />
             <Route path="/tecnico" element={<TecnicoPage />} />

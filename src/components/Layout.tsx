@@ -113,6 +113,8 @@ export default function Layout() {
     { name: 'Estoque', href: '/estoque', icon: Boxes, adminOnly: true },
     { name: 'Comissões', href: '/comissoes', icon: Percent, adminOnly: true },
     { name: 'Lucro', href: '/lucro', icon: TrendingUp, adminOnly: true },
+    { name: 'Margem por OS', href: '/margem-os', icon: TrendingUp, adminOnly: true },
+    { name: 'DRE', href: '/dre', icon: TrendingUp, adminOnly: true },
     { name: 'Faturamento', href: '/faturamento', icon: BarChart3, adminOnly: true },
     { name: 'Pedidos', href: '/pedidos', icon: ShoppingCart, adminOnly: false },
     { name: 'Nota fiscal', href: '/nota-fiscal', icon: FileBadge, adminOnly: true },

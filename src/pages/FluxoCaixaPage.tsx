@@ -9,6 +9,7 @@
  */
 import { useEffect, useMemo, useState } from 'react'
 import { getBills, getTransactions } from '@/services/crm'
+import { recebidosAntesDe } from '@/services/financeiro'
 import type { Bill, Transaction } from '@/types/crm'
 import { brl, dataBR, totalDaLinha } from '@/types/crm'
 import { Card, CardContent } from '@/components/ui/card'
@@ -33,16 +34,23 @@ export default function FluxoCaixaPage() {
   const [lancamentos, setLancamentos] = useState<Transaction[]>([])
   const [contas, setContas] = useState<Bill[]>([])
   const [carregando, setCarregando] = useState(true)
+  /** Saldo no começo do período: tudo que entrou e saiu antes de `de` */
+  const [saldoInicial, setSaldoInicial] = useState(0)
 
   const carregar = async () => {
     setCarregando(true)
     try {
-      const [tx, bl] = await Promise.all([
+      const [tx, bl, recebidosAntes] = await Promise.all([
         getTransactions({ page: 1, perPage: 500, from: de, to: ate }),
         getBills(),
+        recebidosAntesDe(de),
       ])
       setLancamentos(tx.items)
       setContas(bl)
+      const pagosAntes = bl
+        .filter((c) => c.status === 'PAGA' && c.paid_at && c.paid_at.slice(0, 10) < de)
+        .reduce((s, c) => s + Number(c.amount || 0), 0)
+      setSaldoInicial(recebidosAntes - pagosAntes)
     } finally {
       setCarregando(false)
     }
@@ -77,7 +85,8 @@ export default function FluxoCaixaPage() {
     [contas, de, ate],
   )
 
-  const saldo = entradas - saidas
+  /** Saldo final = saldo inicial + entradas − saídas do período */
+  const saldo = saldoInicial + entradas - saidas
 
   const movimentos = useMemo(() => {
     const mov: { data: string; tipo: 'ENTRADA' | 'SAIDA'; desc: string; valor: number }[] = []
@@ -225,6 +234,11 @@ export default function FluxoCaixaPage() {
           </CardContent>
         </Card>
       </div>
+
+      <p className="text-[11px] text-muted-foreground">
+        Saldo inicial do período <strong className="font-mono">{brl(saldoInicial)}</strong> + entrou
+        − saiu = saldo final
+      </p>
 
       {carregando ? (
         <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
