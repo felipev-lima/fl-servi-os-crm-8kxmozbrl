@@ -76,12 +76,24 @@ export default function AgendaPage() {
     )
   }, [visao, referencia])
 
+  /**
+   * A OS aceita MAIS DE UM técnico: o campo pode vir como string (um) ou
+   * array (vários). Comparar com `===` deixaria de fora justamente as OS em
+   * que o técnico filtrado é o segundo designado.
+   */
+  const osDoTecnico = (o: OSAgenda, id: string) => {
+    const campo = o.technician
+    if (!campo) return false
+    if (Array.isArray(campo)) return campo.indexOf(id) >= 0
+    return campo === id
+  }
+
   /** OS agrupadas pela data agendada, já filtradas pelo técnico */
   const porDia = useMemo(() => {
     const mapa = new Map<string, OSAgenda[]>()
     for (const o of os) {
       if (!o.scheduled_date) continue
-      if (filtroTecnico !== 'TODOS' && o.technician !== filtroTecnico) continue
+      if (filtroTecnico !== 'TODOS' && !osDoTecnico(o, filtroTecnico)) continue
       const chave = o.scheduled_date.slice(0, 10)
       if (!mapa.has(chave)) mapa.set(chave, [])
       mapa.get(chave)!.push(o)
@@ -89,7 +101,12 @@ export default function AgendaPage() {
     return mapa
   }, [os, filtroTecnico])
 
-  const nomeTecnico = (id?: string) => tecnicos.find((t) => t.id === id)?.name || 'Sem técnico'
+  const nomeTecnico = (id?: string) => {
+    if (!id) return 'Sem técnico'
+    const ids = Array.isArray(id) ? id : [id]
+    const nomes = ids.map((i) => tecnicos.find((t) => t.id === i)?.name || '?')
+    return nomes.join(', ')
+  }
 
   const mover = (direcao: -1 | 1) => {
     setReferencia((r) => {

@@ -64,9 +64,21 @@ export default function ComissoesPage() {
     [os, de, ate],
   )
 
+  /**
+   * A OS aceita MAIS DE UM técnico: o campo pode vir como string (um) ou
+   * array (vários). Comparar com `===` deixaria de fora justamente as OS em
+   * que o técnico é o segundo designado.
+   */
+  const osDoTecnico = (o: WorkOrder, id: string) => {
+    const campo = o.technician
+    if (!campo) return false
+    if (Array.isArray(campo)) return campo.indexOf(id) >= 0
+    return campo === id
+  }
+
   const base = (t: Technician) =>
     osNoPeriodo
-      .filter((o) => o.technician === t.id)
+      .filter((o) => osDoTecnico(o, t.id))
       .reduce((s, o) => s + Number(o.service_value || 0), 0)
 
   const totalComissao = tecnicos.reduce(
@@ -144,7 +156,7 @@ export default function ComissoesPage() {
             const b = base(t)
             const p = Number((t as any).commission_percent || 0)
             const valor = (b * p) / 100
-            const minhas = osNoPeriodo.filter((o) => o.technician === t.id)
+            const minhas = osNoPeriodo.filter((o) => osDoTecnico(o, t.id))
             return (
               <Card key={t.id}>
                 <CardContent className="space-y-1.5 p-2.5">

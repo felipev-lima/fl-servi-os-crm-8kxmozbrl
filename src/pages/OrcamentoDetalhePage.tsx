@@ -15,6 +15,7 @@ import {
   createTransaction,
   getTransactionsByClient,
   getHistoricoPedido,
+  registrarHistoricoPedido,
 } from '@/services/crm'
 import { getEmpresa, urlArquivo, type Empresa } from '@/lib/empresa'
 import { getNextOrderNumber, createWorkOrder, addOrderMaterial } from '@/services/api'
@@ -391,6 +392,9 @@ export default function OrcamentoDetalhePage() {
    * É o caminho "aprovou, agora executa": em vez de redigitar tudo na OS, os
    * itens do pedido entram como materiais da ordem e o valor de mão de obra
    * vai em `service_value`. A OS sai ABERTA, pronta para o técnico.
+   * Admin apenas; o pedido é mantido (nada é apagado) e fica apontando para
+   * a OS via `work_order` — o botão só aparece sem OS vinculada, o que
+   * também evita conversão duplicada.
    */
   const gerarOS = async () => {
     if (!doc) return
@@ -401,7 +405,7 @@ export default function OrcamentoDetalhePage() {
       /**
        * Feito no cliente, e não por rota no servidor, por um motivo prático: a
        * rota customizada sob /backend/v1 não subiu no deploy desta instância
-       * (responde 404 mesmo publicada). Fazer as três gravações daqui dá o
+       * (responde 404 mesmo publicada). Fazer as gravações daqui dá o
        * mesmo resultado e não depende de hook.
        */
       const numero = await getNextOrderNumber()
@@ -444,8 +448,51 @@ export default function OrcamentoDetalhePage() {
         } as any)
       }
 
+      /**
+       * FOTOS (C6): a OS recebe CÓPIAS das fotos do pedido — o mesmo caminho
+       * da migração OS⇄Pedido (migracao.ts). O pedido original MANTÉM as fotos
+       * dele (nada é transferido nem apagado) e falha em uma foto não aborta
+       * a conversão; a foto problemática é relançada a mão na OS.
+       */
+      const fotosPedido: string[] = (doc.photos as string[]) || []
+      let fotosCopiadas = 0
+      for (let i = 0; i < fotosPedido.length; i++) {
+        try {
+          const urlFoto = pb.files.getURL(
+            { id: doc.id, collectionName: 'quotes' } as any,
+            fotosPedido[i],
+          )
+          const res = await fetch(urlFoto)
+          if (!res.ok) throw new Error(`HTTP ${res.status}`)
+          const blob = await res.blob()
+          const fd = new FormData()
+          fd.append('work_order', os.id)
+          fd.append('image', new File([blob], fotosPedido[i], { type: blob.type || 'image/jpeg' }))
+          fd.append('display_order', String(i + 1))
+          await pb.collection('order_photos').create(fd)
+          fotosCopiadas += 1
+        } catch (e) {
+          console.warn('foto do pedido não copiada para a OS', e)
+        }
+      }
+
       await updateQuote(doc.id, { work_order: os.id } as any)
-      toast.success(`OS ${numero} criada a partir do pedido.`)
+      try {
+        await registrarHistoricoPedido(
+          doc.id,
+          doc.status || 'PEDIDO',
+          doc.status || 'PEDIDO',
+          user?.name || 'Sistema',
+          `Convertido na OS #${numero}` +
+            (fotosCopiadas > 0 ? ` · ${fotosCopiadas} foto(s) copiada(s) para a OS` : ''),
+        )
+      } catch {
+        /* a OS já existe; a nota de histórico é best-effort */
+      }
+      toast.success(
+        `OS ${numero} criada a partir do pedido` +
+          (fotosCopiadas > 0 ? ` com ${fotosCopiadas} foto(s).` : '.'),
+      )
       void carregar()
     } catch (e: any) {
       toast.error(e?.message || 'Não foi possível gerar a OS.')
@@ -662,12 +709,13 @@ export default function OrcamentoDetalhePage() {
             <Receipt className="h-3.5 w-3.5" /> Faturar
           </Button>
         )}
-        {(st === 'PEDIDO' || st === 'ENTREGUE') && !doc.work_order && (
+        {isAdmin && (st === 'PEDIDO' || st === 'ENTREGUE') && !doc.work_order && (
           <Button
             variant="outline"
             onClick={gerarOS}
             disabled={salvando}
             className="h-8 gap-1.5 text-[11px] text-blue-800"
+            title="Cria a OS com os itens, a mão de obra e as FOTOS deste pedido (cópias — o pedido original fica intacto). Admin."
           >
             <Wrench className="h-3.5 w-3.5" /> Gerar OS
           </Button>
