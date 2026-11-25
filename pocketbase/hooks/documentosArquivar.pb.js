@@ -181,10 +181,25 @@ routerAdd('GET', '/backend/v1/documentos-arquivar', (e) => {
   }
 
   // ---------- lista ----------
+  /**
+   * O nome da pasta no OneDrive usa o PEDIDO do Felipe (25/11/2026):
+   *   "ESCOLA TARCISIO PAES - PEDIDO 9 - 24/11/2026 (codigo)"
+   * igual ao padrao das OS. Por isso a lista precisa já trazer o apelido do
+   * cliente e a data — antes vinha só id/numero e a pasta saía como
+   * "Pedido 9 (codigo)", sem nada que identificasse a escola.
+   */
+  const nomeCli = {}
+  const apelidoCli = {}
+  for (const c of $app.findRecordsByFilter('clients', '', 'name', 0, 0)) {
+    nomeCli[c.id] = c.getString('name')
+    apelidoCli[c.id] = c.getString('nickname')
+  }
+
   const docs = []
   for (const q of $app.findRecordsByFilter('quotes', '', '-number', 0, 0)) {
     const status = q.getString('status')
     if (status === 'CANCELADO') continue
+    const cid = String(q.getString('client') || '')
     docs.push({
       id: q.id,
       numero: Number(q.getFloat('number')) || 0,
@@ -192,6 +207,8 @@ routerAdd('GET', '/backend/v1/documentos-arquivar', (e) => {
       status: status,
       atualizado: String(q.getString('updated') || ''),
       data: String(q.getString('date') || '').slice(0, 10),
+      cliente: nomeCli[cid] || '',
+      apelido: apelidoCli[cid] || '',
     })
   }
 
