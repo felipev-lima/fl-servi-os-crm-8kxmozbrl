@@ -197,11 +197,25 @@ export const RecebimentoLoteDialog: React.FC<Props> = ({
 
     setSalvando(true)
     try {
-      const marcaNF = nota.trim() ? `nf=${nota.trim()}` : ''
-      const lote = `lote=${Date.now()}`
-      const rodape = [marcaNF, dataNota ? `nf_data=${dataNota}` : '', obs.trim(), lote]
-        .filter(Boolean)
-        .join(' ')
+      /**
+       * A NOTA AGORA VAI EM CAMPO PRÓPRIO, não em texto solto.
+       *
+       * Antes escrevíamos `nf=...` dentro de `notes`; agora existem as colunas
+       * `nf_numero`, `nf_data`, `empresa_nota` e `nf_lote`, então a nota fica
+       * pesquisável e dá para somar tudo que uma nota recebeu.
+       *
+       * `nf_lote` amarra os vários lançamentos da MESMA nota.
+       */
+      const lote = `lote-${Date.now()}`
+      const nfNumero = nota.trim()
+      const dadosNota: Record<string, unknown> = {}
+      if (nfNumero) {
+        dadosNota.nf_numero = nfNumero
+        dadosNota.nf_lote = lote
+        if (dataNota) dadosNota.nf_data = `${dataNota} 12:00:00.000Z`
+        if (empresaId) dadosNota.empresa_nota = empresaId
+      }
+      const rodape = [obs.trim(), nfNumero ? lote : ''].filter(Boolean).join(' ')
 
       let restante = valorNum
       let linhas = 0
