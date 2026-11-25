@@ -32,6 +32,7 @@ import {
 import { toast } from 'sonner'
 import { baixarExcel, type BlocoPlanilha } from '@/lib/exportarPlanilha'
 import pb from '@/lib/pocketbase/client'
+import { DocumentoDialog, montarDocDaOS, type DocDe } from '@/components/DocumentoNotaDialog'
 
 type StatusNota = 'NAO_EMITIDA' | 'EMITIDA' | 'CANCELADA'
 
@@ -39,6 +40,8 @@ export default function NotaFiscalPage() {
   const [os, setOs] = useState<WorkOrder[]>([])
   const [carregando, setCarregando] = useState(true)
   const [filtro, setFiltro] = useState<'PENDENTE' | 'EMITIDA' | 'TODOS'>('PENDENTE')
+  const [doc, setDoc] = useState<DocDe | null>(null)
+  const [abrindoDoc, setAbrindoDoc] = useState<string | null>(null)
 
   const carregar = async () => {
     setCarregando(true)
@@ -248,6 +251,33 @@ export default function NotaFiscalPage() {
                     <span className="block font-mono text-xs font-bold text-[#0B3D91]">
                       {brl(Number(o.service_value || 0))}
                     </span>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setAbrindoDoc(o.id)
+                        try {
+                          // rebusca completa: traz expand.client e os itens da OS
+                          const completa = await pb.collection('work_orders').getOne(o.id, {
+                            expand: 'client',
+                          })
+                          setDoc(await montarDocDaOS(completa))
+                        } catch {
+                          toast.error('Não foi possível montar os dados da nota.')
+                        } finally {
+                          setAbrindoDoc(null)
+                        }
+                      }}
+                      disabled={abrindoDoc === o.id}
+                      className="mt-0.5 inline-flex items-center gap-0.5 text-[9px] font-semibold text-[#0B3D91] hover:underline disabled:opacity-50"
+                      aria-label={`Dados para o contador da OS ${o.order_number}`}
+                    >
+                      {abrindoDoc === o.id ? (
+                        <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                      ) : (
+                        <FileBadge className="h-2.5 w-2.5" />
+                      )}
+                      Dados p/ contador
+                    </button>
                     <Link
                       to={`/ordens/${o.id}`}
                       className="mt-0.5 inline-flex items-center gap-0.5 text-[9px] text-[#0B3D91] hover:underline"
@@ -270,6 +300,8 @@ export default function NotaFiscalPage() {
           </div>
         )}
       </div>
+
+      <DocumentoDialog doc={doc} onClose={() => setDoc(null)} />
     </div>
   )
 }

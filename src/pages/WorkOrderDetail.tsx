@@ -36,7 +36,7 @@ import {
   MaterialKind,
 } from '@/types/flservicos'
 import { ChecklistItem } from '@/types/checklist'
-import { baixarPorUsoNaOS, devolverPorRemocaoDaOS } from '@/lib/estoque'
+import { baixarPorUsoNaOS, devolverPorRemocaoDaOS, movimentar } from '@/lib/estoque'
 import { custoPorMarcacao } from '@/lib/precos'
 import { enderecoCompleto, linkMapa, temEndereco } from '@/lib/local'
 import { Button } from '@/components/ui/button'
@@ -840,6 +840,10 @@ export default function WorkOrderDetail() {
               { duration: 6000 },
             )
           }
+          // sincroniza o saldo local (mesma razao do ajuste por edicao)
+          setMaterialsCatalog((prev) =>
+            prev.map((mm) => (mm.id === mat.id ? { ...mm, current_stock: r.saldo } : mm)),
+          )
         } catch {
           /* o lançamento na OS vale mais que o estoque; segue */
         }
@@ -943,6 +947,41 @@ export default function WorkOrderDetail() {
         quantity: qtd,
         total_price: Number((qtd * preco).toFixed(2)),
       })
+
+      /**
+       * Ajuste de estoque pela diferenca: e o fluxo mais comum — a lista (kit)
+       * entra zerada e o tecnico digita quanto usou. Sem isso o estoque nunca
+       * seria baixado nesse caminho. Aumentou a quantidade = usou mais (saida);
+       * diminuiu = devolve a diferenca (entrada). Falhar aqui nao desfaz a
+       * edicao: o aviso aparece e o saldo e corrigivel na tela Estoque.
+       */
+      const produtoEditado =
+        mat.expand?.material || materialsCatalog.find((mm) => mm.id === mat.material)
+      const delta = qtd - Number(anterior || 0)
+      if (produtoEditado && (produtoEditado as any).control_stock && Math.abs(delta) > 0.000001) {
+        try {
+          const r = await movimentar({
+            materialId: produtoEditado.id,
+            type: delta > 0 ? 'SAIDA' : 'ENTRADA',
+            quantity: Math.abs(delta),
+            saldoAtual: Number((produtoEditado as any).current_stock || 0),
+            reason:
+              `${delta > 0 ? 'Uso' : 'Devolução'} — quantidade editada na OS ${order?.order_number ?? ''}`.trim(),
+            workOrderRef: String(order?.order_number ?? ''),
+            userName: user?.name,
+          })
+          // sincroniza o saldo local: a proxima edicao do MESMO material precisa
+          // do saldo novo, senao a segunda baixa parte do valor velho
+          setMaterialsCatalog((prev) =>
+            prev.map((mm) =>
+              mm.id === produtoEditado.id ? { ...mm, current_stock: r.saldo } : mm,
+            ),
+          )
+        } catch {
+          /* a edicao na OS ja aconteceu; o saldo e corrigivel na tela Estoque */
+        }
+      }
+
       if (id) {
         const updated = await getOrderMaterials(id)
         setOrderMaterials(updated)
@@ -973,13 +1012,19 @@ export default function WorkOrderDetail() {
         Number(itemRemovido?.quantity || 0) > 0
       ) {
         try {
-          await devolverPorRemocaoDaOS({
+          const r = await devolverPorRemocaoDaOS({
             materialId: produtoRemovido.id,
             quantity: Number(itemRemovido!.quantity),
             saldoAtual: Number((produtoRemovido as any).current_stock || 0),
             orderNumber: order?.order_number,
             userName: user?.name,
           })
+          // sincroniza o saldo local (mesma razao do ajuste por edicao)
+          setMaterialsCatalog((prev) =>
+            prev.map((mm) =>
+              mm.id === produtoRemovido.id ? { ...mm, current_stock: r.saldo } : mm,
+            ),
+          )
         } catch {
           /* a remoção já aconteceu; o saldo é corrigível */
         }
