@@ -38,6 +38,7 @@ export default function AgendaPage() {
     return { ano: h.getFullYear(), mes: h.getMonth() }
   })
   const [filtroTecnico, setFiltroTecnico] = useState('TODOS')
+  const [semanaOffset, setSemanaOffset] = useState(0)
 
   useEffect(() => {
     ;(async () => {
@@ -80,6 +81,23 @@ export default function AgendaPage() {
 
   const chaveDia = (d: number) =>
     `${mes.ano}-${String(mes.mes + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+
+  /** Semana (domingo a sábado) em torno de hoje, deslocada por semanaOffset */
+  const semanaInfo = (() => {
+    const fmt = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const base = new Date()
+    base.setHours(0, 0, 0, 0)
+    const hojeChave = fmt(base)
+    base.setDate(base.getDate() - base.getDay() + semanaOffset * 7)
+    const dias = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(base.getFullYear(), base.getMonth(), base.getDate() + i)
+      return { data: d, chave: fmt(d) }
+    })
+    return { dias, hojeChave }
+  })()
+
+  const nomeTecnico = (id: string) => tecnicos.find((t) => t.id === id)?.name || 'Sem técnico'
 
   const mudarMes = (delta: number) => {
     setMes((m) => {
@@ -166,6 +184,86 @@ export default function AgendaPage() {
               </Link>
             ))
           )}
+        </CardContent>
+      </Card>
+
+      {/* Visão da semana: distribuição da equipe */}
+      <Card>
+        <CardContent className="space-y-2 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              aria-label="Semana anterior"
+              onClick={() => setSemanaOffset((s) => s - 1)}
+              className="h-7 w-7 p-0"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <h2 className="text-center text-xs font-bold">
+              Semana de{' '}
+              {semanaInfo.dias[0].data.toLocaleDateString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+              })}{' '}
+              a{' '}
+              {semanaInfo.dias[6].data.toLocaleDateString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+              })}
+            </h2>
+            <Button
+              size="sm"
+              variant="ghost"
+              aria-label="Próxima semana"
+              onClick={() => setSemanaOffset((s) => s + 1)}
+              className="h-7 w-7 p-0"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="space-y-1.5">
+            {semanaInfo.dias.map(({ data, chave }) => {
+              const lista = porDia.get(chave) || []
+              const ehHoje = chave === semanaInfo.hojeChave
+              return (
+                <div
+                  key={chave}
+                  className={`rounded-lg border p-2 ${ehHoje ? 'border-[#0B3D91]/50 bg-[#0B3D91]/5' : ''}`}
+                >
+                  <p className="text-[11px] font-semibold capitalize">
+                    {data.toLocaleDateString('pt-BR', {
+                      weekday: 'long',
+                      day: '2-digit',
+                      month: '2-digit',
+                    })}
+                    {ehHoje && <span className="ml-1 text-[#0B3D91]">· hoje</span>}
+                  </p>
+                  {lista.length === 0 ? (
+                    <p className="text-[10px] text-muted-foreground">Sem serviços</p>
+                  ) : (
+                    <div className="mt-1 space-y-1">
+                      {lista.map((o) => (
+                        <Link
+                          key={o.id}
+                          to={`/ordens/${o.id}`}
+                          className="flex items-center justify-between gap-2 rounded border bg-white p-1.5 text-[10px] transition hover:border-[#0B3D91]/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B3D91]"
+                        >
+                          <span className="min-w-0 flex-1 truncate">
+                            #{o.order_number} ·{' '}
+                            {o.expand?.client?.nickname || o.expand?.client?.name}
+                          </span>
+                          <span className="shrink-0 text-muted-foreground">
+                            {nomeTecnico(o.technician)}
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </CardContent>
       </Card>
 
