@@ -84,11 +84,7 @@ export default function RecebimentosPage() {
   const carregar = async () => {
     setCarregando(true)
     try {
-      const filtros = [
-        'kind = "DINHEIRO"',
-        `date >= "${de} 00:00:00"`,
-        `date <= "${ate} 23:59:59"`,
-      ]
+      const filtros = ['kind = "DINHEIRO"', `date >= "${de} 00:00:00"`, `date <= "${ate} 23:59:59"`]
       if (somenteNota) filtros.push('nf_numero != ""')
 
       const resp = await pb.collection('transactions').getFullList({
