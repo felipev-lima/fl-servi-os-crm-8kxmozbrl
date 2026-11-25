@@ -32,6 +32,7 @@ import EstoquePage from './pages/EstoquePage'
 import ContatosPage from './pages/ContatosPage'
 import NotaFiscalPage from './pages/NotaFiscalPage'
 import EmpresasNotaPage from './pages/EmpresasNotaPage'
+import RecebimentosPage from './pages/RecebimentosPage'
 import PedidoPage from './pages/PedidoPage'
 import PedidosPage from './pages/PedidosPage'
 import ComissoesPage from './pages/ComissoesPage'
@@ -93,6 +94,7 @@ const App = () => (
             <Route path="/contatos" element={<ContatosPage />} />
             <Route path="/nota-fiscal" element={<NotaFiscalPage />} />
             <Route path="/empresas-nota" element={<EmpresasNotaPage />} />
+            <Route path="/recebimentos" element={<RecebimentosPage />} />
             <Route path="/pedidos" element={<PedidosPage />} />
             <Route path="/pedido/novo" element={<PedidoPage />} />
             <Route path="/pedido/:id" element={<PedidoPage />} />
