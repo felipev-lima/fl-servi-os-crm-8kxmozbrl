@@ -5,13 +5,10 @@ import { ConnectorButton } from '@/components/skip/ConnectorButton'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
-  Cloud,
-  FolderOpen,
   Mail,
   Sheet,
   HardDrive,
   Calendar,
-  MessageSquare,
   AlertTriangle,
   Info,
   Loader2,
@@ -22,13 +19,14 @@ import { Button } from '@/components/ui/button'
 /**
  * Tela de Conectores.
  *
- * O Felipe precisa conectar as contas dele (OneDrive, Google Drive, Gmail…) para
- * o app executar tarefas sozinho — hoje quem arquiva as OS no OneDrive sou eu,
- * de fora, pelo relógio de 5 minutos. Com o conector, o próprio app faz.
+ * O `id` de cada item PRECISA ser exatamente o `toolkit` que
+ * GET /api/skip/connectors devolve. Conferido em 25/11/2026 contra a resposta
+ * real da API neste projeto: gmail, googledrive, googlecalendar, googlesheets.
+ * Antes estava `gcalendar` (nome usado por outras plataformas, NÃO por esta) e
+ * o Google Calendar aparecia como "não conectado" mesmo depois de conectado.
  *
- * A plataforma responde 503 "Connectors are not enabled for this app" enquanto
- * a Adapta não habilitar na conta dele, então a tela precisa EXIBIR esse aviso
- * de forma clara em vez de parecer quebrada.
+ * OneDrive foi retirado do catálogo: a plataforma não o lista no toolkit, então
+ * ele nunca poderia ficar "conectado" e a linha só confundia.
  */
 type Catalogo = {
   id: string
@@ -38,30 +36,13 @@ type Catalogo = {
   icon: React.ReactNode
 }
 
-// Só os conectores que fazem sentido para a operação da FL SERVIÇOS.
-// O `id` é o nome que a plataforma usa no toolkit.
 const CATALOGO: Catalogo[] = [
-  {
-    id: 'microsoftonedrive',
-    nome: 'OneDrive',
-    descricao: 'Arquiva as OS completas na sua nuvem',
-    paraQue:
-      'Hoje eu envio as fichas e fotos para o OneDrive a cada 5 minutos. Conectado, o próprio app arquiva na hora em que você salva a OS — sem espera e sem gastar créditos.',
-    icon: <Cloud className="w-5 h-5" />,
-  },
-  {
-    id: 'googledrive',
-    nome: 'Google Drive',
-    descricao: 'Guarda as OS numa pasta do Google',
-    paraQue: 'Alternativa ao OneDrive, caso um dia queira mudar de nuvem.',
-    icon: <HardDrive className="w-5 h-5" />,
-  },
   {
     id: 'googlesheets',
     nome: 'Google Sheets',
-    descricao: 'Escreve os orçamentos direto na sua planilha',
+    descricao: 'Escreve os lançamentos direto na sua planilha',
     paraQue:
-      'Em vez de baixar o Excel e copiar à mão, o app poderia gravar as OS transmitidas direto na sua planilha financeira.',
+      'Em vez de baixar o Excel e copiar à mão, o app passa a gravar os lançamentos direto na planilha do Google.',
     icon: <Sheet className="w-5 h-5" />,
   },
   {
@@ -69,15 +50,21 @@ const CATALOGO: Catalogo[] = [
     nome: 'Gmail',
     descricao: 'Envia o PDF da OS por e-mail ao cliente',
     paraQue:
-      'Ao finalizar a OS, o app mandaria o relatório em PDF para o e-mail do cliente automaticamente.',
+      'Ao finalizar a OS, o app manda o relatório em PDF para o e-mail do cliente automaticamente.',
     icon: <Mail className="w-5 h-5" />,
   },
   {
-    id: 'gcalendar',
+    id: 'googledrive',
+    nome: 'Google Drive',
+    descricao: 'Guarda as OS numa pasta do Google',
+    paraQue: 'Alternativa ao OneDrive para arquivar as fichas e fotos das ordens de serviço.',
+    icon: <HardDrive className="w-5 h-5" />,
+  },
+  {
+    id: 'googlecalendar',
     nome: 'Google Calendar',
     descricao: 'Coloca as OS agendadas na sua agenda',
-    paraQue:
-      'Cada OS com data agendada entraria na sua agenda, e o técnico veria o dia dele no celular.',
+    paraQue: 'Cada OS com data agendada entra na sua agenda, e o técnico vê o dia dele no celular.',
     icon: <Calendar className="w-5 h-5" />,
   },
 ]
@@ -95,7 +82,7 @@ export default function ConectoresPage() {
       const lista = await listConnectors()
       setEstado(lista)
     } catch (e: any) {
-      // O caso comum hoje: 503 "Connectors are not enabled for this app"
+      // 503 "Connectors are not enabled for this app" = falta a Adapta habilitar.
       setErro(e?.message || 'Não foi possível consultar os conectores.')
       setEstado(null)
     } finally {
@@ -159,7 +146,7 @@ export default function ConectoresPage() {
             <code className="bg-amber-100 px-1 rounded text-[10px]">{erro.slice(0, 90)}</code>
           </p>
           <p className="text-[11px] text-amber-900/90 leading-relaxed">
-            Isso não é erro do app: falta a Adapta habilitar os conectores na sua conta. Assim que
+            Isso não é erro do app: falta a Adapta habilitar os conectores nesta conta. Assim que
             liberarem, é só tocar em <strong>Conectar</strong> aqui e a integração passa a
             funcionar.
           </p>
@@ -238,9 +225,10 @@ export default function ConectoresPage() {
       )}
 
       <div className="rounded-xl border p-3 text-[11px] text-muted-foreground leading-relaxed">
-        <strong className="text-foreground">Enquanto os conectores não são liberados:</strong> o
-        OneDrive continua sendo atualizado pela automação a cada 5 minutos. O trabalho não para — só
-        não é o app que executa.
+        <strong className="text-foreground">Sobre o OneDrive:</strong> ele não é um conector
+        disponível nesta plataforma, por isso não aparece na lista. O arquivamento das OS no
+        OneDrive continua sendo feito pelo processo externo, a cada 30 minutos — o trabalho não
+        para.
       </div>
     </div>
   )
