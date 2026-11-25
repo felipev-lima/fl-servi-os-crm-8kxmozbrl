@@ -32,6 +32,13 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   FileSpreadsheet,
   Download,
   Loader2,
@@ -47,6 +54,14 @@ type TipoLista = 'PEDIDOS' | 'ORCAMENTOS'
 /** Status que contam como PEDIDO (FATURADO é legado, cai aqui também). */
 const STATUS_PEDIDO_BUCKET = ['PEDIDO', 'AGUARDANDO MATERIAL', 'ENTREGUE', 'LANCADO', 'FATURADO']
 
+/** '2026-11' → 'nov/2026' (rotulo curto para o filtro de período). */
+function rotuloMes(m: string): string {
+  const [a, mm] = m.split('-')
+  const nomes = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
+  const i = Number(mm) - 1
+  return `${nomes[i] || mm}/${a}`
+}
+
 function doBucket(q: Quote, tipo: TipoLista): boolean {
   const s = String(q.status || 'ORCAMENTO')
   if (s === 'CANCELADO') return false
@@ -60,7 +75,9 @@ export default function PlanilhaQuotes({ tipo }: { tipo: TipoLista }) {
   const [copiando, setCopiando] = useState(false)
   const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set())
   const [busca, setBusca] = useState('')
-  const [mes, setMes] = useState(() => new Date().toISOString().slice(0, 7))
+  // '' = TODOS os meses (padrão, pedido do Felipe: tudo que foi gerado aparece
+  // ao entrar na aba, sem precisar escolher mês); valor 'AAAA-MM' = aquele mês.
+  const [mes, setMes] = useState('')
 
   useEffect(() => {
     let vivo = true
@@ -83,7 +100,19 @@ export default function PlanilhaQuotes({ tipo }: { tipo: TipoLista }) {
 
   const dataDoDoc = (q: Quote) => String(q.date || q.created || '')
 
-  const doMes = useMemo(() => todos.filter((q) => dataDoDoc(q).slice(0, 7) === mes), [todos, mes])
+  const mesesDisponiveis = useMemo(() => {
+    const set = new Set<string>()
+    todos.forEach((q) => {
+      const m = dataDoDoc(q).slice(0, 7)
+      if (m) set.add(m)
+    })
+    return Array.from(set).sort((a, b) => b.localeCompare(a))
+  }, [todos])
+
+  const doMes = useMemo(
+    () => (mes ? todos.filter((q) => dataDoDoc(q).slice(0, 7) === mes) : todos),
+    [todos, mes],
+  )
 
   const filtradas = useMemo(() => {
     const t = semAcento(busca)
@@ -108,8 +137,8 @@ export default function PlanilhaQuotes({ tipo }: { tipo: TipoLista }) {
     setSelecionadas(new Set(doMes.map((q) => q.id)))
     toast.info(
       doMes.length === 0
-        ? 'Nenhum documento nesse mês.'
-        : `${doMes.length} documento(s) de ${mes} selecionado(s).`,
+        ? 'Nenhum documento nesse período.'
+        : `${doMes.length} documento(s) selecionado(s).`,
     )
   }
 
@@ -174,13 +203,22 @@ export default function PlanilhaQuotes({ tipo }: { tipo: TipoLista }) {
         <CardContent className="p-3 space-y-3">
           <div className="flex flex-wrap items-end gap-2">
             <div className="space-y-1">
-              <Label className="text-[11px] font-semibold">Mês</Label>
-              <Input
-                type="month"
-                value={mes}
-                onChange={(e) => setMes(e.target.value)}
-                className="h-9 text-xs w-[150px]"
-              />
+              <Label className="text-[11px] font-semibold" htmlFor={`periodo-${tipo}`}>
+                Período
+              </Label>
+              <Select value={mes || 'TODOS'} onValueChange={(v) => setMes(v === 'TODOS' ? '' : v)}>
+                <SelectTrigger id={`periodo-${tipo}`} className="h-9 text-xs w-[190px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="TODOS">Todos os meses</SelectItem>
+                  {mesesDisponiveis.map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {rotuloMes(m)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <Button
               type="button"
@@ -190,7 +228,7 @@ export default function PlanilhaQuotes({ tipo }: { tipo: TipoLista }) {
               className="h-9 text-xs gap-1.5"
             >
               <CalendarDays className="w-3.5 h-3.5" />
-              Selecionar o mês
+              {mes ? 'Selecionar o mês' : 'Selecionar todos'}
             </Button>
             <Button
               type="button"
@@ -271,7 +309,7 @@ export default function PlanilhaQuotes({ tipo }: { tipo: TipoLista }) {
             <div className="p-8 text-center border-2 border-dashed rounded-xl">
               <FileSpreadsheet className="w-7 h-7 text-muted-foreground mx-auto mb-2" />
               <p className="text-sm font-semibold">Nenhum {rotuloDoc} encontrado</p>
-              <p className="text-xs text-muted-foreground mt-1">Ajuste o mês ou a busca.</p>
+              <p className="text-xs text-muted-foreground mt-1">Ajuste o período ou a busca.</p>
             </div>
           )}
         </div>
