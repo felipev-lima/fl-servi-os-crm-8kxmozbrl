@@ -37,8 +37,18 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { ArrowLeft, Loader2, Check, Wallet, AlertTriangle, CheckCircle2, Coins } from 'lucide-react'
+import {
+  ArrowLeft,
+  Loader2,
+  Check,
+  Wallet,
+  AlertTriangle,
+  CheckCircle2,
+  Coins,
+  Receipt,
+} from 'lucide-react'
 import { toast } from 'sonner'
+import { RecebimentoLoteDialog } from '@/components/RecebimentoLoteDialog'
 
 interface ItemSaldo {
   id: string
@@ -201,6 +211,15 @@ export default function DarBaixaPage() {
     setDescricao('PAGAMENTO AVULSO - CRÉDITO')
     setCreditoAberto(true)
   }
+
+  /**
+   * RECEBER EM LOTE (pedido do Felipe, 25/11/2026).
+   *
+   * Um pedido de R$ 9.999,18 tem vários itens e vira UMA nota fiscal. Antes era
+   * preciso dar baixa item por item, sem nada que amarrasse os itens à mesma
+   * nota. Este modo abre a tela de seleção múltipla com campo de nota fiscal.
+   */
+  const [loteAberto, setLoteAberto] = useState(false)
 
   const registrar = async () => {
     if (!id) return
@@ -382,15 +401,41 @@ export default function DarBaixaPage() {
         </p>
       </div>
 
+      {/*
+        RECEBER EM LOTE (pedido do Felipe, 25/11/2026): "esse pedido que eu
+        lancei agora da Cleide Canela de 9.999 é um único pedido e foi gerada
+        uma única nota fiscal. Tem como anexar esses pedidos e fazer pagamentos
+        em conjunto?"
+      */}
       {isAdmin && !nadaEmAberto && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-8 w-full gap-1.5 border-emerald-300 text-[11px] font-bold text-emerald-800 hover:bg-emerald-50"
-          onClick={abrirCredito}
-        >
-          <Wallet className="h-3.5 w-3.5" /> Pagamento avulso (sem apontar item)
-        </Button>
+        <div className="grid gap-1.5 sm:grid-cols-2">
+          <Button
+            size="sm"
+            className="h-9 w-full gap-1.5 bg-[#0F6A3A] text-[11px] font-bold text-white hover:bg-[#0F6A3A]/90"
+            onClick={() => setLoteAberto(true)}
+          >
+            <Receipt className="h-3.5 w-3.5" /> Receber em lote (com nota fiscal)
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 w-full gap-1.5 border-emerald-300 text-[11px] font-bold text-emerald-800 hover:bg-emerald-50"
+            onClick={abrirCredito}
+          >
+            <Wallet className="h-3.5 w-3.5" /> Pagamento avulso
+          </Button>
+        </div>
+      )}
+
+      {/* tela de recebimento em lote */}
+      {loteAberto && dados && (
+        <RecebimentoLoteDialog
+          clientId={id || ''}
+          clienteNome={dados.apelido || dados.cliente || 'cliente'}
+          itens={dados.itens}
+          onConcluir={carregar}
+          onFechar={() => setLoteAberto(false)}
+        />
       )}
 
       {/* itens por tipo */}
