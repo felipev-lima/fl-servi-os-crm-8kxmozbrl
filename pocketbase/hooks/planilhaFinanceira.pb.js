@@ -113,6 +113,11 @@ routerAdd('GET', '/backend/v1/planilha-financeira', (e) => {
   const somaAtual = arred(histSoma)
   const desvio = arred(somaAtual - 789533.75)
 
+  // total geral = soma de TODOS os saldos (devedores menos créditos). É o
+  // número que a planilha de Lançamentos mostra na última linha.
+  let totalGeral = 0
+  for (const cid in somaPorCliente) totalGeral += somaPorCliente[cid]
+
   return e.json(200, {
     lancamentos: lancamentos,
     clientes: clientes,
@@ -121,6 +126,8 @@ routerAdd('GET', '/backend/v1/planilha-financeira', (e) => {
     historicos_soma: somaAtual,
     /** diferença em relação aos R$ 789.533,75 originais da planilha */
     desvio_planilha: desvio,
+    /** soma de todos os saldos, usada pela conferência de Contas a Receber */
+    total_geral: arred(totalGeral),
     total_transacoes: todas.length,
     gerado_em: new Date().toISOString(),
   })
