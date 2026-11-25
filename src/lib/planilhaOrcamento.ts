@@ -199,6 +199,9 @@ export function linhasDaOS(order: any, materiais: any[]): LinhaPlanilha[] {
   return linhas
 }
 
+/** Desenha uma aba com o layout do modelo (reusada pela planilha de pedidos). */
+export { montarAba }
+
 function bordaFina(): Partial<ExcelJS.Borders> {
   const lado = { style: 'thin' as const, color: { argb: 'FF808080' } }
   return { left: lado, right: lado, top: lado, bottom: lado }
