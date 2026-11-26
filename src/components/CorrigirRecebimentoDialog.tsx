@@ -100,13 +100,19 @@ export const CorrigirRecebimentoDialog: React.FC<Props> = ({
       try {
         const res = (await pb.collection('transactions').getFullList({
           filter: `client = "${clienteId}" && kind = "DINHEIRO"`,
-          sort: 'created',
+          // ⚠ A coleção transactions NÃO TEM campo `created` — sort por ele
+          // responde 400 no servidor (era o bug do "0 linha(s) · R$ 0,00").
+          // Mesmo padrão das outras telas: ordena por `date`.
+          sort: '-date',
         })) as unknown as LinhaPagamento[]
 
         const escolhidas = res.filter((r) => pagamentoIds.includes(r.id))
         // lote de nota fiscal: corrige o lote INTEIRO, não uma linha solta
         const lote = escolhidas.find((r) => r.nf_lote)?.nf_lote || ''
         const finais = lote ? res.filter((r) => r.nf_lote === lote) : escolhidas
+        // ordena as linhas do lote pela data (a mais antiga primeiro) — a
+        // ordem de gravação da correção segue a ordem dos destinos
+        finais.sort((a, b) => String(a.date).localeCompare(String(b.date)))
 
         setLinhas(finais)
         if (finais[0]) {
@@ -212,7 +218,7 @@ export const CorrigirRecebimentoDialog: React.FC<Props> = ({
       }
 
       const ordenadas = [...linhas].sort((a, b) =>
-        String(a.created || a.id).localeCompare(String(b.created || b.id)),
+        String(a.date || a.id).localeCompare(String(b.date || b.id)),
       )
 
       const detalheNovo = [primeira.details ? String(primeira.details).trim() : '', marca]
@@ -227,6 +233,9 @@ export const CorrigirRecebimentoDialog: React.FC<Props> = ({
         const itemDesc = d.credito ? '' : itens.find((x) => x.id === d.itemId)?.descricao
         await pb.collection('transactions').update(linha.id, {
           settles: d.credito ? '' : d.itemId,
+          // a linha continua quitando um item de nota: continua ENVIADA (a
+          // correção parcial de 26/11 deixou uma linha do lote como PENDENTE)
+          sent_to_finance: 'ENVIADA',
           date: `${data} 12:00:00.000Z`,
           quantity: 1,
           unit_price: -Math.abs(d.valor),
