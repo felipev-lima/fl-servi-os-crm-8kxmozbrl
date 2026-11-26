@@ -72,11 +72,14 @@ import {
   ArrowLeft,
   ArrowRightLeft,
   Link2,
+  FileBadge,
 } from 'lucide-react'
 import { migrarPedidoParaOS, importarFotosOSParaPedido } from '@/services/migracao'
 import { baixarFotosZip, compartilharFotosZip, type FotoParaZip } from '@/lib/fotosZip'
 import { avisarSincronizacao } from '@/lib/onedriveSync'
 import { toast } from 'sonner'
+import pb from '@/lib/pocketbase/client'
+import { DocumentoDialog, montarDocDoPedido, type DocDe } from '@/components/DocumentoNotaDialog'
 import {
   urlDoLinkCliente,
   mensagemWhatsapp,
@@ -153,6 +156,13 @@ export default function PedidoPage() {
   const [salvoId, setSalvoId] = useState<string>('')
   /** registro do pedido tal como carregado do banco (tem o client_link_token) */
   const [quoteAtual, setQuoteAtual] = useState<any>(null)
+  /**
+   * DADOS PARA O CONTADOR (mesmo recurso da OS): abre o diálogo de NFS-e
+   * montado a partir deste pedido — empresa emissora, tomador, itens com
+   * divisão e ISS estimado. Não emite nota: só prepara o texto para copiar.
+   */
+  const [docNF, setDocNF] = useState<DocDe | null>(null)
+  const [abrindoDocNF, setAbrindoDocNF] = useState(false)
   const [numero, setNumero] = useState<string>('')
   const [statusAtual, setStatusAtual] = useState<string>('PEDIDO')
   /** nomes dos arquivos já gravados no servidor (pedido reaberto) */
@@ -173,6 +183,24 @@ export default function PedidoPage() {
   const linkComValores = salvoId
     ? urlDoLinkCliente('pedido', salvoId, tokenDoLinkCliente(quoteAtual), true)
     : ''
+
+  /** Monta o dossiê do contador a partir do pedido gravado (igual ao da OS). */
+  const abrirDocContador = async () => {
+    if (!salvoId) {
+      toast.error('Salve o pedido antes de montar os dados do contador.')
+      return
+    }
+    setAbrindoDocNF(true)
+    try {
+      // rebusca completa: traz expand.client e o JSON de itens atualizado
+      const completa = await pb.collection('quotes').getOne(salvoId, { expand: 'client' })
+      setDocNF(await montarDocDoPedido(completa))
+    } catch {
+      toast.error('Não foi possível montar os dados da nota.')
+    } finally {
+      setAbrindoDocNF(false)
+    }
+  }
 
   /** Copia o link e abre o WhatsApp com a mensagem pronta (telefone do cadastro). */
   const enviarLinkCliente = async () => {
@@ -1039,6 +1067,24 @@ export default function PedidoPage() {
             <Button
               variant="outline"
               size="sm"
+              onClick={abrirDocContador}
+              disabled={abrindoDocNF || salvando}
+              className="h-9 gap-1.5 text-xs border-[#0B3D91]/40 text-[#0B3D91] hover:bg-[#0B3D91]/10 font-medium"
+              title="Monta o dossiê deste pedido para o contador (empresa emissora, tomador, itens, serviços, materiais, total e ISS estimado) — não emite nota"
+            >
+              {abrindoDocNF ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileBadge className="h-4 w-4" />
+              )}
+              <span className="hidden sm:inline">Dados p/ contador</span>
+              <span className="sm:hidden">Contador</span>
+            </Button>
+          )}
+          {!ehNovo && isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
               onClick={migrarParaOS}
               disabled={migrando || salvando}
               className="h-9 gap-1.5 text-xs border-[#0B3D91]/40 text-[#0B3D91] hover:bg-[#0B3D91]/10 font-medium"
@@ -1890,6 +1936,9 @@ export default function PedidoPage() {
           setNovoCliente(false)
         }}
       />
+
+      {/* Dados para a nota fiscal — mesmo diálogo da OS, montado do pedido */}
+      <DocumentoDialog doc={docNF} onClose={() => setDocNF(null)} />
     </div>
   )
 }
