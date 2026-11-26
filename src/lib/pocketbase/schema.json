@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-26T03:00:24.862Z",
+  "generatedAt": "2026-11-26T03:22:14.647Z",
   "collections": [
     {
       "name": "users",
@@ -1517,86 +1517,6 @@
       "indexes": []
     },
     {
-      "name": "client_summary",
-      "type": "view",
-      "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": null,
-        "update": null,
-        "delete": null
-      },
-      "fields": [
-        {
-          "name": "name",
-          "type": "text",
-          "required": true,
-          "system": false
-        },
-        {
-          "name": "nickname",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "document",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "phone",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "city",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "capital",
-          "type": "json",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "consumo",
-          "type": "json",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "servico",
-          "type": "json",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "dinheiro",
-          "type": "json",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "saldo",
-          "type": "json",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "lancamentos",
-          "type": "number",
-          "required": false,
-          "system": false
-        }
-      ],
-      "indexes": []
-    },
-    {
       "name": "tax_rates",
       "type": "base",
       "apiRules": {
@@ -1831,6 +1751,86 @@
         }
       ],
       "indexes": ["CREATE UNIQUE INDEX idx_empresas_nota_nome ON empresas_nota (nome_curto)"]
+    },
+    {
+      "name": "client_summary",
+      "type": "view",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "nickname",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "document",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "phone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "city",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "capital",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "consumo",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "servico",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "saldo",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "lancamentos",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ultimo_lancamento",
+          "type": "json",
+          "required": false,
+          "system": false
+        }
+      ],
+      "indexes": []
     }
   ]
 }

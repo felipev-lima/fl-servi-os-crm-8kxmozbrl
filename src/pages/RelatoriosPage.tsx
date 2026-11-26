@@ -17,6 +17,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { RelatorioDebitoDialog } from '@/components/RelatorioDebitoDialog'
 import {
   Search,
   Loader2,
@@ -26,8 +27,12 @@ import {
   ChevronRight,
   ArrowLeft,
   RefreshCw,
+  ArrowDownAZ,
+  CalendarDays,
+  CircleDollarSign,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { ordenarClientesDebito, ROTULO_ORDEM, type OrdemDebito } from '@/lib/ordenacaoDebito'
 
 export default function RelatoriosPage() {
   const [params, setParams] = useSearchParams()
@@ -37,6 +42,10 @@ export default function RelatoriosPage() {
   const [clienteId, setClienteId] = useState<string | null>(params.get('cliente'))
   const [lancamentos, setLancamentos] = useState<Transaction[]>([])
   const [carregandoItens, setCarregandoItens] = useState(false)
+  /** ordem escolhida nos botões — o PDF sai na MESMA sequência */
+  const [ordem, setOrdem] = useState<OrdemDebito>('valor')
+  /** PDF do relatório de débito por cliente */
+  const [relatorioAberto, setRelatorioAberto] = useState(false)
 
   useEffect(() => {
     getClientsSummary()
@@ -56,18 +65,30 @@ export default function RelatoriosPage() {
 
   const cliente = resumos.find((r) => r.id === clienteId)
 
+  /** A MESMA lista que o PDF usa — ordenada pela regra do Felipe. */
+  const listaOrdenada = useMemo(() => ordenarClientesDebito(resumos, ordem), [resumos, ordem])
+
   const listaClientes = useMemo(() => {
     const t = semAcento(busca)
-    const base = t
-      ? resumos.filter(
-          (r) =>
-            semAcento(r.name).includes(t) ||
-            semAcento(r.nickname).includes(t) ||
-            (r.document || '').includes(busca.trim()),
-        )
-      : resumos
-    return [...base].sort((a, b) => b.saldo - a.saldo)
-  }, [resumos, busca])
+    if (!t && !busca.trim()) return listaOrdenada
+    const alvo = busca.trim()
+    return listaOrdenada.filter(
+      (r) =>
+        semAcento(r.name).includes(t) ||
+        semAcento(r.nickname).includes(t) ||
+        (r.document || '').includes(alvo),
+    )
+  }, [listaOrdenada, busca])
+
+  /** totais para o resumo acima da lista */
+  const totalDevedores = useMemo(
+    () => listaOrdenada.filter((r) => r.saldo > 0.005).reduce((s, r) => s + r.saldo, 0),
+    [listaOrdenada],
+  )
+  const qtdDevedores = useMemo(
+    () => listaOrdenada.filter((r) => r.saldo > 0.005).length,
+    [listaOrdenada],
+  )
 
   const soma = (k: string) =>
     lancamentos.filter((t) => t.kind === k).reduce((s, t) => s + totalDaLinha(t), 0)
@@ -153,6 +174,48 @@ export default function RelatoriosPage() {
           <p className="text-[11px] text-muted-foreground">
             Escolha o cliente e veja todos os itens lançados — no formato da planilha.
           </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Ordenar por:
+          </span>
+          {(
+            [
+              ['nome', 'Nome', ArrowDownAZ],
+              ['data', 'Data', CalendarDays],
+              ['valor', 'Valor', CircleDollarSign],
+            ] as const
+          ).map(([chave, rotulo, Icone]) => (
+            <Button
+              key={chave}
+              type="button"
+              size="sm"
+              variant={ordem === chave ? 'default' : 'outline'}
+              onClick={() => setOrdem(chave)}
+              aria-pressed={ordem === chave}
+              className="h-7 gap-1 px-2 text-[11px]"
+              style={ordem === chave ? { background: '#0B3D91', color: '#fff' } : undefined}
+            >
+              <Icone className="h-3 w-3" /> {rotulo}
+            </Button>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-card px-3 py-2">
+          <p className="text-[11px] text-muted-foreground">
+            <span className="font-bold text-foreground">{qtdDevedores}</span> cliente(s) em débito ·
+            total <span className="font-bold text-amber-800">{brl(totalDevedores)}</span> · ordem:{' '}
+            {ROTULO_ORDEM[ordem]}
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => setRelatorioAberto(true)}
+            className="h-7 gap-1 bg-[#0B3D91] px-2.5 text-[11px] text-white hover:bg-[#0B3D91]/90"
+          >
+            <Printer className="h-3 w-3" /> Gerar relatório (PDF)
+          </Button>
         </div>
 
         <div className="relative">

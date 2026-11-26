@@ -41,6 +41,7 @@ export async function getClientsSummary(): Promise<ClientSummary[]> {
     dinheiro: Number(r.dinheiro || 0),
     saldo: Number(r.saldo || 0),
     lancamentos: Number(r.lancamentos || 0),
+    ultimo_lancamento: (r.ultimo_lancamento as string) || null,
   }))
 }
 

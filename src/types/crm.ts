@@ -45,6 +45,8 @@ export interface ClientSummary {
   dinheiro: number
   saldo: number
   lancamentos: number
+  /** data do ÚLTIMO lançamento do cliente (nulo quando não tem nenhum) */
+  ultimo_lancamento?: string | null
 }
 
 export interface QuoteItem {
