@@ -78,6 +78,8 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { ExtratoClienteDialog } from '@/components/ExtratoClienteDialog'
+import { DebitoClienteDialog } from '@/components/DebitoClienteDialog'
+import { HandCoins } from 'lucide-react'
 
 /** Data do banco ("2026-11-13 12:00:00.000Z") para o campo <input type=date> */
 function dataParaInput(valor?: string): string {
@@ -114,6 +116,8 @@ export default function ClienteFinanceiroPage() {
   const [novoAberto, setNovoAberto] = useState(false)
   /** Extrato em PDF aberto a partir desta ficha (24/11/2026) */
   const [extratoAberto, setExtratoAberto] = useState(false)
+  /** "Débito do cliente" — PDF limpo só com o que falta pagar (26/11/2026) */
+  const [debitoAberto, setDebitoAberto] = useState(false)
   const [novo, setNovo] = useState({
     date: new Date().toISOString().slice(0, 10),
     kind: 'SERVICO' as TransactionKind,
@@ -194,6 +198,32 @@ export default function ClienteFinanceiroPage() {
     }
     return s
   }, [lancamentos])
+
+  /** ITENS EM ABERTO para o "Débito do cliente" (PDF limpo, 26/11/2026).
+   * A MESMA lista da aba "Todos" da ficha: vem de /saldo-por-tipo (quitado
+   * marcado pelo servidor); se a rota falhou, cai para o `settles` local.
+   * Só itens de débito (nunca pagamentos), com o valor que ainda falta. */
+  const itensEmAberto = useMemo(
+    () =>
+      lancamentos
+        .filter((t) => t.kind !== 'DINHEIRO')
+        .filter((t) => {
+          const s = itensSaldo.find((i) => i.id === t.id)
+          if (s) return s.quitado || s.em_aberto <= 0.005 ? false : s.em_aberto > 0.005
+          return !pagosIds.has(t.id)
+        })
+        .map((t) => {
+          const s = itensSaldo.find((i) => i.id === t.id)
+          return {
+            id: t.id,
+            date: t.date,
+            kind: t.kind,
+            description: t.description,
+            valor: s ? s.em_aberto : totalDaLinha(t),
+          }
+        }),
+    [lancamentos, itensSaldo, pagosIds],
+  )
 
   /** Total bruto dos pagamentos registrados (para mostrar no aviso verde). */
   const pagosTotalBruto = useMemo(
@@ -400,6 +430,17 @@ export default function ClienteFinanceiroPage() {
               title="Extrato de débito em PDF"
             >
               <FileText className="h-3 w-3" /> Extrato PDF
+            </Button>
+            {/* DÉBITO DO CLIENTE — segundo botão (26/11/2026): PDF limpo só com
+                o que falta pagar, para o Felipe enviar ao cliente. */}
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 gap-1 text-[10px] font-bold text-[#0B3D91] border-[#0B3D91]/40 hover:bg-[#0B3D91]/10"
+              onClick={() => setDebitoAberto(true)}
+              title="Demonstrativo de débito em PDF (só o que falta pagar)"
+            >
+              <HandCoins className="h-3 w-3" /> Débito do cliente
             </Button>
             <Button
               size="sm"
@@ -807,6 +848,15 @@ export default function ClienteFinanceiroPage() {
       {/* Extrato de débito em PDF desta ficha */}
       {extratoAberto && cliente && (
         <ExtratoClienteDialog client={cliente} onClose={() => setExtratoAberto(false)} />
+      )}
+
+      {/* Débito do cliente — PDF limpo só com o que falta pagar (para enviar) */}
+      {debitoAberto && cliente && (
+        <DebitoClienteDialog
+          client={cliente}
+          itens={itensEmAberto}
+          onClose={() => setDebitoAberto(false)}
+        />
       )}
     </div>
   )
