@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { FileText, Loader2, X, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 import { getEmpresa, urlArquivo, type Empresa } from '@/lib/empresa'
+import { ROTULO_ORDEM, type OrdemDebito } from '@/lib/ordenacaoDebito'
 import { brl, dataBR, type ClientSummary } from '@/types/crm'
 
 /**
@@ -27,18 +28,10 @@ import { brl, dataBR, type ClientSummary } from '@/types/crm'
  * Demonstrativo de débito da ficha.
  */
 
-export type OrdemDebito = 'nome' | 'data' | 'valor'
-
 interface Props {
   clientes: ClientSummary[]
   ordem: OrdemDebito
   onClose: () => void
-}
-
-const ROTULO_ORDEM: Record<OrdemDebito, string> = {
-  nome: 'Alfabética (nome)',
-  data: 'Data do último lançamento',
-  valor: 'Valor do débito',
 }
 
 /** Escapa texto vindo do banco antes de entrar no HTML do PDF. */

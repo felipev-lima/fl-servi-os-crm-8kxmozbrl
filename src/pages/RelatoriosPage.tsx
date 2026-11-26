@@ -271,6 +271,14 @@ export default function RelatoriosPage() {
             )}
           </div>
         )}
+
+        {relatorioAberto && (
+          <RelatorioDebitoDialog
+            clientes={listaOrdenada}
+            ordem={ordem}
+            onClose={() => setRelatorioAberto(false)}
+          />
+        )}
       </div>
     )
   }
