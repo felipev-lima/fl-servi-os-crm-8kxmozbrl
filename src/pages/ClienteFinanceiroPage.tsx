@@ -79,6 +79,7 @@ import {
 import { toast } from 'sonner'
 import { ExtratoClienteDialog } from '@/components/ExtratoClienteDialog'
 import { DebitoClienteDialog } from '@/components/DebitoClienteDialog'
+import { CorrigirRecebimentoDialog } from '@/components/CorrigirRecebimentoDialog'
 import { HandCoins } from 'lucide-react'
 
 /** Data do banco ("2026-11-13 12:00:00.000Z") para o campo <input type=date> */
@@ -118,6 +119,10 @@ export default function ClienteFinanceiroPage() {
   const [extratoAberto, setExtratoAberto] = useState(false)
   /** "Débito do cliente" — PDF limpo só com o que falta pagar (26/11/2026) */
   const [debitoAberto, setDebitoAberto] = useState(false)
+  /** CORRIGIR RECEBIMENTO (26/11/2026): ids das linhas DINHEIRO sendo corrigidas.
+   * Abre o dialog que reescreve os vínculos (settles) do pagamento que JÁ existe —
+   * sem apagar nada, sem redigitar o valor. */
+  const [corrigirIds, setCorrigirIds] = useState<string[]>([])
   const [novo, setNovo] = useState({
     date: new Date().toISOString().slice(0, 10),
     kind: 'SERVICO' as TransactionKind,
@@ -707,6 +712,20 @@ export default function ClienteFinanceiroPage() {
                       </span>
                       {isAdmin && (
                         <div className="flex shrink-0 items-center">
+                          {pagamento && (
+                            /* CORRIGIR VÍNCULOS DO PAGAMENTO (26/11/2026): o
+                               pedido do Felipe — reescrever quais itens este
+                               pagamento quita, sem apagar o lançamento. */
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0"
+                              onClick={() => setCorrigirIds([t.id])}
+                              title="Corrigir os itens que este pagamento quita"
+                            >
+                              <Link2 className="h-3.5 w-3.5 text-[#0B3D91]" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"
