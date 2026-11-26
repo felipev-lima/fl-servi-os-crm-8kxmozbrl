@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
+import html2pdf from 'html2pdf.js'
 import pb from '@/lib/pocketbase/client'
 import type { Client } from '@/types/flservicos'
 import { Button } from '@/components/ui/button'
-import { FileText, Loader2, X } from 'lucide-react'
+import { FileText, Loader2, X, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 import { getEmpresa, urlArquivo, type Empresa } from '@/lib/empresa'
 
@@ -19,9 +20,17 @@ import { getEmpresa, urlArquivo, type Empresa } from '@/lib/empresa'
  *     na peça é informação interna.
  *
  * COMO É GERADO
- *   `html2pdf` monta o arquivo no próprio navegador. No iPhone o download direto
+ *   `html2pdf` (importado de forma ESTÁTICA — nunca `await import(...)`, que
+ *   quebrava com "Failed to fetch dynamically imported module" depois de
+ *   publicar versão nova) monta o arquivo no próprio navegador. No iPhone o download direto
  *   é bloqueado pelo Chrome, então usamos o menu do sistema (o mesmo caminho do
  *   PDF da OS), onde existe "Salvar em Arquivos" e o envio por WhatsApp.
+ *
+ *   O GERADOR É IMPORTADO DE FORMA ESTÁTICA (`import html2pdf from`), nunca via
+ *   `await import(...)`: depois de publicar uma versão nova, o navegador pedia um
+ *   chunk com nome antigo no cache e a carga falhava com o erro cru
+ *   "Failed to fetch dynamically imported module: html2pdf". Import estático o
+ *   empacotador resolve junto do app — não existe chunk para perder.
  */
 
 interface Lancamento {
@@ -72,9 +81,12 @@ interface Props {
 
 export const ExtratoClienteDialog: React.FC<Props> = ({ client, onClose }) => {
   const [gerando, setGerando] = useState(false)
+  /** Mensagem amigável no lugar do erro cru ("Failed to fetch..."). null = sem erro. */
+  const [erro, setErro] = useState<string | null>(null)
 
   const gerar = async () => {
     setGerando(true)
+    setErro(null)
     try {
       /**
        * 1) LANÇAMENTOS DO CLIENTE, do mais antigo para o mais recente.
@@ -223,8 +235,7 @@ export const ExtratoClienteDialog: React.FC<Props> = ({ client, onClose }) => {
       alvo.innerHTML = html
       document.body.appendChild(alvo)
 
-      const html2pdf = (await import('html2pdf.js')).default as any
-      const blob: Blob = await html2pdf()
+      const blob: Blob = await (html2pdf as unknown as (opts?: unknown) => any)()
         .set({
           margin: [4, 4, 4, 4],
           filename: nomeArquivo,
@@ -269,9 +280,16 @@ export const ExtratoClienteDialog: React.FC<Props> = ({ client, onClose }) => {
       onClose()
     } catch (err: any) {
       console.error('EXTRATO ERRO:', err)
-      // Mostra o motivo real: um "tente novamente" genérico esconde a causa e
-      // não permite ao Felipe nem a mim saber o que consertar.
-      toast.error(`Não foi possível gerar o extrato: ${err?.message || err || 'erro desconhecido'}`)
+      // Erro AMIGÁVEL dentro do diálogo, com "Tentar novamente" — nada de erro
+      // técnico cru (ex.: "Failed to fetch dynamically imported module").
+      const tecnico = String(err?.message || err || 'erro desconhecido')
+      const falhaCarga =
+        /fetch dynamically imported|failed to fetch|importing a module|chunk/i.test(tecnico)
+      setErro(
+        falhaCarga
+          ? 'Não foi possível carregar o gerador do PDF. Verifique a internet e tente novamente; se persistir, atualize a página do app.'
+          : `Não foi possível gerar o extrato. Motivo: ${tecnico}`,
+      )
     } finally {
       setGerando(false)
     }
@@ -306,6 +324,27 @@ export const ExtratoClienteDialog: React.FC<Props> = ({ client, onClose }) => {
           completo data a data e o débito total. Vai pronto para enviar ao cliente — sem custo nem
           margem.
         </p>
+
+        {erro && (
+          <div
+            role="alert"
+            className="mb-3 flex items-start gap-2 rounded-md border border-rose-200 bg-rose-50 px-2.5 py-2 text-[11px] text-rose-900"
+          >
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="font-bold">{erro}</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-1.5 h-7 border-rose-300 text-[10px] font-bold text-rose-900 hover:bg-rose-100"
+                onClick={() => void gerar()}
+              >
+                Tentar novamente
+              </Button>
+            </div>
+          </div>
+        )}
 
         <div className="flex gap-2">
           <Button

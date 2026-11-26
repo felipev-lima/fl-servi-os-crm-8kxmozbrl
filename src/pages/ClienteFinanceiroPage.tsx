@@ -24,6 +24,17 @@
  *    aprendido na Natalio: o lançamento de R$ 122 é o que SOBROU de um serviço
  *    de R$ 1.450 onde já foram pagos R$ 1.328. Lançar pagamento antigo aqui
  *    abate duas vezes. Por isso a tela avisa isso em cima, de forma visível.
+ *
+ * 4. CARTÕES POR TIPO MOSTRAM O SALDO EM ABERTO (defeito corrigido 26/11/2026,
+ *    pedido do Felipe: "quando eu selecionasse os itens que foram pagos
+ *    indicando nota fiscal ou pagando avulso esses itens saíssem da logística
+ *    de capital consumo serviço e ficasse só o valor daquele item pendente").
+ *    Antes os cartões somavam as linhas do tipo e ignoravam os pagamentos
+ *    (kind = DINHEIRO, com `settles` apontando para o item). Agora a ficha usa
+ *    o MESMO cálculo da tela Dar baixa: a rota /backend/v1/saldo-por-tipo,
+ *    que já abate pagamento vinculado e crédito avulso e marca o quitado.
+ *    Itens quitados saem dos cartões e da lista em aberto (ficam no filtro
+ *    "Pagos"). O SALDO DEVEDOR continua somando TODAS as linhas, como sempre.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -35,6 +46,7 @@ import {
   createTransaction,
   deleteTransaction,
 } from '@/services/crm'
+import pb from '@/lib/pocketbase/client'
 import type { Transaction, TransactionKind } from '@/types/crm'
 import { TIPOS, brl, dataBR, totalDaLinha, semAcento } from '@/types/crm'
 import type { Client } from '@/types/flservicos'
@@ -110,13 +122,42 @@ export default function ClienteFinanceiroPage() {
     unit_price: '',
   })
 
+  /** SALDO POR ITEM (o mesmo da tela Dar baixa). O servidor `/saldo-por-tipo`
+   * devolve cada lançamento de débito com total, pago, em_aberto e quitado. */
+  interface ItemSaldo {
+    id: string
+    kind: string
+    total: number
+    pago: number
+    em_aberto: number
+    quitado: boolean
+  }
+  const [itensSaldo, setItensSaldo] = useState<ItemSaldo[]>([])
+
   const carregar = useCallback(async () => {
     if (!id) return
     setCarregando(true)
     try {
+      /**
+       * Saldo POR TIPO vem da MESMA rota que a tela Dar baixa usa — o cálculo
+       * de quanto cada item ainda deve (pagamento vinculado por `settles` +
+       * crédito avulso abatendo os itens mais antigos) é feito lá, no servidor.
+       * Se a rota falhar (ex.: permissão), a ficha segue com a soma simples.
+       */
+      let porTipoDoServidor: ItemSaldo[] = []
+      try {
+        const r: any = await pb.send(`/backend/v1/saldo-por-tipo?cliente=${id}`, {
+          method: 'GET',
+        })
+        if (r && Array.isArray(r.itens)) porTipoDoServidor = r.itens as ItemSaldo[]
+      } catch (_) {
+        porTipoDoServidor = []
+      }
+
       const [c, t] = await Promise.all([getCliente(id), getTransactionsByClient(id)])
       setCliente(c)
       setLancamentos(t)
+      setItensSaldo(porTipoDoServidor)
     } catch (e: any) {
       toast.error(e?.message || 'Não foi possível abrir o cliente.')
     } finally {
@@ -128,26 +169,73 @@ export default function ClienteFinanceiroPage() {
     void carregar()
   }, [carregar])
 
+  /** SALDO DEVEDOR GERAL: continua somando TODAS as linhas, como sempre foi —
+   * (pagamento entra negativo e abate). Este número já bate e não se mexe. */
   const saldo = useMemo(() => lancamentos.reduce((s, t) => s + totalDaLinha(t), 0), [lancamentos])
 
-  const porTipo = useMemo(() => {
-    const r: Record<string, number> = { CAPITAL: 0, CONSUMO: 0, SERVICO: 0, DINHEIRO: 0 }
-    for (const t of lancamentos) r[t.kind] = (r[t.kind] || 0) + totalDaLinha(t)
+  /** Cartões Capital/Consumo/Serviço: SOMENTE o que ainda está em aberto de
+   * cada tipo, do mesmo cálculo da Dar baixa (itens quitados não entram). */
+  const emAbertoPorTipo = useMemo(() => {
+    const r: Record<string, number> = { CAPITAL: 0, CONSUMO: 0, SERVICO: 0 }
+    for (const i of itensSaldo) {
+      if (i.quitado || i.em_aberto <= 0.005) continue
+      r[i.kind] = (r[i.kind] || 0) + i.em_aberto
+    }
     return r
+  }, [itensSaldo])
+
+  /** Queda para o filtro "Pagos": o item em aberto cujo id é `settles` de um
+   * pagamento registrado. Recalculado daqui, sem depender do servidor. */
+  const pagosIds = useMemo(() => {
+    const s = new Set<string>()
+    for (const t of lancamentos) {
+      const st = (t as unknown as { settles?: string }).settles
+      if (t.kind === 'DINHEIRO' && st) s.add(st)
+    }
+    return s
   }, [lancamentos])
+
+  /** Total bruto dos pagamentos registrados (para mostrar no aviso verde). */
+  const pagosTotalBruto = useMemo(
+    () =>
+      lancamentos.reduce((s, t) => (t.kind === 'DINHEIRO' ? s + Math.abs(totalDaLinha(t)) : s), 0),
+    [lancamentos],
+  )
 
   const filtrados = useMemo(() => {
     const termo = semAcento(busca)
+    const saldoDoItem = new Map(itensSaldo.map((i) => [i.id, i]))
+    /** O item já foi quitado? Pelo servidor; se ele não respondeu, cai para o
+     * `settles` do pagamento registrado aqui na ficha. */
+    const estaQuitado = (t: Transaction): boolean => {
+      const s = saldoDoItem.get(t.id)
+      if (s) return s.quitado || s.em_aberto <= 0.005
+      return pagosIds.has(t.id)
+    }
     return lancamentos.filter((t) => {
+      // com busca ativa: procura em TUDO (inclusive pagamentos e quitados),
+      // para o Felipe achar "NF 803" mesmo depois de quitado
+      if (termo) {
+        return (
+          semAcento(t.description).includes(termo) ||
+          semAcento(t.details || '').includes(termo) ||
+          semAcento(dataBR(t.date)).includes(termo)
+        )
+      }
+      if (filtroTipo === 'PAGOS') {
+        // aba "Pagos": só itens de débito já quitados
+        return t.kind !== 'DINHEIRO' && estaQuitado(t)
+      }
       if (filtroTipo !== 'TODOS' && t.kind !== filtroTipo) return false
-      if (!termo) return true
-      return (
-        semAcento(t.description).includes(termo) ||
-        semAcento(t.details || '').includes(termo) ||
-        semAcento(dataBR(t.date)).includes(termo)
-      )
+      if (filtroTipo === 'TODOS') {
+        // lista em aberto: esconde pagamentos e itens quitados
+        if (t.kind === 'DINHEIRO') return false
+        return !estaQuitado(t)
+      }
+      // filtro por tipo: o que ainda falta daquele tipo
+      return !estaQuitado(t)
     })
-  }, [lancamentos, busca, filtroTipo])
+  }, [lancamentos, itensSaldo, pagosIds, busca, filtroTipo])
 
   const abrirEdicao = (t: Transaction) => {
     const pagamento = t.kind === 'DINHEIRO'
@@ -325,7 +413,8 @@ export default function ClienteFinanceiroPage() {
         )}
       </div>
 
-      {/* totais */}
+      {/* totais — os cartões por tipo mostram SÓ O QUE AINDA ESTÁ EM ABERTO,
+          pelo mesmo cálculo da Dar baixa (itens pagos saem do cartão). */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Card className="border-l-4 border-l-[#0B3D91]">
           <CardContent className="p-2.5">
@@ -339,28 +428,35 @@ export default function ClienteFinanceiroPage() {
         </Card>
         <Card>
           <CardContent className="p-2.5">
-            <p className="text-[9px] font-bold uppercase text-muted-foreground">Capital</p>
-            <p className="text-sm font-bold">{brl(porTipo.CAPITAL || 0)}</p>
+            <p className="text-[9px] font-bold uppercase text-muted-foreground">
+              Capital (em aberto)
+            </p>
+            <p className="text-sm font-bold">{brl(emAbertoPorTipo.CAPITAL || 0)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-2.5">
-            <p className="text-[9px] font-bold uppercase text-muted-foreground">Consumo</p>
-            <p className="text-sm font-bold">{brl(porTipo.CONSUMO || 0)}</p>
+            <p className="text-[9px] font-bold uppercase text-muted-foreground">
+              Consumo (em aberto)
+            </p>
+            <p className="text-sm font-bold">{brl(emAbertoPorTipo.CONSUMO || 0)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-2.5">
-            <p className="text-[9px] font-bold uppercase text-muted-foreground">Serviço</p>
-            <p className="text-sm font-bold">{brl(porTipo.SERVICO || 0)}</p>
+            <p className="text-[9px] font-bold uppercase text-muted-foreground">
+              Serviço (em aberto)
+            </p>
+            <p className="text-sm font-bold">{brl(emAbertoPorTipo.SERVICO || 0)}</p>
           </CardContent>
         </Card>
       </div>
 
-      {porTipo.DINHEIRO !== 0 && (
+      {pagosIds.size > 0 && (
         <p className="rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-[10px] text-emerald-900">
           <Wallet className="mr-1 inline h-3 w-3" />
-          Pagamentos já descontados: <strong>{brl(Math.abs(porTipo.DINHEIRO))}</strong>
+          Pagamentos registrados nesta ficha:{' '}
+          <strong>{pagosTotalBruto ? brl(Math.abs(pagosTotalBruto)) : '—'}</strong>
         </p>
       )}
 
@@ -383,7 +479,7 @@ export default function ClienteFinanceiroPage() {
           />
         </div>
         <div className="flex flex-wrap gap-1">
-          {['TODOS', 'CAPITAL', 'CONSUMO', 'SERVICO', 'DINHEIRO'].map((k) => (
+          {['TODOS', 'CAPITAL', 'CONSUMO', 'SERVICO', 'DINHEIRO', 'PAGOS'].map((k) => (
             <Button
               key={k}
               type="button"
@@ -392,7 +488,11 @@ export default function ClienteFinanceiroPage() {
               onClick={() => setFiltroTipo(k)}
               className={`h-7 text-[10px] ${filtroTipo === k ? 'bg-slate-900 text-white' : ''}`}
             >
-              {k === 'TODOS' ? 'Todos' : TIPOS[k as TransactionKind]?.label || k}
+              {k === 'TODOS'
+                ? 'Todos'
+                : k === 'PAGOS'
+                  ? 'Pagos'
+                  : TIPOS[k as TransactionKind]?.label || k}
             </Button>
           ))}
         </div>
@@ -403,10 +503,15 @@ export default function ClienteFinanceiroPage() {
         <CardContent className="p-0">
           <div className="flex items-center justify-between border-b bg-muted/30 px-3 py-2">
             <span className="text-[11px] font-bold">
-              Lançamentos ({filtrados.length}
-              {filtrados.length !== lancamentos.length ? ` de ${lancamentos.length}` : ''})
+              {filtroTipo === 'PAGOS'
+                ? `Itens já pagos (${filtrados.length})`
+                : `Lançamentos em aberto (${filtrados.length})`}
             </span>
-            <span className="text-[10px] text-muted-foreground">clique no lápis para corrigir</span>
+            <span className="text-[10px] text-muted-foreground">
+              {filtroTipo === 'PAGOS'
+                ? 'itens quitados por recebimento ou nota fiscal'
+                : 'clique no lápis para corrigir'}
+            </span>
           </div>
 
           <div className="divide-y">
