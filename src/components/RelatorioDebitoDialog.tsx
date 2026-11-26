@@ -1,10 +1,10 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useRef, useState } from 'react'
 import html2pdf from 'html2pdf.js'
 import { Button } from '@/components/ui/button'
 import { FileText, Loader2, X, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 import { getEmpresa, urlArquivo, type Empresa } from '@/lib/empresa'
-import { ROTULO_ORDEM, type OrdemDebito } from '@/lib/ordenacaoDebito'
+import { ROTULO_ORDEM, TOLERANCIA, type OrdemDebito } from '@/lib/ordenacaoDebito'
 import { brl, dataBR, type ClientSummary } from '@/types/crm'
 
 /**
@@ -17,7 +17,7 @@ import { brl, dataBR, type ClientSummary } from '@/types/crm'
  * REGRAS:
  *  - o débito é o MESMO número da ficha do cliente (Saldo Devedor: soma de
  *    todas as linhas, pagamento entra negativo e abate);
- *  - a ordem é EXATAMENTE a que o Felipe escolheu nos botões da tabela —
+ *  - a ordem é EXATAMENTE a que o Felipe escolhheu nos botões da tabela —
  *    o componente recebe a lista já ordenada e não mexe nela;
  *  - devedores primeiro, depois saldo zero, depois crédito (regra da tela);
  *  - html2pdf importado de forma ESTÁTICA (nunca `await import(...)`, que
@@ -25,7 +25,10 @@ import { brl, dataBR, type ClientSummary } from '@/types/crm'
  *
  * No iPhone o download direto é bloqueado: usamos o menu do sistema
  * (compartilhar), que tem "Salvar em Arquivos" e WhatsApp — igual ao
- * Demonstrativo de débito da ficha.
+ * Demonstrativo de débito da ficha. Esse menu é SÓ para celular de verdade:
+ * no desktop o Chrome/macOS também responde canShare(files) e o
+ * navigator.share abre a folha do macOS — dentro de preview em iframe a
+ * promessa nem resolve, travando o "Gerando PDF..." para sempre.
  */
 
 interface Props {
@@ -41,14 +44,21 @@ export const RelatorioDebitoDialog: React.FC<Props> = ({ clientes, ordem, onClos
   const [gerando, setGerando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
 
-  const totalGeral = useMemo(() => clientes.reduce((s, c) => s + c.saldo, 0), [clientes])
-  const devedores = useMemo(() => clientes.filter((c) => c.saldo > 0.005), [clientes])
+  // MESMOS números da faixa-resumo da tela (mesma lista, mesmo filtro saldo > TOLERANCIA)
+  const devedores = useMemo(() => clientes.filter((c) => c.saldo > TOLERANCIA), [clientes])
   const totalDevedores = useMemo(() => devedores.reduce((s, c) => s + c.saldo, 0), [devedores])
+  const totalGeral = useMemo(() => clientes.reduce((s, c) => s + c.saldo, 0), [clientes])
+
+  /** evita segundo clique duplicar a geração enquanto a primeira roda */
+  const gerandoRef = useRef(false)
 
   const gerar = async () => {
-    if (clientes.length === 0) return
+    if (clientes.length === 0 || gerandoRef.current) return
+    gerandoRef.current = true
     setGerando(true)
     setErro(null)
+    /** nó fora da tela usado na renderização — limpo em sucesso OU erro */
+    let alvo: HTMLDivElement | null = null
     try {
       let empresa: Empresa | null = null
       try {
@@ -65,8 +75,8 @@ export const RelatorioDebitoDialog: React.FC<Props> = ({ clientes, ordem, onClos
 
       const linhas = clientes
         .map((c, i) => {
-          const devedor = c.saldo > 0.005
-          const credito = c.saldo < -0.005
+          const devedor = c.saldo > TOLERANCIA
+          const credito = c.saldo < -TOLERANCIA
           const cor = devedor ? '#B91C1C' : credito ? '#15803D' : '#64748B'
           const nome = c.nickname || c.name || '—'
           const razao = c.nickname ? c.name : ''
@@ -141,7 +151,7 @@ export const RelatorioDebitoDialog: React.FC<Props> = ({ clientes, ordem, onClos
 </div>`
 
       // gera o PDF fora da tela (mesmo mecanismo do extrato/débito da ficha)
-      const alvo = document.createElement('div')
+      alvo = document.createElement('div')
       alvo.style.position = 'fixed'
       alvo.style.left = '-10000px'
       alvo.innerHTML = html
@@ -159,13 +169,25 @@ export const RelatorioDebitoDialog: React.FC<Props> = ({ clientes, ordem, onClos
         .from(alvo.firstElementChild as HTMLElement)
         .outputPdf('blob')
 
-      document.body.removeChild(alvo)
+      if (alvo.parentNode) alvo.parentNode.removeChild(alvo)
+      alvo = null
 
       const arquivo = new File([blob], nomeArquivo, { type: 'application/pdf' })
       const nav = navigator as any
 
-      // celular: menu do sistema (Salvar em Arquivos / WhatsApp)
-      if (nav.canShare && nav.canShare({ files: [arquivo] })) {
+      // celular DE VERDADE: menu do sistema (Salvar em Arquivos / WhatsApp).
+      // No desktop o Chrome/macOS também responde canShare(files) e o
+      // navigator.share abre a folha do macOS — dentro de um preview em
+      // iframe a promessa nem resolve, travando o spinner para sempre.
+      // Por isso o share só vale quando é mobile + página principal.
+      const emCelular = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+      const podeCompartilhar =
+        emCelular &&
+        window.top === window.self &&
+        nav.canShare &&
+        nav.canShare({ files: [arquivo] })
+
+      if (podeCompartilhar) {
         try {
           await nav.share({ files: [arquivo], title: nomeArquivo })
           toast.success('Relatório gerado.')
@@ -173,13 +195,14 @@ export const RelatorioDebitoDialog: React.FC<Props> = ({ clientes, ordem, onClos
           return
         } catch (err: any) {
           if (err?.name === 'AbortError') {
-            setGerando(false)
+            // cancelou o menu: PDF já está pronto, só não baixa de novo
             return
           }
+          // falha real no share: cai no download abaixo
         }
       }
 
-      // computador: baixa
+      // computador (e fallback): baixa
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -192,9 +215,13 @@ export const RelatorioDebitoDialog: React.FC<Props> = ({ clientes, ordem, onClos
       onClose()
     } catch (err: any) {
       console.error('RELATÓRIO DÉBITO ERRO:', err)
+      if (alvo && alvo.parentNode) alvo.parentNode.removeChild(alvo)
       const tecnico = String(err?.message || err || 'erro desconhecido')
       setErro(`Não foi possível gerar o relatório. Motivo: ${tecnico}`)
     } finally {
+      // SEMPRE desliga o estado — sucesso, cancelamento ou erro —
+      // para o spinner nunca ficar girando eternamente.
+      gerandoRef.current = false
       setGerando(false)
     }
   }
@@ -233,17 +260,12 @@ export const RelatorioDebitoDialog: React.FC<Props> = ({ clientes, ordem, onClos
         </div>
 
         <div className="rounded-lg border bg-slate-50 p-3 text-[11px] text-muted-foreground">
-          {clientes.length} cliente(s) na lista, no total de{' '}
-          <span className="font-mono font-bold text-foreground">{brl(totalGeral)}</span>
-          {devedores.length > 0 && (
-            <>
-              {' '}
-              — sendo <span className="font-bold text-red-800">{devedores.length}</span> com débito
-              (soma <span className="font-mono font-bold text-red-800">{brl(totalDevedores)}</span>
-              ).
-            </>
-          )}
-          Clientes sem lançamento nenhum entram no final, para prospecção de vendas.
+          <span className="font-bold text-red-800">{devedores.length}</span> cliente(s) em débito
+          (soma <span className="font-mono font-bold text-red-800">{brl(totalDevedores)}</span>) —
+          os mesmos números da faixa-resumo da tela. A lista completa tem {clientes.length}{' '}
+          cliente(s), no total de{' '}
+          <span className="font-mono font-bold text-foreground">{brl(totalGeral)}</span>. Sem débito
+          e com crédito entram no final, para prospecção de vendas.
         </div>
 
         {erro && (
