@@ -80,7 +80,7 @@ import { toast } from 'sonner'
 import { ExtratoClienteDialog } from '@/components/ExtratoClienteDialog'
 import { DebitoClienteDialog } from '@/components/DebitoClienteDialog'
 import { CorrigirRecebimentoDialog } from '@/components/CorrigirRecebimentoDialog'
-import { HandCoins } from 'lucide-react'
+import { HandCoins, Link2 } from 'lucide-react'
 
 /** Data do banco ("2026-11-13 12:00:00.000Z") para o campo <input type=date> */
 function dataParaInput(valor?: string): string {
@@ -140,6 +140,7 @@ export default function ClienteFinanceiroPage() {
     pago: number
     em_aberto: number
     quitado: boolean
+    tem_vinculo?: boolean
   }
   const [itensSaldo, setItensSaldo] = useState<ItemSaldo[]>([])
 
@@ -229,6 +230,36 @@ export default function ClienteFinanceiroPage() {
         }),
     [lancamentos, itensSaldo, pagosIds],
   )
+
+  /** ITENS PARA A CORREÇÃO de recebimento: além do em aberto, inclui os itens
+   * JÁ QUITADOS que as linhas escolhidas vinculam hoje (`settles`) — sem isso
+   * o diálogo não mostraria o item errado que o Felipe quer trocar. */
+  const itensParaCorrecao = useMemo(() => {
+    const idsDasLinhas = new Set(
+      lancamentos
+        .filter((t) => corrigirIds.includes(t.id))
+        .map((t) => (t as unknown as { settles?: string }).settles)
+        .filter(Boolean) as string[],
+    )
+    return lancamentos
+      .filter((t) => t.kind !== 'DINHEIRO')
+      .filter((t) => idsDasLinhas.has(t.id) || itensEmAberto.some((i) => i.id === t.id))
+      .map((t) => {
+        const s = itensSaldo.find((i) => i.id === t.id)
+        const emAberto = s ? s.em_aberto : pagosIds.has(t.id) ? 0 : totalDaLinha(t)
+        return {
+          id: t.id,
+          data: t.date,
+          kind: t.kind,
+          descricao: t.description,
+          total: s ? s.total : totalDaLinha(t),
+          pago: s ? s.pago : emAberto > 0.005 ? totalDaLinha(t) - emAberto : totalDaLinha(t),
+          em_aberto: emAberto,
+          quitado: s ? s.quitado : pagosIds.has(t.id),
+          tem_vinculo: s ? s.tem_vinculo : pagosIds.has(t.id),
+        }
+      })
+  }, [lancamentos, itensEmAberto, itensSaldo, pagosIds, corrigirIds])
 
   /** Total bruto dos pagamentos registrados (para mostrar no aviso verde). */
   const pagosTotalBruto = useMemo(
@@ -875,6 +906,17 @@ export default function ClienteFinanceiroPage() {
           client={cliente}
           itens={itensEmAberto}
           onClose={() => setDebitoAberto(false)}
+        />
+      )}
+
+      {/* Correção de recebimento — trocar os itens que um pagamento quita */}
+      {corrigirIds.length > 0 && cliente && id && (
+        <CorrigirRecebimentoDialog
+          clienteId={id}
+          pagamentoIds={corrigirIds}
+          itens={itensParaCorrecao}
+          onConcluir={() => void carregar()}
+          onFechar={() => setCorrigirIds([])}
         />
       )}
     </div>
