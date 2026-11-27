@@ -16,9 +16,20 @@
 /// GET /backend/v1/planilha-financeira
 /// header: X-Arquivador-Secret
 routerAdd('GET', '/backend/v1/planilha-financeira', (e) => {
+  /**
+   * DUAS FORMAS DE ENTRAR (corrigido em 27/11/2026):
+   *   1. segredo de serviço — automação e assistente;
+   *   2. sessão de usuário ADMIN — a TELA de planilha do Google, no navegador.
+   *
+   * A tela chamava esta rota com a sessão do Felipe e recebia 403: o
+   * navegador não tem o segredo. O resultado era a sincronização falhar
+   * antes de gravar qualquer linha, com uma mensagem que não explicava.
+   */
   const esperado = $secrets.get('ARQUIVADOR_SECRET') || ''
   const enviado = String(e.request.header.get('X-Arquivador-Secret') || '')
-  if (esperado === '' || enviado !== esperado) {
+  const porSegredo = esperado !== '' && enviado === esperado
+  const porSessao = e.auth && ['admin', 'superadmin'].indexOf(e.auth.getString('role')) >= 0
+  if (!porSegredo && !porSessao) {
     throw new ForbiddenError('Acesso não autorizado.')
   }
 
