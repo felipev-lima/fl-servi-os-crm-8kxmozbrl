@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { SignaturePad } from '@/components/SignaturePad'
+import { ConexoesGoogle } from '@/components/ConexoesGoogle'
 import { Building2, Upload, Loader2, Save, ImageIcon, PenLine, CheckCircle2 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -117,6 +118,8 @@ export default function ConfiguracoesPage() {
           Estes dados aparecem no PDF dos orçamentos e pedidos.
         </p>
       </div>
+
+      <ConexoesGoogle />
 
       <Card>
         <CardContent className="space-y-2 p-3">
