@@ -44,6 +44,7 @@ import AliquotasPage from './pages/AliquotasPage'
 import TecnicoPage from './pages/TecnicoPage'
 import ClienteFinanceiroPage from './pages/ClienteFinanceiroPage'
 import DarBaixaPage from './pages/DarBaixaPage'
+import PlanilhaGooglePage from './pages/PlanilhaGooglePage'
 import PaginaPublicaCliente from './pages/ClienteLinkPage'
 import NotFound from './pages/NotFound'
 
@@ -73,6 +74,9 @@ const App = () => (
             {/* Dar baixa item por item: mostra o que o cliente deve de
                 serviço, consumo e capital, e quita o item escolhido. */}
             <Route path="/clientes/:id/dar-baixa" element={<DarBaixaPage />} />
+            {/* Planilha do Google: cria no Drive do dono, grava as duas abas
+                e mantém sincronizado (pedido do Felipe, 27/11/2026). */}
+            <Route path="/planilha-google" element={<PlanilhaGooglePage />} />
             <Route path="/tecnicos" element={<TechniciansPage />} />
             <Route path="/materiais" element={<MaterialsPage />} />
             <Route path="/listas-material" element={<MaterialKitsPage />} />
