@@ -146,12 +146,26 @@ async function escrever(
 ): Promise<number> {
   if (linhas.length === 0) return 0
 
-  // limpa o que existia (a planilha é espelho: não pode sobrar linha velha)
+  /**
+   * LIMPEZA ANTES DE GRAVAR (corrigido em 27/11/2026).
+   *
+   * A versão anterior mandava um "range" junto com os values, e o conector
+   * IGNORAVA o range: escrevia as linhas em cima da PRIMEIRA linha, deixando o
+   * conteúdo antigo vivo logo abaixo. O resultado era o cabeçalho novo na
+   * linha 1, o antigo na linha 2, e os dados começando na linha 3.
+   *
+   * Agora limpa primeiro (uma faixa larga, em branco) e SÓ DEPOIS grava a
+   * partir da linha 1, sem range — que é o que o conector respeita.
+   */
+  const vazias: string[][] = []
+  for (let i = 0; i < 60; i++) {
+    vazias.push(['', '', '', '', '', '', '', '', '', '', '', ''])
+  }
   await execute('GOOGLESHEETS_BATCH_UPDATE', {
     spreadsheet_id: spreadsheetId,
     sheet_name: aba,
-    values: [['']],
-    range: `${aba}!A1:Z10000`,
+    values: vazias,
+    range: `${aba}!A1:L60`,
     value_input_option: 'USER_ENTERED',
   })
 
@@ -161,8 +175,8 @@ async function escrever(
     const r = await execute('GOOGLESHEETS_BATCH_UPDATE', {
       spreadsheet_id: spreadsheetId,
       sheet_name: aba,
+      // sem `range`: o conector grava a partir de A1, em sequência
       values: fatia,
-      // USER_ENTERED faz o Sheets interpretar número como número, e não texto
       value_input_option: 'USER_ENTERED',
     })
     if (!r.successful) {
@@ -297,9 +311,10 @@ export async function sincronizarPlanilha(): Promise<ResultadoSincronizacao> {
     await garantirAba(cfg.id, ABA_CONTAS)
     const nContas = await escrever(cfg.id, ABA_CONTAS, cabContas)
 
+    // o campo tem limite de 20 caracteres no banco: texto curto e preciso
     await salvarEstado(cfg.registroId, {
       status: 'SINCRONIZADO',
-      linhas: `${nLanc - 2} lançamentos · ${nContas - 2} devedores`,
+      linhas: `${nLanc - 2} lanc / ${nContas - 2} dev`,
       erro: '',
     })
 

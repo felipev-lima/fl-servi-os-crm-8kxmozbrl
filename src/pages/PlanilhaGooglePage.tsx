@@ -152,6 +152,19 @@ export default function PlanilhaGooglePage() {
         </p>
       </div>
 
+      {/*
+  AVISO DA LINHA 1 (27/11/2026): na primeira sincronização, um teste meu
+  deixou duas linhas no topo da aba e os dados começaram na linha 3. Foi
+  corrigido, mas quem abrir uma planilha antiga pode ver isso. O aviso
+  abaixo explica o que é e como resolver — sem obrigar a recriar.
+*/}
+      {temPlanilha && cfg?.status === 'SINCRONIZADO' && (
+        <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[10px] leading-relaxed text-slate-600">
+          <strong>Se a planilha tiver linha sobrando no topo</strong>, toque em Sincronizar: a
+          gravação reescreve as abas do começo e limpa o resíduo.
+        </p>
+      )}
+
       {/* ---------- sem planilha: oferece criar ---------- */}
       {!temPlanilha && (
         <Card className="border-emerald-300 bg-emerald-50/40">
