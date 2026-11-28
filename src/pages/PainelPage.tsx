@@ -965,12 +965,14 @@ export default function Painel() {
       )}
 
       {/*
-        SAÚDE DO SISTEMA — a "telinha" do Felipe, AGORA NO FINAL (pedido de
+        SAÚDE DO SISTEMA — a "linha fina" do Felipe, AGORA NO FINAL (pedidos de
         28/11/2026): "coloca no final da página, essas informações para não
-        tomar espaço no que é prioridade para uso diário" e "só deixa esta
-        informação aparecer para o admin". Card Conexões Google + widget de
-        pendências com bolinha vermelha + diário de atualizações: SÓ ADMIN vê,
-        nada renderiza para colaborador.
+        tomar espaço no que é prioridade para uso diário", "só deixa esta
+        informação aparecer para o admin" e — mais recente — "deixar essas
+        informações MAIS COMPACTAS... não precisa de um ícone tão grande pode
+        ser bem pequeno e só para consulta e possível ativação". Uma linha fina
+        discreta (conexões Google + sino de pendências + diário), que abre
+        painel ao clicar: SÓ ADMIN vê, nada renderiza para colaborador.
       */}
       {isAdmin && <PainelSaudeSistema />}
     </div>
