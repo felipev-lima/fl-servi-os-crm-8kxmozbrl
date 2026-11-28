@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-27T23:20:56.818Z",
+  "generatedAt": "2026-11-28T01:25:34.960Z",
   "collections": [
     {
       "name": "users",
@@ -1867,6 +1867,116 @@
         }
       ],
       "indexes": []
+    },
+    {
+      "name": "system_alerts",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && @collection.system_alerts.user ?= @request.auth.id",
+        "view": "@request.auth.id != '' && @collection.system_alerts.user ?= @request.auth.id",
+        "create": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "user",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "chave",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tipo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "titulo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "mensagem",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "acao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "acao_link",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "resolvido",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "avisado_em",
+          "type": "date",
+          "required": false,
+          "system": false
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_system_alerts_user_chave ON system_alerts (user, chave)",
+        "CREATE INDEX idx_system_alerts_user ON system_alerts (user)"
+      ]
+    },
+    {
+      "name": "system_updates",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "view": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "version",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "titulo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "detalhe",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data",
+          "type": "date",
+          "required": false,
+          "system": false
+        }
+      ],
+      "indexes": ["CREATE UNIQUE INDEX idx_system_updates_version ON system_updates (version)"]
     }
   ]
 }

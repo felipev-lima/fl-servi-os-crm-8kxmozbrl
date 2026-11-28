@@ -33,6 +33,7 @@ import type { WorkOrder } from '@/types/flservicos'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { PainelSaudeSistema } from '@/components/PainelSaudeSistema'
 import {
   Wallet,
   TrendingUp,
@@ -457,6 +458,11 @@ export default function Painel() {
         para cá. Dois toques para a mesma coisa. Ficou só o de Pedidos, que era
         o que estava longe, lá embaixo.
       */}
+      {/* SAÚDE DO SISTEMA — a "telinha" do Felipe (27/11/2026): estado dos 4
+          conectores Google da conta logada + pendências com bolinha vermelha +
+          diário de atualizações (só admin). Fica no topo, antes da lista. */}
+      <PainelSaudeSistema />
+
       <Link
         to="/pedidos"
         className="flex items-center gap-2 rounded-xl border-l-4 border-l-amber-500 bg-amber-50 p-2.5 transition hover:shadow-md"
