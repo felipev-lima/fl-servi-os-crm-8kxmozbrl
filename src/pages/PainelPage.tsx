@@ -458,11 +458,6 @@ export default function Painel() {
         para cá. Dois toques para a mesma coisa. Ficou só o de Pedidos, que era
         o que estava longe, lá embaixo.
       */}
-      {/* SAÚDE DO SISTEMA — a "telinha" do Felipe (27/11/2026): estado dos 4
-          conectores Google da conta logada + pendências com bolinha vermelha +
-          diário de atualizações (só admin). Fica no topo, antes da lista. */}
-      <PainelSaudeSistema />
-
       <Link
         to="/pedidos"
         className="flex items-center gap-2 rounded-xl border-l-4 border-l-amber-500 bg-amber-50 p-2.5 transition hover:shadow-md"
@@ -968,6 +963,16 @@ export default function Painel() {
           </CardContent>
         </Card>
       )}
+
+      {/*
+        SAÚDE DO SISTEMA — a "telinha" do Felipe, AGORA NO FINAL (pedido de
+        28/11/2026): "coloca no final da página, essas informações para não
+        tomar espaço no que é prioridade para uso diário" e "só deixa esta
+        informação aparecer para o admin". Card Conexões Google + widget de
+        pendências com bolinha vermelha + diário de atualizações: SÓ ADMIN vê,
+        nada renderiza para colaborador.
+      */}
+      {isAdmin && <PainelSaudeSistema />}
     </div>
   )
 }
